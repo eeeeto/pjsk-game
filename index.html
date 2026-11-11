@@ -286,6 +286,7 @@
     font-size:clamp(10px,1.7vh,13px);font-weight:900;letter-spacing:.1em;color:#3a2c00;
     background:linear-gradient(135deg,#ffd94a,#ffb62e);box-shadow:0 6px 18px rgba(255,190,60,.4);}
   #loading .meta{min-width:0;padding-bottom:6px;}
+  #loading .load-hint{font-size:clamp(10px,2.2vh,13px);color:#5f7896;letter-spacing:.12em;margin-bottom:1.2vh;}
   #loading .song{font-size:clamp(16px,3vh,26px);font-weight:800;letter-spacing:.06em;color:#f2f8ff;text-align:left;
     text-shadow:0 2px 14px rgba(0,0,0,.5);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:70vw;}
   #loading .artist{margin-top:6px;font-size:clamp(11px,1.9vh,15px);color:#c9d9ef;letter-spacing:.08em;text-align:left;
@@ -567,6 +568,7 @@
       <div class="diff" id="load-diff">MEDIUM</div>
     </div>
     <div class="meta">
+      <div class="load-hint">初次加载资源较慢，请耐心等待</div>
       <div class="song" id="load-song"></div>
       <div class="artist" id="load-artist"></div>
       <div class="txt" id="load-txt">正在读取音频…</div>
