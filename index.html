@@ -1736,45 +1736,50 @@ function drawJudgmentLine(g) {
   if (_keyCache.key !== keyKey) {
     _keyCache.key = keyKey; _keyCache.cellH = cellH;
     const y = g.judgeY - cellH / 2;
+    // 按键配色：胶囊形、上白下淡紫、发光描边、两端紫色圆点（严格按参考图）
     const nm = c.createLinearGradient(0, y, 0, y + cellH);
-    nm.addColorStop(0, 'rgba(196,178,255,.20)');
-    nm.addColorStop(.6, 'rgba(150,120,240,.13)');
-    nm.addColorStop(1, 'rgba(112,86,200,.10)');
+    nm.addColorStop(0, 'rgba(252,251,255,.95)');
+    nm.addColorStop(.55, 'rgba(230,224,250,.92)');
+    nm.addColorStop(1, 'rgba(198,190,234,.90)');
     const gl = c.createLinearGradient(0, y, 0, y + cellH);
-    gl.addColorStop(0, 'rgba(232,214,255,.62)');
-    gl.addColorStop(.55, 'rgba(178,132,255,.50)');
-    gl.addColorStop(1, 'rgba(126,84,224,.44)');
+    gl.addColorStop(0, 'rgba(255,255,255,.98)');
+    gl.addColorStop(.5, 'rgba(234,206,255,.96)');
+    gl.addColorStop(1, 'rgba(182,142,255,.94)');
     _keyCache.normal = nm; _keyCache.glow = gl;
   }
-  // 键盘格（每轨 2 格）
+  // 同排按键之间的横线：整条贯穿画在按键下层，从按键间隙与两端露出
+  c.save();
+  c.strokeStyle = 'rgba(238,235,255,.78)';
+  c.lineWidth = 2;
+  c.shadowColor = 'rgba(196,205,255,.9)'; c.shadowBlur = 7;
+  c.beginPath(); c.moveTo(left, g.judgeY); c.lineTo(right, g.judgeY); c.stroke();
+  c.restore();
+  // 键盘格（每轨 2 格）：胶囊按键 + 两端圆点
+  const dotR = Math.max(1.8, cellH * 0.10);
+  const dotInset = dotR + Math.max(2.5, cellH * 0.16);
+  const gap = Math.max(5, g.laneW * 0.045);   // 按键间距：留出缝隙让连接横线露出来
   for (let i = 0; i < G.lanes; i++) {
     for (let h = 0; h < 2; h++) {
-      const x = g.cx + (i - (G.lanes - 1) / 2) * g.laneW - g.laneW / 2 + (h * g.laneW / 2) + 2.5;
-      const w = g.laneW / 2 - 5;
+      const x = g.cx + (i - (G.lanes - 1) / 2) * g.laneW - g.laneW / 2 + (h * g.laneW / 2) + gap;
+      const w = g.laneW / 2 - gap * 2;
       const y = g.judgeY - cellH / 2;
       const glow = G.pressed[i * 2 + h] > 0 || G.laneFlash[i] > 0.5;
       c.save();
-      if (glow) { c.shadowColor = 'rgba(178,126,255,.95)'; c.shadowBlur = 12; }
-      roundRect(c, x, y, w, cellH, 6);
+      if (glow) { c.shadowColor = 'rgba(178,126,255,.95)'; c.shadowBlur = 14; }
+      else { c.shadowColor = 'rgba(165,205,255,.6)'; c.shadowBlur = 7; }
+      roundRect(c, x, y, w, cellH, cellH / 2);
       c.fillStyle = glow ? _keyCache.glow : _keyCache.normal;
       c.fill();
-      c.strokeStyle = glow ? 'rgba(246,238,255,.95)' : 'rgba(190,168,255,.46)';
-      c.lineWidth = 1.4;
+      c.strokeStyle = glow ? 'rgba(252,246,255,.98)' : 'rgba(226,241,255,.92)';
+      c.lineWidth = 1.6;
       c.stroke();
       c.restore();
+      // 两端的紫色圆点
+      c.fillStyle = glow ? 'rgba(138,98,230,.95)' : 'rgba(148,130,208,.82)';
+      c.beginPath(); c.arc(x + dotInset, g.judgeY, dotR, 0, Math.PI * 2); c.fill();
+      c.beginPath(); c.arc(x + w - dotInset, g.judgeY, dotR, 0, Math.PI * 2); c.fill();
     }
   }
-  // 判定线
-  c.save();
-  const grad = c.createLinearGradient(left, 0, right, 0);
-  grad.addColorStop(0, 'rgba(150,120,255,0)');
-  grad.addColorStop(.5, 'rgba(226,214,255,.95)');
-  grad.addColorStop(1, 'rgba(255,94,168,0)');
-  c.strokeStyle = grad;
-  c.lineWidth = 2.4;
-  c.shadowColor = 'rgba(168,130,255,.9)'; c.shadowBlur = 18;
-  c.beginPath(); c.moveTo(left, g.judgeY); c.lineTo(right, g.judgeY); c.stroke();
-  c.restore();
 }
 
 function drawNote(c, g, n, p, travel) {
