@@ -592,6 +592,13 @@ const UNITS = [
 ];
 const UNIT_MAP = Object.fromEntries(UNITS.map(u => [u.key, u]));
 
+/* 在线托管：部署在 GitHub Pages 上时，音频/图片改走 jsDelivr CDN（国内直连快得多）；
+   本地双击打开时保持相对路径，离线可用 */
+const CDN_BASE = location.hostname.endsWith('.github.io')
+  ? 'https://cdn.jsdelivr.net/gh/eeeeto/pjsk-game@main/' : '';
+const res = p => CDN_BASE ? CDN_BASE + p : p;
+if (CDN_BASE) document.querySelectorAll('.dev-avatar img').forEach(img => { img.src = res('assets/dev-avatar.jpg'); });
+
 /* 角色（按键图案库） */
 const CHARS = [
   ['ichika','星乃一歌'],['saki','天馬咲希'],['honami','望月穂波'],['shiho','日野森志歩'],
@@ -609,25 +616,25 @@ const SFX = [
   ['rui1','神代類','音效 / rui1'],['tsukasa','天馬司','音效 / tsukasa']
 ];
 const COVERS = [];
-['leoneed','mmj','vbs','wxs','n25'].forEach(k => { for (let i = 1; i <= 5; i++) COVERS.push([`assets/covers/${k}${i}.jpg`, UNIT_MAP[k].label]); });
-COVERS.push(['assets/covers/other1.jpg','其他']);
-COVERS.push(['assets/covers/vocaloid1.jpg','ボカロ']);
-COVERS.push(['assets/covers/zijiang1.jpg','枝江娱乐']);
-COVERS.push(['assets/covers/egirls1.jpg','E-girls']);
+['leoneed','mmj','vbs','wxs','n25'].forEach(k => { for (let i = 1; i <= 5; i++) COVERS.push([res(`assets/covers/${k}${i}.jpg`), UNIT_MAP[k].label]); });
+COVERS.push([res('assets/covers/other1.jpg'),'其他']);
+COVERS.push([res('assets/covers/vocaloid1.jpg'),'ボカロ']);
+COVERS.push([res('assets/covers/zijiang1.jpg'),'枝江娱乐']);
+COVERS.push([res('assets/covers/egirls1.jpg'),'E-girls']);
 
 /* 卡面（来自 sekai.best 卡面库，铺满全屏用） */
 const CARDS = [
-  ['assets/cards/c01.jpg','星乃一歌'],['assets/cards/c02.jpg','天馬咲希'],
-  ['assets/cards/c03.jpg','日野森志歩'],['assets/cards/c04.jpg','花里みのり'],
-  ['assets/cards/c05.jpg','桃井愛莉'],['assets/cards/c06.jpg','東雲彰人'],
-  ['assets/cards/c07.jpg','天馬司'],['assets/cards/c08.jpg','鳳えむ'],
-  ['assets/cards/c09.jpg','宵崎奏'],['assets/cards/c10.jpg','朝比奈まふゆ'],
-  ['assets/cards/c11.jpg','初音ミク'],['assets/cards/c12.jpg','KAITO']
+  [res('assets/cards/c01.jpg'),'星乃一歌'],[res('assets/cards/c02.jpg'),'天馬咲希'],
+  [res('assets/cards/c03.jpg'),'日野森志歩'],[res('assets/cards/c04.jpg'),'花里みのり'],
+  [res('assets/cards/c05.jpg'),'桃井愛莉'],[res('assets/cards/c06.jpg'),'東雲彰人'],
+  [res('assets/cards/c07.jpg'),'天馬司'],[res('assets/cards/c08.jpg'),'鳳えむ'],
+  [res('assets/cards/c09.jpg'),'宵崎奏'],[res('assets/cards/c10.jpg'),'朝比奈まふゆ'],
+  [res('assets/cards/c11.jpg'),'初音ミク'],[res('assets/cards/c12.jpg'),'KAITO']
 ];
 
 /* ---------- 设置存储 ---------- */
-const DEF_SET = { skin:'rect', sound:'default', bgMode:'album', bgCover:'assets/covers/leoneed1.jpg',
-  bgCard:'assets/cards/c11.jpg', bgCardShade:0.45, customSkin:null, sfxVolume:0.5, speed:7.0, diff:'normal' };
+const DEF_SET = { skin:'rect', sound:'default', bgMode:'album', bgCover:res('assets/covers/leoneed1.jpg'),
+  bgCard:res('assets/cards/c11.jpg'), bgCardShade:0.45, customSkin:null, sfxVolume:0.5, speed:7.0, diff:'normal' };
 let settings = Object.assign({}, DEF_SET);
 try {
   const raw = localStorage.getItem('sekai-fan-settings');
@@ -641,7 +648,7 @@ function saveSettings() {
   try { localStorage.setItem('sekai-fan-settings', JSON.stringify(settings)); } catch (e) {}
 }
 const SONGS = Array.isArray(window.SONGS) ? window.SONGS.slice() : [];
-SONGS.forEach((s, i) => { s._i = i; });
+SONGS.forEach((s, i) => { s._i = i; if (CDN_BASE) { if (s.file) s.file = CDN_BASE + s.file; if (s.cover) s.cover = CDN_BASE + s.cover; } });
 
 /* ---------- 背景应用 ---------- */
 function applyBackground() {
@@ -733,7 +740,7 @@ function buildSongList() {
       el.className = 'song-item';
       el.dataset.i = s._i;
       el.innerHTML = `
-        <div class="cover" style="background-image:url(${s.cover || 'assets/covers/other1.jpg'})"></div>
+        <div class="cover" style="background-image:url(${s.cover || res('assets/covers/other1.jpg')})"></div>
         <div class="meta">
           <div class="name">${escapeHTML(s.title)}${s.full ? '<span class="full">【full】</span>' : ''}</div>
           <div class="artist"><b>${escapeHTML(s.artist || '')}</b>${s.credit ? `<i> · ${escapeHTML(s.credit)}</i>` : ''}</div>
@@ -918,7 +925,7 @@ $('#song-scroll').addEventListener('scroll', () => {
 function openConfirm() {
   const s = SONGS[selectedIdx];
   if (!s) return;
-  $('#dc-cover').style.backgroundImage = `url(${s.cover || 'assets/covers/other1.jpg'})`;
+  $('#dc-cover').style.backgroundImage = `url(${s.cover || res('assets/covers/other1.jpg')})`;
   $('#dc-title').textContent = s.title + (s.full ? ' 【full】' : '');
   $('#dc-artist').textContent = s.artist || '';
   $$('#modal-confirm .pill').forEach(p => p.classList.toggle('on', p.dataset.diff === settings.diff));
@@ -1283,7 +1290,7 @@ function hashString(s) {
 async function loadHitSound() {
   try {
     const ac = audioCtx();
-    const file = settings.sound === 'default' ? 'assets/sfx/default.mp3' : `assets/sfx/${settings.sound}.mp3`;
+    const file = settings.sound === 'default' ? res('assets/sfx/default.mp3') : res(`assets/sfx/${settings.sound}.mp3`);
     const r = await fetch(file);
     const b = await r.arrayBuffer();
     G.hitSound = await ac.decodeAudioData(b);
@@ -1309,7 +1316,7 @@ function loadSkinImage() {
     const img = new Image();
     img.onload = () => { G.skinImg = img; res(); };
     img.onerror = () => { G.skinImg = null; res(); };
-    img.src = settings.skin === 'custom' ? settings.customSkin : `assets/keys/${settings.skin}.png`;
+    img.src = settings.skin === 'custom' ? settings.customSkin : res(`assets/keys/${settings.skin}.png`);
   });
 }
 
@@ -1973,7 +1980,7 @@ function renderSkins() {
   CHARS.forEach(([id, name]) => {
     const el = document.createElement('div');
     el.className = 'skin' + (settings.skin === id ? ' on' : '');
-    el.innerHTML = `<img src="assets/keys/${id}.png" alt="${name}" loading="lazy"><div class="lbl">${name}</div>`;
+    el.innerHTML = `<img src="${res('assets/keys/'+id+'.png')}" alt="${name}" loading="lazy"><div class="lbl">${name}</div>`;
     el.onclick = () => { settings.skin = id; saveSettings(); renderSkins(); };
     grid.appendChild(el);
   });
@@ -2053,7 +2060,7 @@ function stopSfxPreview() {
 async function startSfxPreview(id) {
   stopSfxPreview();
   const token = ++sfxPrevToken;
-  const file = id === 'default' ? 'assets/sfx/default.mp3' : `assets/sfx/${id}.mp3`;
+  const file = id === 'default' ? res('assets/sfx/default.mp3') : res(`assets/sfx/${id}.mp3`);
   try {
     const ac = audioCtx();
     if (ac.state === 'suspended') { try { await ac.resume(); } catch (e) {} }
