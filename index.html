@@ -212,6 +212,12 @@
   .skin.on{border-color:rgba(37,226,255,.75);background:rgba(37,226,255,.1);box-shadow:0 0 0 1px rgba(37,226,255,.3),0 0 22px rgba(37,226,255,.2);}
   .skin.rect{background:rgba(8,14,26,.6);}  .skin.rect .rectprev{width:76%;height:26%;border-radius:6px;
     background:linear-gradient(180deg,#eafcff,#7fe9ff 45%,#39c6ff);box-shadow:0 0 18px rgba(80,220,255,.8),inset 0 1px 0 #fff;}
+  .skin.pill{background:rgba(8,14,26,.6);}  .skin.pill .pillprev{position:relative;width:76%;height:26%;border-radius:999px;
+    background:linear-gradient(180deg,#fcfbff,#e6e0fa 55%,#c6beea);
+    border:1px solid rgba(226,241,255,.92);box-shadow:0 0 14px rgba(165,205,255,.55);}
+  .skin.pill .pillprev::before,.skin.pill .pillprev::after{content:"";position:absolute;top:50%;width:12%;aspect-ratio:1/1;
+    border-radius:50%;background:#9482d0;transform:translateY(-50%);}
+  .skin.pill .pillprev::before{left:9%;}  .skin.pill .pillprev::after{right:9%;}
   .vol-row{display:flex;align-items:center;gap:12px;margin:0 0 12px;padding:8px 14px;border-radius:12px;
     background:rgba(12,22,40,.6);border:1px solid rgba(90,180,255,.16);}
   .vol-row .vol-lbl{flex:0 0 auto;font-size:clamp(10px,1.7vh,13px);font-weight:800;letter-spacing:.06em;color:#b7cfe9;}
@@ -422,7 +428,7 @@
     </div>
     <div class="settings-body">
       <div class="panel on" id="panel-skin">
-        <p class="hint">默认图案为浅蓝色发光长方形；选择角色后，短键会压扁小人，长键会出现连续的小人。也可以导入自己的图片作为按键图标（建议透明背景 PNG）。</p>
+        <p class="hint">默认图案为白色发光胶囊按键（两端的紫色圆点为装饰），可切回经典浅蓝长方形；选择角色后，短键会压扁小人，长键会出现连续的小人。也可以导入自己的图片作为按键图标（建议透明背景 PNG）。</p>
         <div class="skin-grid" id="skin-grid"></div>
         <input type="file" id="skin-file" accept="image/*" style="display:none">
       </div>
@@ -679,7 +685,7 @@ const CARDS = [
 ];
 
 /* ---------- 设置存储 ---------- */
-const DEF_SET = { skin:'rect', sound:'default', bgMode:'album', bgCover:res('assets/covers/leoneed1.jpg'),
+const DEF_SET = { skin:'pill', sound:'default', bgMode:'album', bgCover:res('assets/covers/leoneed1.jpg'),
   bgCard:res('assets/cards/c11.jpg'), bgCardShade:0.45, customSkin:null, sfxVolume:0.5, speed:7.0, diff:'normal' };
 let settings = Object.assign({}, DEF_SET);
 try {
@@ -690,6 +696,12 @@ try {
 if (settings.bgMode === 'cover' || settings.bgMode === 'image') settings.bgMode = 'album';
 if (!settings.bgCard && settings.bgImage) settings.bgCard = settings.bgImage;
 if (typeof settings.bgCardShade !== 'number') settings.bgCardShade = 0.45;
+// 按键样式升级：老用户的「默认长方形」一次性切换为新的胶囊按键（之后仍可在设置里选回长方形）
+if (!settings._skinV2) {
+  if (settings.skin === 'rect') settings.skin = 'pill';
+  settings._skinV2 = 1;
+  saveSettings();
+}
 function saveSettings() {
   try { localStorage.setItem('sekai-fan-settings', JSON.stringify(settings)); } catch (e) {}
 }
@@ -1365,7 +1377,7 @@ function playHitSound() {
 
 function loadSkinImage() {
   return new Promise(done => {
-    if (settings.skin === 'rect') { G.skinImg = null; done(); return; }
+    if (settings.skin === 'rect' || settings.skin === 'pill') { G.skinImg = null; done(); return; }
     if (settings.skin === 'custom' && !settings.customSkin) { G.skinImg = null; done(); return; }
     const img = new Image();
     img.onload = () => { G.skinImg = img; done(); };
@@ -1727,16 +1739,17 @@ function drawLanes(g) {
   c.shadowBlur = 0;
 }
 
-let _keyCache = { key: '', normal: null, glow: null, cellH: 0 };
+let _keyCache = { key: '', normal: null, glow: null, rectNormal: null, rectGlow: null, cellH: 0 };
 function drawJudgmentLine(g) {
   const c = ctx2d;
   const left = g.cx - (G.lanes / 2) * g.laneW, right = g.cx + (G.lanes / 2) * g.laneW;
   const cellH = Math.min(g.laneW * 0.26, g.H * 0.052);
   const keyKey = `${g.W}x${g.H}x${G.lanes}`;
+  const pill = settings.skin !== 'rect';   // rect = 旧长方形样式，其余均为胶囊按键
   if (_keyCache.key !== keyKey) {
     _keyCache.key = keyKey; _keyCache.cellH = cellH;
     const y = g.judgeY - cellH / 2;
-    // 按键配色：胶囊形、上白下淡紫、发光描边、两端紫色圆点（严格按参考图）
+    // 胶囊按键：上白下淡紫、不透明（按参考图）
     const nm = c.createLinearGradient(0, y, 0, y + cellH);
     nm.addColorStop(0, 'rgba(252,251,255,.95)');
     nm.addColorStop(.55, 'rgba(230,224,250,.92)');
@@ -1745,19 +1758,36 @@ function drawJudgmentLine(g) {
     gl.addColorStop(0, 'rgba(255,255,255,.98)');
     gl.addColorStop(.5, 'rgba(234,206,255,.96)');
     gl.addColorStop(1, 'rgba(182,142,255,.94)');
+    // 旧长方形：浅蓝半透明（保留为第二选项）
+    const rm = c.createLinearGradient(0, y, 0, y + cellH);
+    rm.addColorStop(0, 'rgba(196,178,255,.20)');
+    rm.addColorStop(.6, 'rgba(150,120,240,.13)');
+    rm.addColorStop(1, 'rgba(112,86,200,.10)');
+    const rg = c.createLinearGradient(0, y, 0, y + cellH);
+    rg.addColorStop(0, 'rgba(232,214,255,.62)');
+    rg.addColorStop(.55, 'rgba(178,132,255,.50)');
+    rg.addColorStop(1, 'rgba(126,84,224,.44)');
     _keyCache.normal = nm; _keyCache.glow = gl;
+    _keyCache.rectNormal = rm; _keyCache.rectGlow = rg;
   }
-  // 同排按键之间的横线：整条贯穿画在按键下层，从按键间隙与两端露出
-  c.save();
-  c.strokeStyle = 'rgba(238,235,255,.78)';
-  c.lineWidth = 2;
-  c.shadowColor = 'rgba(196,205,255,.9)'; c.shadowBlur = 7;
-  c.beginPath(); c.moveTo(left, g.judgeY); c.lineTo(right, g.judgeY); c.stroke();
-  c.restore();
-  // 键盘格（每轨 2 格）：胶囊按键 + 两端圆点
+  // 判定线（原样保留）；胶囊模式画在按键下层，正好从按键间隙中穿过形成连接横线
+  const paintJudgeLine = () => {
+    c.save();
+    const grad = c.createLinearGradient(left, 0, right, 0);
+    grad.addColorStop(0, 'rgba(150,120,255,0)');
+    grad.addColorStop(.5, 'rgba(226,214,255,.95)');
+    grad.addColorStop(1, 'rgba(255,94,168,0)');
+    c.strokeStyle = grad;
+    c.lineWidth = 2.4;
+    c.shadowColor = 'rgba(168,130,255,.9)'; c.shadowBlur = 18;
+    c.beginPath(); c.moveTo(left, g.judgeY); c.lineTo(right, g.judgeY); c.stroke();
+    c.restore();
+  };
+  if (pill) paintJudgeLine();
+  // 键盘格（每轨 2 格）
   const dotR = Math.max(1.8, cellH * 0.10);
   const dotInset = dotR + Math.max(2.5, cellH * 0.16);
-  const gap = Math.max(5, g.laneW * 0.045);   // 按键间距：留出缝隙让连接横线露出来
+  const gap = Math.max(5, g.laneW * 0.045);   // 按键间距：留出缝隙让判定线在键之间露出来
   for (let i = 0; i < G.lanes; i++) {
     for (let h = 0; h < 2; h++) {
       const x = g.cx + (i - (G.lanes - 1) / 2) * g.laneW - g.laneW / 2 + (h * g.laneW / 2) + gap;
@@ -1765,21 +1795,34 @@ function drawJudgmentLine(g) {
       const y = g.judgeY - cellH / 2;
       const glow = G.pressed[i * 2 + h] > 0 || G.laneFlash[i] > 0.5;
       c.save();
-      if (glow) { c.shadowColor = 'rgba(178,126,255,.95)'; c.shadowBlur = 14; }
-      else { c.shadowColor = 'rgba(165,205,255,.6)'; c.shadowBlur = 7; }
-      roundRect(c, x, y, w, cellH, cellH / 2);
-      c.fillStyle = glow ? _keyCache.glow : _keyCache.normal;
-      c.fill();
-      c.strokeStyle = glow ? 'rgba(252,246,255,.98)' : 'rgba(226,241,255,.92)';
-      c.lineWidth = 1.6;
-      c.stroke();
-      c.restore();
-      // 两端的紫色圆点
-      c.fillStyle = glow ? 'rgba(138,98,230,.95)' : 'rgba(148,130,208,.82)';
-      c.beginPath(); c.arc(x + dotInset, g.judgeY, dotR, 0, Math.PI * 2); c.fill();
-      c.beginPath(); c.arc(x + w - dotInset, g.judgeY, dotR, 0, Math.PI * 2); c.fill();
+      if (pill) {
+        // 胶囊按键 + 两端紫色圆点
+        if (glow) { c.shadowColor = 'rgba(178,126,255,.95)'; c.shadowBlur = 14; }
+        else { c.shadowColor = 'rgba(165,205,255,.6)'; c.shadowBlur = 7; }
+        roundRect(c, x, y, w, cellH, cellH / 2);
+        c.fillStyle = glow ? _keyCache.glow : _keyCache.normal;
+        c.fill();
+        c.strokeStyle = glow ? 'rgba(252,246,255,.98)' : 'rgba(226,241,255,.92)';
+        c.lineWidth = 1.6;
+        c.stroke();
+        c.restore();
+        c.fillStyle = glow ? 'rgba(138,98,230,.95)' : 'rgba(148,130,208,.82)';
+        c.beginPath(); c.arc(x + dotInset, g.judgeY, dotR, 0, Math.PI * 2); c.fill();
+        c.beginPath(); c.arc(x + w - dotInset, g.judgeY, dotR, 0, Math.PI * 2); c.fill();
+      } else {
+        // 旧长方形按键
+        if (glow) { c.shadowColor = 'rgba(178,126,255,.95)'; c.shadowBlur = 12; }
+        roundRect(c, x, y, w, cellH, 6);
+        c.fillStyle = glow ? _keyCache.rectGlow : _keyCache.rectNormal;
+        c.fill();
+        c.strokeStyle = glow ? 'rgba(246,238,255,.95)' : 'rgba(190,168,255,.46)';
+        c.lineWidth = 1.4;
+        c.stroke();
+        c.restore();
+      }
     }
   }
+  if (!pill) paintJudgeLine();   // 旧样式：判定线画在按键上层，与原来一致
 }
 
 function drawNote(c, g, n, p, travel) {
@@ -2050,9 +2093,16 @@ function quitGame() {
 function renderSkins() {
   const grid = $('#skin-grid');
   grid.innerHTML = '';
+  // 第一个选项：胶囊按键（新默认，按参考图）
+  const pill = document.createElement('div');
+  pill.className = 'skin pill' + (settings.skin === 'pill' ? ' on' : '');
+  pill.innerHTML = `<div class="pillprev"></div><div class="lbl">发光胶囊按键</div>`;
+  pill.onclick = () => { settings.skin = 'pill'; saveSettings(); renderSkins(); };
+  grid.appendChild(pill);
+  // 第二个选项：之前的浅蓝长方形按键
   const rect = document.createElement('div');
   rect.className = 'skin rect' + (settings.skin === 'rect' ? ' on' : '');
-  rect.innerHTML = `<div class="rectprev"></div><div class="lbl">默认长方形</div>`;
+  rect.innerHTML = `<div class="rectprev"></div><div class="lbl">经典长方形</div>`;
   rect.onclick = () => { settings.skin = 'rect'; saveSettings(); renderSkins(); };
   grid.appendChild(rect);
   CHARS.forEach(([id, name]) => {
@@ -2073,7 +2123,7 @@ function renderSkins() {
     if (e.target.classList && e.target.classList.contains('del')) {
       e.stopPropagation();
       settings.customSkin = null;
-      if (settings.skin === 'custom') settings.skin = 'rect';
+      if (settings.skin === 'custom') settings.skin = 'pill';
       saveSettings(); renderSkins();
       return;
     }
