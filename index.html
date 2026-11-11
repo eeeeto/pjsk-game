@@ -1129,7 +1129,7 @@ function buildChart(rh, difficulty, seed) {
   const minGap = ultra ? Math.max(beat * 0.22, 0.095) : hard ? Math.max(beat * 0.25, 0.115) : Math.max(beat * 0.5, 0.2);
   const strengthFloor = ultra ? 0.05 : hard ? 0.07 : 0.17;
   const maxNotes = Math.floor(duration * (ultra ? 7.2 : hard ? 5.4 : 3.3));
-  const L = ultra ? 12 : 6;
+  const L = 6;
 
   const picked = [];
   let last = -10;
@@ -1209,12 +1209,18 @@ function buildChart(rh, difficulty, seed) {
       }
     }
 
-    notes.push({ t: c.t, lane, type: dur > 0 ? 'hold' : 'tap', dur });
+    // ultra：长按与和弦为大键，部分随机 tap 为半宽小键（落在该轨左/右半格）
+    let span = 2, cell = lane * 2;
+    if (ultra && dur === 0 && rnd() < 0.42) {
+      span = 1;
+      cell = lane * 2 + (rnd() < 0.5 ? 0 : 1);
+    }
+    notes.push({ t: c.t, lane, cell, span, type: dur > 0 ? 'hold' : 'tap', dur });
     laneFree[lane] = c.t + dur + (dur > 0 ? 0.09 : minGap * 0.6);
     if (chord && dur === 0) {
       let l2 = lane + (lane < 2 ? 2 : -2);
       if (l2 >= 0 && l2 < 6 && laneFree[l2] <= c.t) {
-        notes.push({ t: c.t, lane: l2, type: 'tap', dur: 0 });
+        notes.push({ t: c.t, lane: l2, cell: l2 * 2, span: 2, type: 'tap', dur: 0 });
         laneFree[l2] = c.t + minGap * 0.6;
       }
     }
@@ -1271,6 +1277,12 @@ function laneX(lane, t, g) {
   return lerp(tx, bx, t);
 }
 function laneY(t, g) { return g.topY + t * (g.judgeY - g.topY); }
+// 半格（小键）横向位置：12 格透视轨道
+function laneXCell(cell, t, g) {
+  const bx = g.cx + (cell - 5.5) * (g.laneW / 2);
+  const tx = g.cx + (cell - 5.5) * (g.laneW / 2) * 0.3;
+  return lerp(tx, bx, t);
+}
 
 // 同人向的宽松判定窗口（秒）：PERFECT ±110ms / GREAT ±190ms / GOOD ±270ms / BAD ±360ms
 function hitWindows() { return { perfect: 0.11, great: 0.19, good: 0.27, bad: 0.36 }; }
@@ -1352,12 +1364,12 @@ function playHitSound() {
 }
 
 function loadSkinImage() {
-  return new Promise(res => {
-    if (settings.skin === 'rect') { G.skinImg = null; res(); return; }
-    if (settings.skin === 'custom' && !settings.customSkin) { G.skinImg = null; res(); return; }
+  return new Promise(done => {
+    if (settings.skin === 'rect') { G.skinImg = null; done(); return; }
+    if (settings.skin === 'custom' && !settings.customSkin) { G.skinImg = null; done(); return; }
     const img = new Image();
-    img.onload = () => { G.skinImg = img; res(); };
-    img.onerror = () => { G.skinImg = null; res(); };
+    img.onload = () => { G.skinImg = img; done(); };
+    img.onerror = () => { G.skinImg = null; done(); };
     img.src = settings.skin === 'custom' ? settings.customSkin : res(`assets/keys/${settings.skin}.png`);
   });
 }
@@ -1369,7 +1381,7 @@ function initGame(song, buffer, notes, diff, speed) {
   G.song = song; G.buffer = buffer; G.duration = buffer.duration;
   G.notes = notes.map(n => ({ ...n, judged: false, holdState: 0, holdNote: false, t: n.t }));
   G.counts = { perfect: 0, great: 0, good: 0, bad: 0, miss: 0 };
-  G.lanes = diff === 'ultra' ? 12 : 6;
+  G.lanes = 6; G.ultra = diff === 'ultra';
   G.pressed = new Array(G.lanes * 2).fill(0);
   G.laneFlash = new Array(G.lanes).fill(0);
   G.combo = 0; G.maxCombo = 0; G.hp = 1000; G.maxHp = 1000; G.damage = 0;
@@ -1427,13 +1439,16 @@ function applyJudge(kind, note, lane) {
   playHitSound();
 }
 
-function judgePress(lane) {
+function judgePress(cell) {
+  const lane = cell >> 1;
   const w = hitWindows();
   const now = G.now;
   let best = null, bd = 1e9;
   for (const n of G.notes) {
     if (n.judged) continue;
-    if (n.lane !== lane) continue;
+    // 大键：命中轨道任一半格；小键：必须精确命中所在半格
+    if (n.span === 1) { if (n.cell !== cell) continue; }
+    else if (n.lane !== lane) continue;
     const d = n.t - now;
     if (d > w.bad + 0.05) break;
     if (d < -w.bad) continue;
@@ -1534,7 +1549,7 @@ cv.addEventListener('pointerdown', e => {
   G.pointerMap.set(e.pointerId, cell);
   G.pressed[cell] = 1;
   G.laneFlash[lane] = 1;
-  judgePress(lane);
+  judgePress(cell);
 }, { passive: false });
 cv.addEventListener('pointerup', e => {
   const cell = G.pointerMap.get(e.pointerId);
@@ -1555,19 +1570,19 @@ cv.addEventListener('pointercancel', e => {
   if (!still) releaseLane(lane);
 }, { passive: true });
 
-  const KEYMAP6 = { a: 0, s: 1, d: 2, j: 3, k: 4, l: 5 };
-  const KEYMAP12 = { q: 0, w: 1, e: 2, r: 3, t: 4, y: 5, a: 6, s: 7, d: 8, f: 9, g: 10, h: 11 };
+  const KEYMAP6 = { a: 0, s: 2, d: 4, j: 6, k: 8, l: 10 };   // 每键=整轨（偶数格）
+  const KEYMAP12 = { q: 0, w: 1, e: 2, r: 3, t: 4, y: 5, a: 6, s: 7, d: 8, f: 9, g: 10, h: 11 }; // 每键=半格
 window.addEventListener('keydown', e => {
   if (screen !== 'game' || !G.active || G.paused) return;
-  const lane = (G.lanes === 12 ? KEYMAP12 : KEYMAP6)[e.key.toLowerCase()];
-  if (lane != null && !e.repeat) {
-    G.pressed[lane * 2] = 1; G.laneFlash[lane] = 1; judgePress(lane);
+  const cell = (G.ultra ? KEYMAP12 : KEYMAP6)[e.key.toLowerCase()];
+  if (cell != null && !e.repeat) {
+    G.pressed[cell] = 1; G.laneFlash[cell >> 1] = 1; judgePress(cell);
   }
   if (e.key === 'Escape') togglePause();
 });
 window.addEventListener('keyup', e => {
-  const lane = (G.lanes === 12 ? KEYMAP12 : KEYMAP6)[e.key.toLowerCase()];
-  if (lane != null) { releaseLane(lane); G.pressed[lane * 2] = 0; }
+  const cell = (G.ultra ? KEYMAP12 : KEYMAP6)[e.key.toLowerCase()];
+  if (cell != null) { releaseLane(cell >> 1); G.pressed[cell] = 0; }
 });
 
 /* ---------- 主循环 ---------- */
@@ -1768,9 +1783,9 @@ function drawNote(c, g, n, p, travel) {
   // 下落速度与音符大小成正比（远处小→慢、近处大→快），消除"越靠近越慢"的透视错觉
   const tw = (0.38 * t + 0.31 * t * t) / 0.69;
   const scale = lerp(0.38, 1, t);
-  const x = laneX(n.lane, tw, g);
+  const x = n.span === 1 ? laneXCell(n.cell, tw, g) : laneX(n.lane, tw, g);
   const y = laneY(tw, g);
-  const size = g.laneW * 0.94 * scale;
+  const size = g.laneW * 0.94 * scale * (n.span === 1 ? 0.52 : 1);
 
   const holdLive = n.type === 'hold' && n.holdState !== 2 && n.holdState !== 3 && n.holdState !== 4;
   if (holdLive) {
