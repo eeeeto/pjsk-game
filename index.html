@@ -266,6 +266,11 @@
 
   /* ---------- 游戏 ---------- */
   #screen-game{background:transparent;}
+  /* 底部彩虹进度条 */
+  #prog{position:absolute;left:0;bottom:0;width:100%;height:5px;background:rgba(10,14,26,.55);z-index:25;pointer-events:none;}
+  #prog-fill{height:100%;width:0%;
+    background:linear-gradient(90deg,#ff5e5e,#ffb84d,#ffe94d,#6dff8a,#5ea8ff,#b06dff,#ff5ec4);
+    box-shadow:0 0 8px rgba(255,120,180,.5);}
   #cv{position:absolute;inset:0;width:100%;height:100%;display:block;}
   #pause-btn{position:absolute;top:max(10px,env(safe-area-inset-top));right:max(12px,env(safe-area-inset-right));
     width:40px;height:40px;border-radius:50%;border:1px solid rgba(150,210,255,.3);background:rgba(8,14,26,.55);
@@ -499,6 +504,7 @@
   <!-- ================= 游戏 ================= -->
   <section id="screen-game" class="screen">
     <canvas id="cv"></canvas>
+    <div id="prog"><div id="prog-fill"></div></div>
     <button id="pause-btn">❚❚</button>
   </section>
 
@@ -517,6 +523,7 @@
     <div class="res-extra" id="res-extra"></div>
     <div class="res-actions">
       <button class="btn ghost" id="res-again">再次演奏</button>
+      <button class="btn pink" id="res-share">分 享</button>
       <button class="btn" id="res-home">回到主页</button>
     </div>
   </section>
@@ -538,6 +545,7 @@
       <div class="pills">
         <div class="pill on" data-diff="normal">中 等</div>
         <div class="pill" data-diff="hard">稍 高</div>
+        <div class="pill" data-diff="ultra">超 高</div>
       </div>
     </div>
     <div class="field">
@@ -581,11 +589,30 @@
 <div id="rotate"><div class="ph"></div><p>请旋转设备 · 横屏游玩</p></div>
 
 <script>
-/* 歌曲清单：GitHub Pages 上改走 jsDelivr（与主资源一致，避免国内直连卡住主脚本） */
-if (location.hostname.endsWith('.github.io'))
-  document.write('<script src="https://cdn.jsdelivr.net/gh/eeeeto/pjsk-game@main/songs/manifest.js"><\/script>');
-else
-  document.write('<script src="songs/manifest.js"><\/script>');
+/* 歌曲清单：GitHub Pages 上依次尝试多个镜像源（国内部分域名可能被墙），
+   拿到内容后内联执行；本地打开直接用相对路径 */
+(function () {
+  const sources = location.hostname.endsWith('.github.io')
+    ? ['https://gcore.jsdelivr.net/gh/eeeeto/pjsk-game@main/songs/manifest.js',
+       'https://fastly.jsdelivr.net/gh/eeeeto/pjsk-game@main/songs/manifest.js',
+       'https://cdn.jsdelivr.net/gh/eeeeto/pjsk-game@main/songs/manifest.js',
+       'songs/manifest.js']
+    : ['songs/manifest.js'];
+  let loaded = false;
+  for (const u of sources) {
+    try {
+      const x = new XMLHttpRequest();
+      x.open('GET', u, false); // 同步：保证在主脚本执行前就绪
+      x.send(null);
+      if (x.status === 200 && x.responseText && x.responseText.length > 200) {
+        document.write('<script>\n' + x.responseText + '\n<\/script>');
+        loaded = true;
+        break;
+      }
+    } catch (e) { /* 该源不可用，尝试下一个 */ }
+  }
+  if (!loaded) window.__manifestFailed = true;
+})();
 </script>
 <script>
 /* ============================================================
@@ -813,54 +840,30 @@ function setPreviewLoading(on) {
   } else if (s) s.remove();
 }
 
-/* 用 WebAudio 解码后从中段播放——不依赖服务器 Range 支持，切换即时且可控 */
-async function playPreview(song) {
+/* 用 <audio> 流式播放——边下边播，几秒内出声；从歌曲约 34% 处开始 */
+function playPreview(song) {
   if (!song) return;
-  if (previewBufFile === song.file && previewNode) return;   // 同一首正在播
+  if (previewAudioFallback && previewAudioFallback.dataset.file === song.file && !previewAudioFallback.paused) return; // 同一首正在播
   stopPreview();
-  const token = ++previewToken;
-  const ac = audioCtx();
   setPreviewLoading(true);
-  try {
-    let buf = (previewBufFile === song.file) ? previewBuf : null;
-    if (!buf) {
-      previewAbort = new AbortController();
-      const resp = await fetch(encodeURI(song.file), { signal: previewAbort.signal, cache: 'force-cache' });
-      if (!resp.ok) throw new Error('HTTP ' + resp.status);
-      const ab = await resp.arrayBuffer();
-      if (token !== previewToken) return;
-      buf = await ac.decodeAudioData(ab);
-      if (token !== previewToken) return;
-      previewBuf = buf; previewBufFile = song.file;
+  const a = new Audio(encodeURI(song.file));
+  a.preload = 'auto';
+  a.volume = 0.5;
+  a.dataset.file = song.file;
+  let seekDone = false;
+  a.addEventListener('loadedmetadata', () => {
+    if (!seekDone && isFinite(a.duration) && a.duration > 40) {
+      seekDone = true;
+      try { a.currentTime = Math.min(a.duration * 0.34, a.duration - 32); } catch (e) {}
     }
-    const src = ac.createBufferSource();
-    const gain = ac.createGain();
-    src.buffer = buf;
-    src.connect(gain); gain.connect(ac.destination);
-    const offset = Math.min(Math.max(6, buf.duration * 0.34), Math.max(0, buf.duration - 32));
-    const now = ac.currentTime;
-    gain.gain.setValueAtTime(0.0001, now);
-    gain.gain.exponentialRampToValueAtTime(0.55, now + 0.55);
-    src.start(now + 0.02, offset);
-    previewNode = src; previewGain = gain;
-    src.onended = () => { if (previewNode === src) { previewNode = null; previewGain = null; } };
-    // 试听 30 秒后淡出
-    previewStopTimer = setTimeout(() => {
-      if (previewNode !== src) return;
-      try {
-        gain.gain.cancelScheduledValues(ac.currentTime);
-        gain.gain.setValueAtTime(gain.gain.value, ac.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.5);
-        setTimeout(() => { try { src.stop(); } catch (e) {} }, 620);
-      } catch (e) {}
-    }, 30000);
-  } catch (e) {
-    if (e && e.name === 'AbortError') return;
-    console.warn('[preview] decode failed, fallback to <audio>', e);
-    fallbackPreview(song);
-  } finally {
-    if (token === previewToken) setPreviewLoading(false);
-  }
+  });
+  a.addEventListener('playing', () => { if (previewAudioFallback === a) setPreviewLoading(false); });
+  a.addEventListener('error', () => { if (previewAudioFallback === a) setPreviewLoading(false); });
+  previewAudioFallback = a;
+  const pr = a.play();
+  if (pr && pr.catch) pr.catch(() => { setPreviewLoading(false); showAudioHint(); });
+  // 试听 30 秒后停止
+  previewStopTimer = setTimeout(() => { if (previewAudioFallback === a) stopPreview(); }, 30000);
 }
 
 function fallbackPreview(song) {
@@ -1119,14 +1122,31 @@ function analyzeRhythm(buffer) {
 function buildChart(rh, difficulty, seed) {
   const { beat, cands, rms, hopSec, duration } = rh;
   const rnd = mulberry32(seed >>> 0);
-  const hard = difficulty === 'hard';
-  const minGap = hard ? Math.max(beat * 0.25, 0.115) : Math.max(beat * 0.5, 0.2);
-  const strengthFloor = hard ? 0.07 : 0.17;
-  const maxNotes = Math.floor(duration * (hard ? 5.4 : 3.3));
+  const ultra = difficulty === 'ultra';
+  const hard = difficulty !== 'normal';
+  const minGap = ultra ? Math.max(beat * 0.22, 0.095) : hard ? Math.max(beat * 0.25, 0.115) : Math.max(beat * 0.5, 0.2);
+  const strengthFloor = ultra ? 0.05 : hard ? 0.07 : 0.17;
+  const maxNotes = Math.floor(duration * (ultra ? 7.2 : hard ? 5.4 : 3.3));
+  const L = ultra ? 12 : 6;
 
   const picked = [];
   let last = -10;
-  cands.forEach((c, i) => {
+  // ultra：把候选拍再细分一半，让密度更高
+  let candsUse = cands;
+  if (ultra) {
+    const fine = [];
+    for (let i = 0; i < cands.length; i++) {
+      fine.push(cands[i]);
+      if (i + 1 < cands.length && cands[i + 1].t - cands[i].t >= beat * 0.5) {
+        const t2 = (cands[i].t + cands[i + 1].t) / 2;
+        const s2 = (cands[i].s + cands[i + 1].s) / 2 * 0.8;
+        if (s2 >= strengthFloor) fine.push({ t: t2, s: s2 });
+      }
+    }
+    fine.sort((a, b) => a.t - b.t);
+    candsUse = fine;
+  }
+  candsUse.forEach((c, i) => {
     if (c.s < strengthFloor) return;
     if (c.t - last < minGap) {
       // 保留更强的
@@ -1147,7 +1167,7 @@ function buildChart(rh, difficulty, seed) {
   }
 
   const notes = [];
-  const laneFree = [0, 0, 0, 0, 0, 0];
+  const laneFree = new Array(L).fill(0);
   let prevLane = -1, prev2Lane = -1;
   const maxStrength = picked.reduce((m, c) => Math.max(m, c.s), 0.001);
 
@@ -1163,15 +1183,15 @@ function buildChart(rh, difficulty, seed) {
     let lane;
     let guard = 0;
     do {
-      lane = Math.floor(rnd() * 6);
+      lane = Math.floor(rnd() * L);
       guard++;
     } while (guard < 12 && (lane === prevLane && lane === prev2Lane));
     if (lane === prevLane) {
       // 优先跳到另一侧，避免同轨连打
-      lane = (lane + 3) % 6;
+      lane = (lane + L / 2) % L;
     }
-    if (laneFree[lane] > c.t) lane = (lane + 1) % 6;
-    if (laneFree[lane] > c.t) lane = (lane + 4) % 6;
+    if (laneFree[lane] > c.t) lane = (lane + 1) % L;
+    if (laneFree[lane] > c.t) lane = (lane + 4) % L;
     if (laneFree[lane] > c.t) continue;
 
     // 长按
@@ -1214,7 +1234,7 @@ const FF = getComputedStyle(document.body).fontFamily || 'sans-serif';
 const G = {
   active: false, paused: false, song: null, notes: [], counts: { perfect: 0, great: 0, good: 0, bad: 0, miss: 0 },
   combo: 0, maxCombo: 0, hp: 1000, maxHp: 1000, damage: 0, now: 0, startAt: 0,
-  source: null, buffer: null, duration: 0, speed: 7, diff: 'normal',
+  source: null, buffer: null, duration: 0, speed: 7, diff: 'normal', lanes: 6,
   effects: [], pressed: new Array(12).fill(0), pointerMap: new Map(), holding: new Map(),
   hitSound: null, skinImg: null, finished: false, laneFlash: new Array(6).fill(0), leadIn: 2.6,
   totalNotes: 0, judged: 0, lastCombo: 0, comboPop: 0, result: null
@@ -1233,7 +1253,9 @@ window.addEventListener('resize', () => { if (screen === 'game') resizeCanvas();
 
 function geometry() {
   const W = VW, H = VH;
-  const laneW = W / 6;              // 轨道最下端（判定线）与屏幕等宽
+  // 手机端（窄屏）轨道整体收窄一点；超高难度轨道数为 12
+  const span = W < 960 ? W * 0.9 : W;
+  const laneW = span / G.lanes;     // 轨道最下端与（收窄后的）可用宽度等宽
   const cx = W * 0.5;
   const judgeY = H * 0.865;
   const topY = H * 0.155;
@@ -1241,8 +1263,9 @@ function geometry() {
 }
 // t: 0 = 轨道最远端（顶部、窄），1 = 判定线（底部、宽）
 function laneX(lane, t, g) {
-  const bx = g.cx + (lane - 2.5) * g.laneW;
-  const tx = g.cx + (lane - 2.5) * g.laneW * 0.3;
+  const half = (G.lanes - 1) / 2;
+  const bx = g.cx + (lane - half) * g.laneW;
+  const tx = g.cx + (lane - half) * g.laneW * 0.3;
   return lerp(tx, bx, t);
 }
 function laneY(t, g) { return g.topY + t * (g.judgeY - g.topY); }
@@ -1262,7 +1285,7 @@ async function startGame(song, diff, speed) {
   const cov = $('#load-cover');
   cov.style.backgroundImage = song.cover ? `url(${encodeURI(song.cover)})` : 'none';
   const dEl = $('#load-diff');
-  dEl.textContent = diff === 'hard' ? 'HARD' : 'MEDIUM';
+  dEl.textContent = diff === 'hard' ? 'HARD' : (diff === 'ultra' ? 'MASTER' : 'MEDIUM');
   $('#load-txt').textContent = '正在读取音频…';
   show('game');
   await new Promise(r => setTimeout(r, 60));
@@ -1339,10 +1362,14 @@ function loadSkinImage() {
 
 function initGame(song, buffer, notes, diff, speed) {
   resizeCanvas();
+  G.progFill = $('#prog-fill'); G.lastProg = -1;
   G.active = true; G.paused = false; G.finished = false;
   G.song = song; G.buffer = buffer; G.duration = buffer.duration;
   G.notes = notes.map(n => ({ ...n, judged: false, holdState: 0, holdNote: false, t: n.t }));
   G.counts = { perfect: 0, great: 0, good: 0, bad: 0, miss: 0 };
+  G.lanes = diff === 'ultra' ? 12 : 6;
+  G.pressed = new Array(G.lanes * 2).fill(0);
+  G.laneFlash = new Array(G.lanes).fill(0);
   G.combo = 0; G.maxCombo = 0; G.hp = 1000; G.maxHp = 1000; G.damage = 0;
   G.effects = []; G.pressed.fill(0); G.pointerMap.clear(); G.holding.clear();
   G.laneFlash.fill(0); G.speed = speed; G.diff = diff;
@@ -1487,11 +1514,12 @@ function releaseLane(lane) {
 function cellAt(x, y) {
   const g = geometry();
   if (y < g.topY + g.H * 0.05) return -1;
-  const lane = Math.floor((x - (g.cx - 3 * g.laneW)) / g.laneW);
-  if (lane < 0 || lane > 5) return -1;
-  const fx = x - (g.cx + (lane - 2.5) * g.laneW);
-  const half = fx >= 0 ? 1 : 0;
-  return lane * 2 + half;
+  const half = (G.lanes - 1) / 2;
+  const lane = Math.floor((x - (g.cx - (G.lanes / 2) * g.laneW)) / g.laneW);
+  if (lane < 0 || lane >= G.lanes) return -1;
+  const fx = x - (g.cx + (lane - half) * g.laneW);
+  const side = fx >= 0 ? 1 : 0;
+  return lane * 2 + side;
 }
 cv.addEventListener('pointerdown', e => {
   if (!G.active || G.paused || G.finished) return;
@@ -1525,17 +1553,18 @@ cv.addEventListener('pointercancel', e => {
   if (!still) releaseLane(lane);
 }, { passive: true });
 
-  const KEYMAP = { a: 0, s: 1, d: 2, j: 3, k: 4, l: 5 };
+  const KEYMAP6 = { a: 0, s: 1, d: 2, j: 3, k: 4, l: 5 };
+  const KEYMAP12 = { q: 0, w: 1, e: 2, r: 3, t: 4, y: 5, a: 6, s: 7, d: 8, f: 9, g: 10, h: 11 };
 window.addEventListener('keydown', e => {
   if (screen !== 'game' || !G.active || G.paused) return;
-  const lane = KEYMAP[e.key.toLowerCase()];
+  const lane = (G.lanes === 12 ? KEYMAP12 : KEYMAP6)[e.key.toLowerCase()];
   if (lane != null && !e.repeat) {
     G.pressed[lane * 2] = 1; G.laneFlash[lane] = 1; judgePress(lane);
   }
   if (e.key === 'Escape') togglePause();
 });
 window.addEventListener('keyup', e => {
-  const lane = KEYMAP[e.key.toLowerCase()];
+  const lane = (G.lanes === 12 ? KEYMAP12 : KEYMAP6)[e.key.toLowerCase()];
   if (lane != null) { releaseLane(lane); G.pressed[lane * 2] = 0; }
 });
 
@@ -1546,6 +1575,12 @@ function loop(ts) {
   G.lastFrame = ts;
   if (!G.paused && !G.finished) {
     G.now = AC.currentTime - G.startAt;
+    // 底部彩虹进度条
+    if (G.progFill) {
+      const pr = Math.min(1, Math.max(0, G.now / G.duration));
+      const pct = Math.round(pr * 1000) / 10;
+      if (pct !== G.lastProg) { G.lastProg = pct; G.progFill.style.width = pct + '%'; }
+    }
     // miss 检测
     const w = hitWindows();
     for (const n of G.notes) {
@@ -1634,11 +1669,11 @@ function draw() {
 let _laneCache = { key: '', grads: [] };
 function drawLanes(g) {
   const c = ctx2d;
-  const laneKey = `${g.W}x${g.H}`;
+  const laneKey = `${g.W}x${g.H}x${G.lanes}`;
   if (_laneCache.key !== laneKey) {
     _laneCache.key = laneKey;
     _laneCache.grads = [];
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < G.lanes; i++) {
       const grad = c.createLinearGradient(0, g.topY, 0, g.judgeY);
       grad.addColorStop(0, i % 2 ? 'rgba(130,110,230,.014)' : 'rgba(140,118,240,.032)');
       grad.addColorStop(1, i % 2 ? 'rgba(168,140,255,.075)' : 'rgba(180,152,255,.115)');
@@ -1646,9 +1681,9 @@ function drawLanes(g) {
     }
   }
   const topW = g.laneW * 0.3;
-  for (let i = 0; i < 6; i++) {
-    const bx = g.cx + (i - 2.5) * g.laneW;
-    const tx = g.cx + (i - 2.5) * g.laneW * 0.3;
+  for (let i = 0; i < G.lanes; i++) {
+    const bx = g.cx + (i - (G.lanes - 1) / 2) * g.laneW;
+    const tx = g.cx + (i - (G.lanes - 1) / 2) * g.laneW * 0.3;
     c.beginPath();
     c.moveTo(tx - topW / 2, g.topY);
     c.lineTo(tx + topW / 2, g.topY);
@@ -1662,8 +1697,9 @@ function drawLanes(g) {
     c.stroke();
   }
   // 外侧边框
-  const leftB = g.cx - 3 * g.laneW, rightB = g.cx + 3 * g.laneW;
-  const leftT = g.cx - 3 * g.laneW * 0.3, rightT = g.cx + 3 * g.laneW * 0.3;
+  const HB = (G.lanes / 2) * g.laneW;
+  const leftB = g.cx - HB, rightB = g.cx + HB;
+  const leftT = g.cx - HB * 0.3, rightT = g.cx + HB * 0.3;
   c.beginPath();
   c.moveTo(leftT, g.topY); c.lineTo(leftB, g.judgeY);
   c.moveTo(rightT, g.topY); c.lineTo(rightB, g.judgeY);
@@ -1677,9 +1713,9 @@ function drawLanes(g) {
 let _keyCache = { key: '', normal: null, glow: null, cellH: 0 };
 function drawJudgmentLine(g) {
   const c = ctx2d;
-  const left = g.cx - 3 * g.laneW, right = g.cx + 3 * g.laneW;
+  const left = g.cx - (G.lanes / 2) * g.laneW, right = g.cx + (G.lanes / 2) * g.laneW;
   const cellH = Math.min(g.laneW * 0.26, g.H * 0.052);
-  const keyKey = `${g.W}x${g.H}`;
+  const keyKey = `${g.W}x${g.H}x${G.lanes}`;
   if (_keyCache.key !== keyKey) {
     _keyCache.key = keyKey; _keyCache.cellH = cellH;
     const y = g.judgeY - cellH / 2;
@@ -1693,10 +1729,10 @@ function drawJudgmentLine(g) {
     gl.addColorStop(1, 'rgba(126,84,224,.44)');
     _keyCache.normal = nm; _keyCache.glow = gl;
   }
-  // 12 格键盘
-  for (let i = 0; i < 6; i++) {
+  // 键盘格（每轨 2 格）
+  for (let i = 0; i < G.lanes; i++) {
     for (let h = 0; h < 2; h++) {
-      const x = g.cx + (i - 2.5) * g.laneW - g.laneW / 2 + (h * g.laneW / 2) + 2.5;
+      const x = g.cx + (i - (G.lanes - 1) / 2) * g.laneW - g.laneW / 2 + (h * g.laneW / 2) + 2.5;
       const w = g.laneW / 2 - 5;
       const y = g.judgeY - cellH / 2;
       const glow = G.pressed[i * 2 + h] > 0 || G.laneFlash[i] > 0.5;
@@ -1727,9 +1763,11 @@ function drawJudgmentLine(g) {
 function drawNote(c, g, n, p, travel) {
   // p: 1 = 刚生成（最远）, 0 = 正落在判定线
   const t = 1 - clamp(p, 0, 1);              // 0 = 远 / 1 = 近
+  // 下落速度与音符大小成正比（远处小→慢、近处大→快），消除"越靠近越慢"的透视错觉
+  const tw = (0.38 * t + 0.31 * t * t) / 0.69;
   const scale = lerp(0.38, 1, t);
-  const x = laneX(n.lane, t, g);
-  const y = laneY(t, g);
+  const x = laneX(n.lane, tw, g);
+  const y = laneY(tw, g);
   const size = g.laneW * 0.94 * scale;
 
   const holdLive = n.type === 'hold' && n.holdState !== 2 && n.holdState !== 3 && n.holdState !== 4;
@@ -1737,7 +1775,8 @@ function drawNote(c, g, n, p, travel) {
     const endT = n.t + n.dur;
     const pTail = (endT - G.now) / travel;
     const tTail = clamp(1 - clamp(pTail, 0, 1.15), 0, 1);   // 尾部时间更晚 → 更远
-    const yTail = laneY(tTail, g);
+    const twTail = (0.38 * tTail + 0.31 * tTail * tTail) / 0.69;
+    const yTail = laneY(twTail, g);
     const tailScale = lerp(0.38, 1, tTail);
     const wHead = g.laneW * 0.8 * scale, wTail = g.laneW * 0.8 * tailScale;
     if (pTail > -0.08) {
@@ -1865,7 +1904,7 @@ function drawHUD(g) {
   c.fillText(G.song ? G.song.title : '', g.W * 0.035, g.H * 0.075);
   c.fillStyle = 'rgba(150,175,205,.75)';
   c.font = `600 ${Math.max(9, g.H * 0.0155)}px ${FF}`;
-  const diffTxt = G.diff === 'hard' ? '稍高' : '中等';
+  const diffTxt = G.diff === 'hard' ? '稍高' : (G.diff === 'ultra' ? '超高' : '中等');
   c.fillText(`${diffTxt} · 流速 ${Number(G.speed).toFixed(1)}`, g.W * 0.035, g.H * 0.105);
   // HP
   const hbW = Math.min(g.W * 0.2, g.H * 0.42);
@@ -1946,7 +1985,7 @@ function finishGame() {
   const isAP = c.perfect === total && total > 0;
   const isFC = G.damage === 0 && total > 0;
 
-  $('#res-song').innerHTML = `<b>${escapeHTML(G.song.title)}</b> · ${G.diff === 'hard' ? '稍高' : '中等'} · 流速 ${Number(G.speed).toFixed(1)}`;
+  $('#res-song').innerHTML = `<b>${escapeHTML(G.song.title)}</b> · ${G.diff === 'ultra' ? '超高' : (G.diff === 'hard' ? '稍高' : '中等')} · 流速 ${Number(G.speed).toFixed(1)}`;
   const banner = $('#res-banner');
   banner.className = 'res-fcap';
   if (isAP) { banner.classList.add('ap'); banner.textContent = '✦ ALL PERFECT ✦'; }
@@ -2050,11 +2089,9 @@ function importSkinImage(file) {
   img.onerror = () => { alert('图片读取失败'); URL.revokeObjectURL(url); };
   img.src = url;
 }
-/* 音效试听：选中后每 2 秒循环播放一次，离开面板即停止
-   用 WebAudio 播放（与打歌一致），避免 <audio> 被自动播放策略静音 */
+/* 音效试听：选中后每 2 秒循环播放一次，离开面板即停止（<audio> 流式播放） */
 let sfxPrevTimer = null;
 let sfxPrevToken = 0;
-let sfxBufCache = new Map();
 let sfxLiveGain = null;
 let sfxCurrentSrc = null;
 let sfxPrevAudio = null;   // 仅在解码失败时兜底
@@ -2074,55 +2111,21 @@ function stopSfxPreview() {
   }
 }
 
-async function startSfxPreview(id) {
+function startSfxPreview(id) {
   stopSfxPreview();
   const token = ++sfxPrevToken;
   const file = id === 'default' ? res('assets/sfx/default.mp3') : res(`assets/sfx/${id}.mp3`);
-  try {
-    const ac = audioCtx();
-    if (ac.state === 'suspended') { try { await ac.resume(); } catch (e) {} }
-    let buf = sfxBufCache.get(file);
-    if (!buf) {
-      const r = await fetch(file);
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      buf = await ac.decodeAudioData(await r.arrayBuffer());
-      sfxBufCache.set(file, buf);
-    }
+  if (!sfxPrevAudio) sfxPrevAudio = new Audio();
+  sfxPrevAudio.src = file;
+  sfxPrevAudio.volume = sfxVolume();
+  const tick2 = () => {
     if (token !== sfxPrevToken) return;
-    const tick = () => {
-      if (token !== sfxPrevToken) return;
-      try {
-        if (sfxCurrentSrc) { try { sfxCurrentSrc.stop(); } catch (e) {} }
-        const src = ac.createBufferSource();
-        const gain = ac.createGain();
-        src.buffer = buf;
-        gain.gain.value = sfxVolume();
-        src.connect(gain).connect(ac.destination);
-        src.start();
-        sfxCurrentSrc = src;
-        sfxLiveGain = gain;
-        src.onended = () => {
-          if (sfxCurrentSrc === src) sfxCurrentSrc = null;
-          if (sfxLiveGain === gain) sfxLiveGain = null;
-        };
-      } catch (e) {}
-    };
-    tick();
-    sfxPrevTimer = setInterval(tick, 2000);
-  } catch (e) {
-    console.warn('[sfx preview] fallback to <audio>', e);
-    if (token !== sfxPrevToken) return;
-    if (!sfxPrevAudio) sfxPrevAudio = new Audio();
-    sfxPrevAudio.src = file;
-    sfxPrevAudio.volume = sfxVolume();
-    const tick2 = () => {
-      try { sfxPrevAudio.currentTime = 0; } catch (err) {}
-      const p = sfxPrevAudio.play();
-      if (p && p.catch) p.catch(() => {});
-    };
-    tick2();
-    sfxPrevTimer = setInterval(tick2, 2000);
-  }
+    try { sfxPrevAudio.currentTime = 0; } catch (err) {}
+    const p = sfxPrevAudio.play();
+    if (p && p.catch) p.catch(() => {});
+  };
+  tick2();
+  sfxPrevTimer = setInterval(tick2, 2000);
 }
 
 function renderSounds() {
@@ -2260,6 +2263,101 @@ $('#pause-resume').addEventListener('click', togglePause);
 $('#pause-quit').addEventListener('click', quitGame);
 $('#res-home').addEventListener('click', () => { goTitle(); });
 $('#res-again').addEventListener('click', () => startFromClock());
+
+/* 分享成绩：生成成绩图 → 移动端调系统分享，否则直接下载 */
+$('#res-share').addEventListener('click', () => {
+  try {
+    const canvas = renderResultImage();
+    canvas.toBlob(blob => {
+      if (!blob) return;
+      const file = new File([blob], 'pjsk-result.png', { type: 'image/png' });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        navigator.share({ files: [file], title: 'PJSK FAN STAGE 演奏成绩' }).catch(() => {});
+      } else {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'pjsk-result.png';
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+        const hint = document.createElement('div');
+        hint.className = 'audio-hint';
+        hint.textContent = '成绩图已保存到下载';
+        document.body.appendChild(hint);
+        requestAnimationFrame(() => hint.classList.add('show'));
+        setTimeout(() => { hint.classList.remove('show'); setTimeout(() => hint.remove(), 400); }, 3200);
+      }
+    }, 'image/png');
+  } catch (e) { console.warn('[share]', e); }
+});
+
+function renderResultImage() {
+  const W = 1200, H = 675;
+  const cv = document.createElement('canvas');
+  cv.width = W; cv.height = H;
+  const c = cv.getContext('2d');
+  const g = c.createLinearGradient(0, 0, W, H);
+  g.addColorStop(0, '#0a1020'); g.addColorStop(.55, '#101a30'); g.addColorStop(1, '#1a1030');
+  c.fillStyle = g; c.fillRect(0, 0, W, H);
+  // 装饰光斑
+  [['#ff5ec4', 130, 120, 260], ['#5ea8ff', 1050, 180, 300], ['#6dff8a', 900, 560, 220]].forEach(([col, x, y, r]) => {
+    const rg = c.createRadialGradient(x, y, 0, x, y, r);
+    rg.addColorStop(0, col + '44'); rg.addColorStop(1, col + '00');
+    c.fillStyle = rg; c.fillRect(x - r, y - r, r * 2, r * 2);
+  });
+  // 边框
+  c.strokeStyle = 'rgba(170,150,255,.5)'; c.lineWidth = 3;
+  c.strokeRect(18, 18, W - 36, H - 36);
+  const FF = '"Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif';
+  c.textAlign = 'left';
+  c.fillStyle = '#7fdcff'; c.font = `600 22px ${FF}`; c.letterSpacing = '6px';
+  c.fillText('PROJECT SEKAI · FAN STAGE', 60, 78);
+  c.fillStyle = '#ffffff'; c.font = `700 44px ${FF}`;
+  c.fillText(G.song.title.slice(0, 24), 60, 138);
+  c.fillStyle = '#9db4d4'; c.font = `28px ${FF}`;
+  c.fillText(`${G.diff === 'ultra' ? '超高 MASTER' : G.diff === 'hard' ? '稍高 HARD' : '中等 MEDIUM'} · 流速 ${Number(G.speed).toFixed(1)} · 音符 ${G.counts.perfect + G.counts.great + G.counts.good + G.counts.bad + G.counts.miss}`, 60, 182);
+  // 判定列表
+  const cc = G.counts, pad = n => String(n).padStart(4, '0');
+  const rows = [['PERFECT', '#ffd76b'], ['GREAT', '#7fe3ff'], ['GOOD', '#8ef0a8'], ['BAD', '#ff9d7a'], ['MISS', '#ff6b8a']];
+  rows.forEach(([k, col], i) => {
+    const y = 260 + i * 66;
+    c.fillStyle = 'rgba(255,255,255,.05)';
+    c.fillRect(60, y - 38, 500, 56);
+    c.fillStyle = col; c.font = `700 30px ${FF}`;
+    c.fillText(k, 90, y);
+    c.textAlign = 'right';
+    c.fillStyle = '#ffffff'; c.font = `700 34px ${FF}`;
+    c.fillText(pad(cc[k.toLowerCase()]), 520, y);
+    c.textAlign = 'left';
+  });
+  // COMBO / FC·AP
+  c.textAlign = 'center';
+  const isAP = cc.perfect === cc.perfect + cc.great + cc.good + cc.bad + cc.miss && cc.perfect > 0;
+  const isFC = G.damage === 0 && cc.perfect + cc.great + cc.good + cc.bad + cc.miss > 0;
+  if (isAP || isFC) {
+    const bg2 = c.createLinearGradient(760, 210, 1140, 260);
+    if (isAP) { bg2.addColorStop(0, '#ff5ec4'); bg2.addColorStop(.5, '#ffe94d'); bg2.addColorStop(1, '#5ea8ff'); }
+    else { bg2.addColorStop(0, '#ff7ab8'); bg2.addColorStop(1, '#b06dff'); }
+    c.fillStyle = bg2;
+    c.font = `800 34px ${FF}`;
+    const label = isAP ? '✦ ALL PERFECT ✦' : '✦ FULL COMBO ✦';
+    const tw = c.measureText(label).width + 60;
+    roundRect(c, (760 + 1140) / 2 - tw / 2, 226, tw, 58, 29);
+    c.fill();
+    c.fillStyle = '#14060f';
+    c.fillText(label, (760 + 1140) / 2, 266);
+  }
+  c.fillStyle = '#9db4d4'; c.font = `24px ${FF}`; c.fillText('COMBO', 950, 330);
+  const bgc = c.createLinearGradient(0, 350, 0, 500);
+  bgc.addColorStop(0, '#ffffff'); bgc.addColorStop(1, '#a8baff');
+  c.fillStyle = bgc; c.font = `800 120px ${FF}`;
+  c.fillText(pad(G.maxCombo), 950, 480);
+  c.fillStyle = '#5f7896'; c.font = `20px ${FF}`;
+  c.fillText('剩余 HP ' + Math.round(G.hp) + ' / 1000', 950, 540);
+  c.textAlign = 'left';
+  c.fillStyle = '#44597a'; c.font = `18px ${FF}`;
+  c.fillText(new Date().toLocaleString('zh-CN'), 60, H - 42);
+  return cv;
+}
 /* ---------- 背景模式 / 卡面 ---------- */
 $$('#bg-mode-pills .pill').forEach(p => p.addEventListener('click', () => {
   settings.bgMode = p.dataset.bgmode;
