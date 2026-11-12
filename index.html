@@ -132,7 +132,7 @@
   .team-row .tmini{width:24px;height:24px;border-radius:6px;background:rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;font-size:12px;}
   .team-row .tmini.judge{color:#ffd66b;}
   .team-row .tmini.heal{color:#7ff0a8;}
-  .card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px;margin-top:10px;}
+  .card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-top:10px;}
   .card-cell{position:relative;padding:10px 8px 9px;border-radius:10px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07);
     cursor:pointer;text-align:center;font-size:11px;color:#b7cfe9;font-weight:700;line-height:1.3;}
   .card-cell small{display:block;font-size:9px;color:#7d92b0;font-weight:600;margin-top:4px;}
@@ -140,20 +140,20 @@
   .card-cell .tj{position:absolute;top:5px;right:7px;font-size:10px;}
   .card-cell .tj.judge{color:#ffd66b;}
   .card-cell .tj.heal{color:#7ff0a8;}
-  /* 每张卡的数量步进器：大按钮 + 数字 + 单位，一眼看懂 */
-  .card-cell .stepper{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:9px;}
-  .card-cell .st-btn{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;
-    font-size:20px;font-weight:900;cursor:pointer;user-select:none;flex:0 0 auto;line-height:1;
+  /* 每张卡的数量步进器：大按钮 + 数字 + 单位，一行排进卡内 */
+  .card-cell .stepper{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:6px;margin-top:9px;}
+  .card-cell .st-btn{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-size:18px;font-weight:900;cursor:pointer;user-select:none;flex:0 0 auto;line-height:1;
     transition:transform .08s,box-shadow .15s,opacity .15s;}
   .card-cell .st-btn.minus{background:rgba(120,145,180,.16);border:1.5px solid rgba(150,175,205,.5);color:#cfe6ff;}
   .card-cell .st-btn.plus{background:linear-gradient(160deg,rgba(37,226,255,.3),rgba(37,226,255,.08));
     border:1.5px solid rgba(37,226,255,.6);color:#7ceaff;box-shadow:0 0 12px rgba(37,226,255,.18);}
   .card-cell .st-btn:active{transform:scale(.85);}
   .card-cell .st-btn.dis{opacity:.25;pointer-events:none;box-shadow:none;}
-  .card-cell .st-mid{display:flex;align-items:baseline;gap:3px;flex:0 1 auto;}
-  .card-cell .st-num{width:44px;text-align:center;background:rgba(0,0,0,.35);border:1.5px solid rgba(255,255,255,.18);
-    border-radius:9px;color:#fff;font-weight:900;font-size:18px;padding:4px 0;outline:none;font-family:inherit;}
-  .card-cell .st-mid i{font-size:10px;color:#7d92b0;font-style:normal;font-weight:700;}
+  .card-cell .st-mid{display:flex;align-items:baseline;justify-content:center;gap:3px;min-width:0;}
+  .card-cell .st-num{width:100%;min-width:0;text-align:center;background:rgba(0,0,0,.35);border:1.5px solid rgba(255,255,255,.18);
+    border-radius:9px;color:#fff;font-weight:900;font-size:17px;padding:3px 0;outline:none;font-family:inherit;}
+  .card-cell .st-mid i{font-size:10px;color:#7d92b0;font-style:normal;font-weight:700;flex:0 0 auto;}
   .card-cell .odd{margin-top:6px;font-size:10px;color:#8fe0ff;font-weight:700;}
 
   @keyframes skPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
@@ -330,7 +330,7 @@
     letter-spacing:.1em;margin:14px 0 8px;flex-wrap:wrap;}
   .mini-link{color:#5fd8ff;text-decoration:none;border-bottom:1px dotted rgba(95,216,255,.5);font-size:.95em;}
   .bg-box{margin-top:4px;}
-  .card-grid{grid-template-columns:repeat(auto-fill,minmax(116px,1fr));}
+  .card-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));}
   .card-grid .cov{aspect-ratio:16/9;}
   .url-row{display:flex;gap:8px;margin-top:10px;}
   .url-row input{flex:1;min-width:0;height:38px;border-radius:10px;border:1px solid rgba(140,200,255,.25);
@@ -589,7 +589,7 @@
         </div>
       </div>
       <div class="panel" id="panel-team">
-        <p class="hint">自定义你的演出配队：从卡池里挑最多 5 张卡组成一支队伍并起名字。队伍技能取队伍里第一张有效果的卡——<b>判卡</b>：发动后 5 秒内打中的所有音符都算 PERFECT；<b>奶卡</b>：发动后 5 秒内不扣血；其余卡（加分、体力等）暂无实际效果。每场演出可发动一次技能。在选歌后的确认界面选择本次使用的配队。</p>
+        <p class="hint">自定义你的演出配队：用 − / ＋ 调整每种卡的张数（共最多 5 张）并起名字。演出中每 20~30 秒会从队里的卡中随机抽一张发动——<b>判卡</b>：5 秒内打中的所有音符都算 PERFECT；<b>奶卡</b>：5 秒内不扣血。抽中概率按张数分配，例如判卡×4 + 奶卡×1 就有 80% 抽到判卡。在选歌后的确认界面选择本次使用的配队。</p>
         <div class="team-list" id="team-list"></div>
         <div class="pills" style="margin-top:12px">
           <div class="pill" id="team-new">＋ 新建配队</div>
@@ -952,7 +952,7 @@ if (!settings._sfxV2) {
 // 配队：默认内置一支示例队伍，方便直接体验队伍技能
 if (!Array.isArray(settings.teams)) settings.teams = [];
 if (!settings.teams.length) {
-  settings.teams = [{ name: '我的配队', cards: ['judge_r', 'heal_g', 'score1', 'life1', 'wild1'] }];
+  settings.teams = [{ name: '我的配队', cards: ['judge', 'heal'] }];
   settings.activeTeam = 0;
 }
 // 按键样式：默认改为发光长方形（旧设置一次性迁移，之后可自由选择）
@@ -3260,17 +3260,17 @@ function renderSounds() {
 }
 /* ---------- 配队 ---------- */
 const TEAM_CARDS = [
-  { id:'judge_r', name:'判定辅助·彩虹', type:'judge', icon:'✦', desc:'发动后 5 秒内打中的音符全部算 PERFECT' },
-  { id:'judge_g', name:'判定辅助·金',   type:'judge', icon:'✧', desc:'发动后 5 秒内打中的音符全部算 PERFECT' },
-  { id:'heal_r',  name:'体力守护·彩虹', type:'heal',  icon:'✚', desc:'发动后 5 秒内不扣血' },
-  { id:'heal_g',  name:'体力守护·金',   type:'heal',  icon:'✚', desc:'发动后 5 秒内不扣血' },
-  { id:'score1',  name:'得分提升·小',   type:'none',  icon:'♪', desc:'暂无实际效果' },
-  { id:'score2',  name:'得分提升·大',   type:'none',  icon:'♪', desc:'暂无实际效果' },
-  { id:'life1',   name:'体力上限·小',   type:'none',  icon:'♥', desc:'暂无实际效果' },
-  { id:'life2',   name:'体力上限·大',   type:'none',  icon:'♥', desc:'暂无实际效果' },
-  { id:'combo1',  name:'连击加成',      type:'none',  icon:'∞', desc:'暂无实际效果' },
-  { id:'wild1',   name:'万能卡',        type:'none',  icon:'◇', desc:'暂无实际效果' }
+  { id:'judge', name:'判定辅助', type:'judge', icon:'✦', desc:'发动后 5 秒内打中的音符全部算 PERFECT' },
+  { id:'heal',  name:'体力守护', type:'heal',  icon:'✚', desc:'发动后 5 秒内不扣血' }
 ];
+/* 卡池精简迁移：旧 id（彩虹/金两种判卡奶卡及各无效果卡）映射到 judge / heal，其余丢弃。
+   注意必须保留已是新 id 的值——迁移可能被执行多次，不幂等会把队伍清空 */
+(settings.teams || []).forEach(t => {
+  if (!Array.isArray(t.cards)) return;
+  t.cards = t.cards.map(id => id === 'judge_r' || id === 'judge_g' ? 'judge'
+    : id === 'heal_r' || id === 'heal_g' ? 'heal'
+    : (id === 'judge' || id === 'heal') ? id : null).filter(Boolean);
+});
 const CARD_MAP = Object.fromEntries(TEAM_CARDS.map(c => [c.id, c]));
 /* 队伍技能：取队伍里第一张有效果的卡（判卡优先于奶卡） */
 function teamSkill(t) {
