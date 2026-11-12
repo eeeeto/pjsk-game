@@ -616,7 +616,7 @@ window.SONGS = [
   "cover": "assets/covers/zijiang1.jpg"
  },
  {
-  "title": "超级敏感",
+  "title": "SuperSensitive",
   "artist": "A-SOUL",
   "credit": "",
   "unit": "zijiang",
@@ -624,6 +624,28 @@ window.SONGS = [
   "duration": 257.9,
   "file": "songs/s35.mp3",
   "full": true,
+  "cover": "assets/covers/zijiang1.jpg"
+ },
+ {
+  "title": "SuperSensitive (Short)",
+  "artist": "A-SOUL",
+  "credit": "",
+  "unit": "zijiang",
+  "game": false,
+  "duration": 156.71,
+  "file": "songs/s77.mp3",
+  "full": false,
+  "cover": "assets/covers/zijiang1.jpg"
+ },
+ {
+  "title": "SuperSensitive (Short·消音版)",
+  "artist": "A-SOUL",
+  "credit": "",
+  "unit": "zijiang",
+  "game": false,
+  "duration": 156.9,
+  "file": "songs/s78.mp3",
+  "full": false,
   "cover": "assets/covers/zijiang1.jpg"
  },
  {
