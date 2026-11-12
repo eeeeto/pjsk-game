@@ -630,12 +630,15 @@
 /* 歌曲清单：GitHub Pages 上依次尝试多个镜像源（国内部分域名可能被墙），
    拿到内容后内联执行；本地打开直接用相对路径 */
 (function () {
+  /* 加时间戳绕过浏览器/CDN 对 manifest.js 的长期缓存（jsDelivr 的 @main 会缓存 7 天，
+     否则新增曲目要等一周才会出现在列表里） */
+  const bust = /^https?:$/.test(location.protocol) ? '?v=' + Date.now() : '';
   const sources = location.hostname.endsWith('.github.io')
-    ? ['https://gcore.jsdelivr.net/gh/eeeeto/pjsk-game@main/songs/manifest.js',
-       'https://fastly.jsdelivr.net/gh/eeeeto/pjsk-game@main/songs/manifest.js',
-       'https://cdn.jsdelivr.net/gh/eeeeto/pjsk-game@main/songs/manifest.js',
-       'songs/manifest.js']
-    : ['songs/manifest.js'];
+    ? ['https://gcore.jsdelivr.net/gh/eeeeto/pjsk-game@main/songs/manifest.js' + bust,
+       'https://fastly.jsdelivr.net/gh/eeeeto/pjsk-game@main/songs/manifest.js' + bust,
+       'https://cdn.jsdelivr.net/gh/eeeeto/pjsk-game@main/songs/manifest.js' + bust,
+       'songs/manifest.js' + bust]
+    : ['songs/manifest.js' + bust];
   let loaded = false;
   for (const u of sources) {
     try {
@@ -2014,7 +2017,12 @@ function drawNote(c, g, n, p, travel) {
     const twTail = (0.38 * tTail + 0.31 * tTail * tTail) / 0.69;
     const yTail = laneY(twTail, g);
     const tailScale = lerp(0.38, 1, tTail);
-    const wHead = g.laneW * 0.8 * scale, wTail = g.laneW * 0.8 * tailScale;
+    // 长条要贴合透视轨道：尾端的横向位置和宽度都按自身深度单独算，
+    // 只沿用头部的 x 会让整条随头部平移，看起来脱离轨道乱飘
+    const xTail = n.span === 1 ? laneXCell(n.cell, twTail, g) : laneX(n.lane, twTail, g);
+    const wHead = g.laneW * 0.8 * scale * (n.span === 1 ? 0.52 : 1);
+    const persp = tt => 0.3 + 0.7 * tt;                  // 轨道在该深度的宽度系数
+    const wTail = wHead * persp(twTail) / persp(tw);
     if (pTail > -0.08) {
       c.save();
       const grad = c.createLinearGradient(0, yTail, 0, y);
@@ -2023,14 +2031,14 @@ function drawNote(c, g, n, p, travel) {
       grad.addColorStop(1, 'rgba(140,255,198,.48)');
       c.fillStyle = grad;
       c.beginPath();
-      c.moveTo(x - wTail / 2, yTail); c.lineTo(x + wTail / 2, yTail);
+      c.moveTo(xTail - wTail / 2, yTail); c.lineTo(xTail + wTail / 2, yTail);
       c.lineTo(x + wHead / 2, y); c.lineTo(x - wHead / 2, y);
       c.closePath(); c.fill();
       c.strokeStyle = 'rgba(150,255,200,.55)'; c.lineWidth = 1.5; c.stroke();
       // 尾判标记：长条末端的浅绿端帽（要在它压到判定线时松手）
       const capH = Math.max(3.5, g.laneW * 0.085 * tailScale);
       c.shadowColor = 'rgba(70,240,160,.85)'; c.shadowBlur = 14 * tailScale;
-      roundRect(c, x - wTail / 2, yTail - capH / 2, wTail, capH, capH / 2);
+      roundRect(c, xTail - wTail / 2, yTail - capH / 2, wTail, capH, capH / 2);
       c.fillStyle = 'rgba(216,255,234,.94)';
       c.fill();
       c.shadowBlur = 0;
@@ -2049,13 +2057,17 @@ function drawNote(c, g, n, p, travel) {
       c.restore();
     }
     if (G.skinImg) {
-      // 长键：连续的小人
+      // 长键：连续的小人（从尾端往头部排，位置和大小都跟着轨道透视变化）
       const stepY = Math.max(10, size * 0.55);
-      for (let yy = y; yy < yTail; yy += stepY) {
-        const w = size * 0.78, h = w * (G.skinImg.height / G.skinImg.width) * 0.5;
+      const spanY = Math.max(1, y - yTail);
+      for (let yy = yTail; yy <= y; yy += stepY) {
+        const k = (yy - yTail) / spanY;
+        const xk = lerp(xTail, x, k);
+        const wk = lerp(wTail, wHead, k) * 0.97;
+        const h = wk * (G.skinImg.height / G.skinImg.width) * 0.5;
         c.save();
         c.globalAlpha = 0.9;
-        c.drawImage(G.skinImg, x - w / 2, yy - h * 0.7, w, h);
+        c.drawImage(G.skinImg, xk - wk / 2, yy - h * 0.7, wk, h);
         c.restore();
       }
     }
