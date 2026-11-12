@@ -1634,7 +1634,7 @@ function loop(ts) {
       }
     }
     if (G.comboPop > 0) G.comboPop = Math.max(0, G.comboPop - dt * 3.2);
-    G.laneFlash = G.laneFlash.map(v => Math.max(0, v - dt * 4));
+    G.laneFlash = G.laneFlash.map(v => Math.max(0, v - dt * 2));   // 0.5s 内渐隐
     if (G.now > G.duration + 0.2 && G.source) {
       try { G.source.stop(); } catch (e) {}
       finishGame();
@@ -1725,6 +1725,16 @@ function drawLanes(g) {
     c.closePath();
     c.fillStyle = _laneCache.grads[i];
     c.fill();
+    // 点击高亮：整条大格子亮一下，0.5s 内渐隐
+    const fl = G.laneFlash[i] || 0;
+    if (fl > 0.002) {
+      const hg = c.createLinearGradient(0, g.topY, 0, g.judgeY);
+      hg.addColorStop(0, 'rgba(205,228,255,0)');
+      hg.addColorStop(.6, `rgba(210,230,255,${(0.14 * fl).toFixed(3)})`);
+      hg.addColorStop(1, `rgba(232,240,255,${(0.28 * fl).toFixed(3)})`);
+      c.fillStyle = hg;
+      c.fill();
+    }
     c.strokeStyle = 'rgba(160,140,255,.16)';
     c.lineWidth = 1;
     c.stroke();
