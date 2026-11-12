@@ -2629,14 +2629,16 @@ async function initMyCards() {
   renderCards(); applyBackground(); syncBgUI();
 }
 
-/* 卡面编号 -> assetbundleName 对照表（sekai-world master-db，jsDelivr 镜像） */
-const CARD_DB_SRC = [
-  'https://cdn.jsdelivr.net/gh/Sekai-World/sekai-master-db-tc-diff@main/cards.json',
-  'https://gcore.jsdelivr.net/gh/Sekai-World/sekai-master-db-tc-diff@main/cards.json',
-  'https://fastly.jsdelivr.net/gh/Sekai-World/sekai-master-db-tc-diff@main/cards.json'
+/* 卡面编号 -> assetbundleName 对照表（日服 sekai-master-db）
+   主源：仓库内置精简索引 assets/card-index.json（约 50KB，同源加载，秒开）
+   索引里没有的编号（新卡刚出、索引还没更新）→ 回退抓取完整的日服 cards.json（约 35MB，较慢） */
+const CARD_INDEX_SRC = 'assets/card-index.json';
+const CARD_DB_REMOTE = [
+  'https://ghfast.top/https://raw.githubusercontent.com/Sekai-World/sekai-master-db-diff/main/cards.json',
+  'https://raw.githubusercontent.com/Sekai-World/sekai-master-db-diff/main/cards.json'
 ];
 const CARD_ASSET_BASE = 'https://storage.sekai.best/sekai-jp-assets/character/member/';
-let _cardMap = null;
+let _cardMap = null, _cardMapFromIndex = false;
 
 async function fetchTextProg(url, onProg) {
   const r = await fetch(url);
@@ -2676,25 +2678,47 @@ async function fetchBlobProg(urls, onProg) {
   throw lastErr;
 }
 
+function parseCardsJson(arr) {
+  const m = {};
+  for (const c of arr) m[c.id] = [c.assetbundleName, c.cardRarityType || ''];
+  return m;
+}
+
+/* 内置精简索引（24 小时本地缓存；部署后 10 分钟内即为最新） */
 async function loadCardMap(onProg) {
   if (_cardMap) return _cardMap;
   try {
-    const raw = localStorage.getItem('pjsk-cardmap-v1');
+    const raw = localStorage.getItem('pjsk-cardmap-v2');
     if (raw) {
       const o = JSON.parse(raw);
-      if (o && o.m && Date.now() - o.t < 30 * 864e5) { _cardMap = o.m; return _cardMap; }
+      if (o && o.m && Date.now() - o.t < 24 * 864e5) { _cardMap = o.m; _cardMapFromIndex = true; return _cardMap; }
+    }
+  } catch (e) {}
+  const txt = await fetchTextProg(CARD_INDEX_SRC, p => onProg && onProg(p));
+  const o = JSON.parse(txt);
+  _cardMap = o.cards; _cardMapFromIndex = true;
+  try { localStorage.setItem('pjsk-cardmap-v2', JSON.stringify({ t: Date.now(), m: _cardMap })); } catch (e) {}
+  return _cardMap;
+}
+
+/* 完整日服数据库兜底（30 天本地缓存） */
+async function loadCardDbRemote(onProg) {
+  try {
+    const raw = localStorage.getItem('pjsk-cardmap-v2-full');
+    if (raw) {
+      const o = JSON.parse(raw);
+      if (o && o.m && Date.now() - o.t < 30 * 864e5) { _cardMap = o.m; _cardMapFromIndex = false; return _cardMap; }
     }
   } catch (e) {}
   let lastErr = new Error('card db failed');
-  for (const u of CARD_DB_SRC) {
+  for (const u of CARD_DB_REMOTE) {
     try {
       const txt = await fetchTextProg(u, p => onProg && onProg(p));
       const arr = JSON.parse(txt);
-      const m = {};
-      for (const c of arr) m[c.id] = [c.assetbundleName, c.cardRarityType || ''];
-      _cardMap = m;
-      try { localStorage.setItem('pjsk-cardmap-v1', JSON.stringify({ t: Date.now(), m })); } catch (e) {}
-      return m;
+      _cardMap = parseCardsJson(arr); _cardMapFromIndex = false;
+      try { localStorage.setItem('pjsk-cardmap-v2-full', JSON.stringify({ t: Date.now(), m: _cardMap })); } catch (e) {}
+      try { localStorage.removeItem('pjsk-cardmap-v2'); } catch (e) {}
+      return _cardMap;
     } catch (e) { lastErr = e; }
   }
   throw lastErr;
@@ -2718,9 +2742,15 @@ async function downloadCardById(rawId) {
   if (btn.disabled) return;
   btn.disabled = true;
   try {
-    cardDlUI(true, 0.02, '正在读取卡面数据…（首次较慢，之后会缓存）');
-    const map = await loadCardMap(p => cardDlUI(true, 0.02 + p * 0.35, `正在读取卡面数据… ${Math.round(p * 100)}%`));
-    const ent = map[cid];
+    cardDlUI(true, 0.02, '正在读取卡面数据…');
+    const map = await loadCardMap(p => cardDlUI(true, 0.02 + p * 0.15, `正在读取卡面数据… ${Math.round(p * 100)}%`));
+    let ent = map[cid];
+    if (!ent && _cardMapFromIndex) {
+      // 精简索引里没有（可能是刚出的新卡）→ 抓取完整的日服数据库兜底
+      cardDlUI(true, 0.17, '索引中没有该编号，正在读取完整日服数据库…（约 35MB，仅首次）');
+      const full = await loadCardDbRemote(p => cardDlUI(true, 0.17 + p * 0.2, `正在读取完整日服数据库… ${Math.round(p * 100)}%`));
+      ent = full[cid];
+    }
     if (!ent) { cardDlUI(true, 0, `没有找到编号 ${cid} 的卡面`); return; }
     const [abn, rarity] = ent;
     const trainable = rarity === 'rarity_3' || rarity === 'rarity_4';
