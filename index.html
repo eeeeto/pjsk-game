@@ -853,6 +853,8 @@ function show(name) {
 }
 function goTitle() {
   stopPreview();
+  gameToken++;
+  stopGameAudio();      // 回到主页绝不留音轨
   show('title');
   applyBackground();
 }
@@ -997,6 +999,7 @@ function setPreviewLoading(on) {
 /* 用 <audio> 流式播放——边下边播，几秒内出声；从歌曲约 34% 处开始 */
 function playPreview(song) {
   if (!song) return;
+  if (G.active) return;                    // 打歌中绝不试听
   if (previewAudioFallback && previewAudioFallback.dataset.file === song.file && !previewAudioFallback.paused) return; // 同一首正在播
   stopPreview();
   setPreviewLoading(true);
@@ -1027,7 +1030,9 @@ function playPreview(song) {
   });
   previewAudioFallback = a;
   const pr = a.play();
-  if (pr && pr.catch) pr.catch(() => { setPreviewLoading(false); showAudioHint(); });
+  if (pr && pr.catch) pr.catch(() => { if (previewAudioFallback === a) setPreviewLoading(false); });
+  // play() 是异步的：如果期间已经切歌/开局，回来的这声必须立刻掐掉，否则会出现两首歌同时响
+  if (pr && pr.then) pr.then(() => { if (previewAudioFallback !== a) { try { a.pause(); } catch (e) {} } });
   // 试听 30 秒后停止
   previewStopTimer = setTimeout(() => { if (previewAudioFallback === a) stopPreview(); }, 30000);
 }
@@ -1071,8 +1076,10 @@ function stopPreview() {
     } catch (e) { try { node.stop(); } catch (_) {} }
   }
   if (previewAudioFallback) {
-    try { previewAudioFallback.pause(); } catch (e) {}
+    const a = previewAudioFallback;
     previewAudioFallback = null;
+    try { a.pause(); } catch (e) {}
+    try { a.removeAttribute('src'); a.load(); } catch (e) {}   // 彻底释放，防止残留流继续出声
   }
   setPreviewLoading(false);
 }
@@ -1463,8 +1470,25 @@ function tailWindows() {
 // 下落音符大小倍率（设置里的「音符大小」滑块；只作用于音符，不影响底部键盘）
 function noteScale() { return clamp(Number(settings.keyScale) || 1, 0.5, 1.5); }
 
+/* 每次开局分配一个令牌：旧的加载流程（上次开局 / 连点开始）发现令牌变了就自行作废，
+   避免两条音轨先后启动叠在一起播放 */
+let gameToken = 0;
+
+/* 统一停掉当前游戏音轨：解绑回调 + 停止 + 断开连接，避免残留音源与新音轨叠加 */
+function stopGameAudio() {
+  const src = G.source;
+  G.source = null;
+  if (!src) return;
+  try { src.onended = null; } catch (e) {}
+  try { src.stop(); } catch (e) {}
+  try { src.disconnect(); } catch (e) {}
+}
+
 async function startGame(song, diff, speed) {
+  const myToken = ++gameToken;
   stopSfxPreview();
+  stopPreview();          // 清掉选歌试听：它是独立的 <audio>，不停会与游戏音轨同时响
+  stopGameAudio();
   hideAllModals();
   const t0 = performance.now();
   $('#loading').classList.add('show');
@@ -1481,9 +1505,11 @@ async function startGame(song, diff, speed) {
   try {
     const ac = audioCtx();
     const ab = await fetchRes(song.file);
+    if (myToken !== gameToken) return;          // 已有更新的开局请求，本流程作废
     $('#load-txt').textContent = '正在解码音频…';
     await new Promise(r => setTimeout(r, 30));
     const buffer = await ac.decodeAudioData(ab);
+    if (myToken !== gameToken) return;
     $('#load-txt').textContent = '正在分析节奏 · 生成谱面…';
     await new Promise(r => setTimeout(r, 40));
     const rh = analyzeRhythm(buffer);
@@ -1499,9 +1525,11 @@ async function startGame(song, diff, speed) {
     // 让加载画面至少停留一会儿，读得清歌名与歌手
     const wait = 1400 - (performance.now() - t0);
     if (wait > 0) await new Promise(r => setTimeout(r, wait));
+    if (myToken !== gameToken) return;          // 等待期间又开了新局：不要启动这条音轨
     initGame(song, buffer, notes, diff, speed);
     $('#loading').classList.remove('show');
   } catch (err) {
+    if (myToken !== gameToken) return;
     console.error(err);
     $('#loading').classList.remove('show');
     alert('音频加载失败：' + (err && err.message ? err.message : err));
@@ -1552,6 +1580,8 @@ function loadSkinImage() {
 }
 
 function initGame(song, buffer, notes, diff, speed) {
+  const myToken = gameToken;     // 与开局令牌绑定：旧局延迟完成的回调不再启动音轨
+  stopGameAudio();
   resizeCanvas();
   G.progFill = $('#prog-fill'); G.lastProg = -1;
   G.active = true; G.paused = false; G.finished = false;
@@ -1567,7 +1597,9 @@ function initGame(song, buffer, notes, diff, speed) {
   G.totalNotes = G.notes.length + G.notes.filter(n => n.type === 'hold').length;
   G.judged = 0; G.comboPop = 0;
   loadSkinImage().then(() => {
+    if (myToken !== gameToken) return;      // 期间已经开了新局，这条音轨作废
     const ac = audioCtx();
+    stopGameAudio();
     const src = ac.createBufferSource();
     src.buffer = buffer;
     src.connect(ac.destination);
@@ -2316,7 +2348,7 @@ function drawHUD(g) {
 function finishGame() {
   if (G.finished) return;
   G.finished = true; G.active = false;
-  try { if (G.source) G.source.stop(); } catch (e) {}
+  stopGameAudio();
   // 补齐未判定
   const rest = G.notes.filter(n => !n.judged).length;
   if (rest) {
@@ -2364,7 +2396,8 @@ function hideAllModals() {
 }
 function quitGame() {
   G.active = false; G.paused = false; G.finished = true;
-  try { if (G.source) G.source.stop(); } catch (e) {}
+  gameToken++;                 // 作废还在加载中的开局，避免退出后音轨自己响起来
+  stopGameAudio();
   try { AC.resume(); } catch (e) {}
   $('#modal-pause').classList.remove('show');
   goTitle();
@@ -2374,7 +2407,7 @@ function restartGame() {
   if (!G.song) return;
   const song = G.song, diff = G.diff, speed = G.speed;
   G.active = false; G.paused = false; G.finished = true;
-  try { if (G.source) { G.source.onended = null; G.source.stop(); } } catch (e) {}
+  stopGameAudio();
   try { AC.resume(); } catch (e) {}
   $('#modal-pause').classList.remove('show');
   startGame(song, diff, speed);
