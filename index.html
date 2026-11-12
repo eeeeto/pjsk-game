@@ -348,11 +348,12 @@
     font-weight:900;letter-spacing:.12em;line-height:1.15;}
   .res-row .n{font-size:clamp(12px,2.2vh,18px);font-weight:800;font-variant-numeric:tabular-nums;
     color:#dbe9fa;letter-spacing:.06em;}
-  .res-row.perfect .l{color:#ffd66b}
-  .res-row.great .l{color:#4ff0b4}
-  .res-row.good .l{color:#5cb8ff}
-  .res-row.bad .l{color:#b98bff}
-  .res-row.miss .l{color:#ff6b8a}
+  .res-row.perfect .l{background:linear-gradient(90deg,#ffffff,#ffc4e1 42%,#c9a6ff 72%,#8fb4ff);
+    -webkit-background-clip:text;background-clip:text;color:transparent;}
+  .res-row.great .l{color:#e863c8}
+  .res-row.good .l{color:#7cc8f4}
+  .res-row.bad .l{color:#7ce9b8}
+  .res-row.miss .l{color:#f2f5ff}
   .res-combo{text-align:center;min-width:clamp(96px,16vw,180px);}
   .res-combo .lbl{font-size:clamp(10px,1.9vh,15px);font-weight:900;letter-spacing:.2em;color:#dceafc;}
   .res-combo .num{font-size:clamp(30px,7vh,60px);font-weight:900;line-height:1.05;letter-spacing:.04em;
@@ -432,6 +433,7 @@
     <div class="bottom-bar">
       <button class="btn ghost" id="songs-back">返 回</button>
       <div class="center" id="songs-now"></div>
+      <button class="btn ghost" id="songs-random">随机曲目</button>
       <button class="btn pink" id="songs-ok">确认曲目</button>
     </div>
   </section>
@@ -1551,7 +1553,7 @@ function startFromClock() {
 }
 
 /* ---------- 判定 ---------- */
-const JUDGE_COLOR = { perfect: '#ffd66b', great: '#4ff0b4', good: '#5cb8ff', bad: '#b98bff', miss: '#ff6b8a' };
+const JUDGE_COLOR = { perfect: '#ffffff', great: '#e863c8', good: '#7cc8f4', bad: '#7ce9b8', miss: '#f2f5ff' };
 const JUDGE_LABEL = { perfect: 'PERFECT', great: 'GREAT', good: 'GOOD', bad: 'BAD', miss: 'MISS' };
 
 function addEffect(lane, text, color, fs) {
@@ -2159,7 +2161,17 @@ function drawEffects(g) {
     c.textAlign = 'center';
     c.font = `900 ${Math.max(14, g.H * (e.small ? 0.032 : 0.05))}px ${FF}`;
     c.fillStyle = e.color;
-    c.shadowColor = e.color; c.shadowBlur = 14;
+    // PERFECT 用白→粉→紫→蓝的渐变字（与结算页一致）
+    if (e.text === 'PERFECT') {
+      const twd = c.measureText(e.text).width;
+      const pg = c.createLinearGradient(e.x - twd / 2, 0, e.x + twd / 2, 0);
+      pg.addColorStop(0, '#ffffff');
+      pg.addColorStop(.42, '#ffc4e1');
+      pg.addColorStop(.72, '#c9a6ff');
+      pg.addColorStop(1, '#8fb4ff');
+      c.fillStyle = pg;
+    }
+    c.shadowColor = e.text === 'PERFECT' ? 'rgba(255,190,235,.85)' : c.fillStyle; c.shadowBlur = 14;
     c.fillText(e.text, e.x, y);
     // FAST / SLOW 小字（显示在判定文字上方）
     if (e.fs) {
@@ -2891,6 +2903,13 @@ $('#btn-dev').addEventListener('click', () => { show('dev'); applyBackground(); 
 $('#dev-back').addEventListener('click', () => { goTitle(); });
 $('#songs-back').addEventListener('click', () => { stopPreview(); releasePreviewBuffer(); goTitle(); });
 $('#songs-ok').addEventListener('click', () => { stopPreview(); releasePreviewBuffer(); openConfirm(); });
+/* 随机曲目：从全部歌曲里随机抽一首（避开当前选中的），滚动到它并试听 */
+$('#songs-random').addEventListener('click', () => {
+  if (!SONGS.length) return;
+  let i = Math.floor(Math.random() * SONGS.length);
+  if (SONGS.length > 1 && i === selectedIdx) i = (i + 1) % SONGS.length;
+  selectSong(i, true, true);
+});
 $('#settings-back').addEventListener('click', () => { stopSfxPreview(); applyBackground(); goTitle(); });
 
 $$('#modal-confirm .pill').forEach(p => p.addEventListener('click', () => {
