@@ -303,7 +303,7 @@ window.SONGS = [
   "unit": "n25",
   "game": true,
   "duration": 253.3,
-  "file": "songs/s76.mp3",
+  "file": "songs/s79.mp3",
   "full": true,
   "cover": "assets/covers/n251.jpg"
  },
