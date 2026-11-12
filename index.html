@@ -209,7 +209,7 @@
   .hint{font-size:clamp(10px,1.5vh,12px);color:#7b90ae;margin:0 0 12px;letter-spacing:.06em;}
   .skin-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(76px,1fr));gap:10px;}
   .key-size-field{margin-top:14px;}
-  .keysize-prev{display:block;width:100%;height:58px;margin-top:10px;border-radius:10px;
+  .keysize-prev{display:block;width:100%;height:76px;margin-top:10px;border-radius:10px;
     background:rgba(8,14,26,.55);border:1px solid rgba(120,200,255,.12);}
   .skin{position:relative;aspect-ratio:1/1;border-radius:14px;background:rgba(255,255,255,.04);
     border:1px solid rgba(255,255,255,.08);overflow:hidden;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.18s;}
@@ -449,11 +449,11 @@
     </div>
     <div class="settings-body">
       <div class="panel on" id="panel-skin">
-        <p class="hint">这里选择的是从屏幕上方落下的音符样式：默认为白色发光的圆角长方形，还可切换发光胶囊、经典蓝色长方形，或选择角色图案（短键会压扁小人，长键出现连续小人），也可以导入自己的图片（建议透明背景 PNG）。底部键盘固定为半透明按键。</p>
+        <p class="hint">这里选择的是从屏幕上方落下的音符样式：默认为白色发光的圆角长方形，还可切换发光胶囊、经典蓝色长方形，或选择角色图案（短键会压扁小人，长键出现连续小人），也可以导入自己的图片（建议透明背景 PNG）。底部键盘固定为半透明按键，下方的滑块只调整下落音符的大小。</p>
         <div class="skin-grid" id="skin-grid"></div>
         <div class="field key-size-field">
-          <div class="lbl"><span>按键大小</span><b id="keysize-val">100%</b></div>
-          <input type="range" id="keysize-range" min="50" max="180" step="5" value="100">
+          <div class="lbl"><span>音符大小</span><b id="keysize-val">100%</b></div>
+          <input type="range" id="keysize-range" min="50" max="150" step="5" value="100">
           <canvas id="keysize-prev" class="keysize-prev"></canvas>
         </div>
         <input type="file" id="skin-file" accept="image/*" style="display:none">
@@ -619,6 +619,7 @@
     <div class="dlg-title" style="margin-bottom:14px">暂 <span>停</span></div>
     <div class="dlg-actions">
       <button class="btn ghost" id="pause-quit">退出演出</button>
+      <button class="btn ghost" id="pause-restart">重新开始</button>
       <button class="btn" id="pause-resume">继续</button>
     </div>
   </div>
@@ -788,7 +789,7 @@ try {
 if (settings.bgMode === 'cover' || settings.bgMode === 'image') settings.bgMode = 'album';
 if (!settings.bgCard && settings.bgImage) settings.bgCard = settings.bgImage;
 if (typeof settings.bgCardShade !== 'number') settings.bgCardShade = 0.45;
-if (typeof settings.keyScale !== 'number') settings.keyScale = 1.0;
+settings.keyScale = clamp(Number(settings.keyScale) || 1, 0.5, 1.5);
 if (!Array.isArray(settings.myCards)) settings.myCards = [];
 // 按键样式：默认改为发光长方形（旧设置一次性迁移，之后可自由选择）
 if (!settings._skinV4) {
@@ -1426,6 +1427,8 @@ function laneXCell(cell, t, g) {
 function hitWindows() { return { perfect: 0.11, great: 0.19, good: 0.27, bad: 0.36 }; }
 // 长条尾判窗口（松手时机）：比头判稍宽一点
 function tailWindows() { return { perfect: 0.13, great: 0.22, good: 0.30, bad: 0.40 }; }
+// 下落音符大小倍率（设置里的「音符大小」滑块；只作用于音符，不影响底部键盘）
+function noteScale() { return clamp(Number(settings.keyScale) || 1, 0.5, 1.5); }
 
 async function startGame(song, diff, speed) {
   stopSfxPreview();
@@ -1882,9 +1885,8 @@ let _keyCache = { key: '', normal: null, glow: null, rectNormal: null, rectGlow:
 function drawJudgmentLine(g) {
   const c = ctx2d;
   const left = g.cx - (G.lanes / 2) * g.laneW, right = g.cx + (G.lanes / 2) * g.laneW;
-  const keyScale = clamp(Number(settings.keyScale) || 1, 0.5, 1.8);
-  const cellH = Math.min(g.laneW * 0.26, g.H * 0.052) * keyScale;
-  const keyKey = `${g.W}x${g.H}x${G.lanes}x${keyScale.toFixed(2)}`;
+  const cellH = Math.min(g.laneW * 0.26, g.H * 0.052);
+  const keyKey = `${g.W}x${g.H}x${G.lanes}`;
   // 键盘格固定为蓝色半透明长方形；皮肤选项只影响下落的音符
   if (_keyCache.key !== keyKey) {
     _keyCache.key = keyKey; _keyCache.cellH = cellH;
@@ -1951,7 +1953,7 @@ function noteGeo(n, p, travel, g) {
   const scale = lerp(0.38, 1, t);
   const x = n.span === 1 ? laneXCell(n.cell, tw, g) : laneX(n.lane, tw, g);
   const y = laneY(tw, g);
-  const size = g.laneW * 0.94 * scale * (n.span === 1 ? 0.52 : 1);
+  const size = g.laneW * 0.94 * scale * noteScale() * (n.span === 1 ? 0.52 : 1);
   const w = size * 1.02, h = size * 0.33;
   return { x, cy: y - h * 0.34, w, h };
 }
@@ -2009,7 +2011,7 @@ function drawNote(c, g, n, p, travel) {
   const scale = lerp(0.38, 1, t);
   const x = n.span === 1 ? laneXCell(n.cell, tw, g) : laneX(n.lane, tw, g);
   const y = laneY(tw, g);
-  const size = g.laneW * 0.94 * scale * (n.span === 1 ? 0.52 : 1);
+  const size = g.laneW * 0.94 * scale * noteScale() * (n.span === 1 ? 0.52 : 1);
 
   const holdLive = n.type === 'hold' && n.holdState !== 2 && n.holdState !== 3 && n.holdState !== 4;
   if (holdLive) {
@@ -2022,7 +2024,7 @@ function drawNote(c, g, n, p, travel) {
     // 长条要贴合透视轨道：尾端的横向位置和宽度都按自身深度单独算，
     // 只沿用头部的 x 会让整条随头部平移，看起来脱离轨道乱飘
     const xTail = n.span === 1 ? laneXCell(n.cell, twTail, g) : laneX(n.lane, twTail, g);
-    const wHead = g.laneW * 0.8 * scale * (n.span === 1 ? 0.52 : 1);
+    const wHead = g.laneW * 0.8 * scale * noteScale() * (n.span === 1 ? 0.52 : 1);
     const persp = tt => 0.3 + 0.7 * tt;                  // 轨道在该深度的宽度系数
     const wTail = wHead * persp(twTail) / persp(tw);
     if (pTail > -0.08) {
@@ -2297,6 +2299,16 @@ function quitGame() {
   $('#modal-pause').classList.remove('show');
   goTitle();
 }
+/* 从暂停界面重开当前曲目：停掉旧音源，重新加载谱面 */
+function restartGame() {
+  if (!G.song) return;
+  const song = G.song, diff = G.diff, speed = G.speed;
+  G.active = false; G.paused = false; G.finished = true;
+  try { if (G.source) { G.source.onended = null; G.source.stop(); } } catch (e) {}
+  try { AC.resume(); } catch (e) {}
+  $('#modal-pause').classList.remove('show');
+  startGame(song, diff, speed);
+}
 
 /* ============================================================
    设置界面渲染
@@ -2350,47 +2362,105 @@ function renderSkins() {
   grid.appendChild(cus);
 }
 
-/* 按键大小：滑块 + 实时预览 */
+/* 音符大小：滑块 + 实时预览（预览画的是下落的音符，不是底部键盘） */
+const _prevImgs = {};
+function previewSkinImg() {
+  if (settings.skin === 'rect' || settings.skin === 'pill' || settings.skin === 'lumirect') return null;
+  const src = settings.skin === 'custom' ? settings.customSkin : res(`assets/keys/${settings.skin}.png`);
+  if (!src) return null;
+  let im = _prevImgs[src];
+  if (!im) {
+    im = new Image();
+    im.onload = () => renderKeySize();
+    im.src = src;
+    _prevImgs[src] = im;
+  }
+  return im.complete && im.naturalWidth ? im : null;
+}
 function renderKeySize() {
   const range = $('#keysize-range'), val = $('#keysize-val'), cvp = $('#keysize-prev');
   if (!range) return;
-  const pct = Math.round(clamp(Number(settings.keyScale) || 1, 0.5, 1.8) * 100);
+  const ns = clamp(Number(settings.keyScale) || 1, 0.5, 1.5);
+  const pct = Math.round(ns * 100);
   range.value = pct;
   val.textContent = pct + '%';
   if (!cvp) return;
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  const w = cvp.clientWidth || 420, h = cvp.clientHeight || 58;
+  const w = cvp.clientWidth || 420, h = cvp.clientHeight || 76;
   if (!cvp.width || Math.abs(cvp.width / dpr - w) > 1) { cvp.width = Math.round(w * dpr); cvp.height = Math.round(h * dpr); }
   const c = cvp.getContext('2d');
   c.setTransform(dpr, 0, 0, dpr, 0, 0);
   c.clearRect(0, 0, w, h);
-  const lanes = 6, gap = 4;
-  const laneW = (w - 16) / lanes;
-  const cellH = Math.min(h * 0.52, laneW * 0.5) * (pct / 100);
-  const y = h / 2 - cellH / 2;
+
+  // 迷你透视轨道：上窄下宽，与游戏里一致
+  const lanes = 6, topY = 8, judgeY = h - 11;
+  const laneW = Math.min(w * 0.92, 560) / lanes;
+  const cx = w / 2;
+  const persp = t => 0.3 + 0.7 * t;
+  const laneXAt = (k, t) => cx + (k - lanes / 2) * laneW * persp(t);   // k 可为半整数（格线）
+  c.save();
+  for (let i = 0; i < lanes; i++) {
+    c.beginPath();
+    c.moveTo(laneXAt(i, 0), topY); c.lineTo(laneXAt(i + 1, 0), topY);
+    c.lineTo(laneXAt(i + 1, 1), judgeY); c.lineTo(laneXAt(i, 1), judgeY);
+    c.closePath();
+    c.fillStyle = i % 2 ? 'rgba(120,150,210,.06)' : 'rgba(120,150,210,.03)';
+    c.fill();
+    c.strokeStyle = 'rgba(130,165,220,.16)'; c.lineWidth = 1; c.stroke();
+  }
+  c.restore();
+
   // 判定线
   c.save();
-  const lg = c.createLinearGradient(8, 0, w - 8, 0);
+  const lg = c.createLinearGradient(laneXAt(0, 1), 0, laneXAt(lanes, 1), 0);
   lg.addColorStop(0, 'rgba(150,120,255,0)');
-  lg.addColorStop(.5, 'rgba(226,214,255,.85)');
+  lg.addColorStop(.5, 'rgba(226,214,255,.9)');
   lg.addColorStop(1, 'rgba(255,94,168,0)');
   c.strokeStyle = lg; c.lineWidth = 2;
   c.shadowColor = 'rgba(168,130,255,.8)'; c.shadowBlur = 10;
-  c.beginPath(); c.moveTo(8, h / 2); c.lineTo(w - 8, h / 2); c.stroke();
+  c.beginPath(); c.moveTo(laneXAt(0, 1), judgeY); c.lineTo(laneXAt(lanes, 1), judgeY); c.stroke();
   c.restore();
-  for (let i = 0; i < lanes; i++) {
-    const x = 8 + i * laneW + gap / 2;
-    const cw = laneW - gap;
+
+  // 三个下落音符（当前皮肤 + 当前大小）
+  const tNote = 0.78;
+  const tw = (0.38 * tNote + 0.31 * tNote * tNote) / 0.69;
+  const yNote = topY + tw * (judgeY - topY);
+  const scaleAnim = 0.38 + 0.62 * tNote;
+  const laneWAt = laneW * persp(tw);
+  const nw = laneWAt * 0.94 * scaleAnim * ns;
+  const nh = nw * 0.33;
+  const img = previewSkinImg();
+  [1, 2.5, 4].forEach(lane => {
+    const x = laneXAt(lane + 0.5, tw);
     c.save();
-    const g2 = c.createLinearGradient(0, y, 0, y + cellH);
-    g2.addColorStop(0, 'rgba(196,178,255,.20)');
-    g2.addColorStop(.6, 'rgba(150,120,240,.13)');
-    g2.addColorStop(1, 'rgba(112,86,200,.10)');
-    roundRect(c, x, y, cw, cellH, Math.min(6, cellH / 2));
-    c.fillStyle = g2; c.fill();
-    c.strokeStyle = 'rgba(190,168,255,.46)'; c.lineWidth = 1.2; c.stroke();
+    if (img) {
+      const iw = nw * 1.02, ih = iw * (img.naturalHeight / img.naturalWidth) * 0.5;
+      c.shadowColor = 'rgba(165,205,255,.7)'; c.shadowBlur = 10;
+      c.drawImage(img, x - iw / 2, yNote - ih * 0.72, iw, ih);
+    } else {
+      const isRect = settings.skin === 'rect';
+      const rad = settings.skin === 'pill' ? nh / 2 : Math.min(nh * 0.24, 6);
+      const g2 = c.createLinearGradient(x - nw / 2, 0, x + nw / 2, 0);
+      if (isRect) {
+        g2.addColorStop(0, '#ffffff');
+        g2.addColorStop(.38, '#d6f7ff');
+        g2.addColorStop(.72, '#7fdcff');
+        g2.addColorStop(1, '#35bdf5');
+        c.shadowColor = 'rgba(80,220,255,.9)';
+      } else {
+        g2.addColorStop(0, '#fcfbff');
+        g2.addColorStop(.55, '#e6e0fa');
+        g2.addColorStop(1, '#c6beea');
+        c.shadowColor = 'rgba(165,205,255,.85)';
+      }
+      c.shadowBlur = 9;
+      roundRect(c, x - nw / 2, yNote - nh / 2, nw, nh, rad);
+      c.fillStyle = g2; c.fill();
+      c.shadowBlur = 0;
+      c.strokeStyle = 'rgba(255,255,255,.9)'; c.lineWidth = 1; c.stroke();
+    }
     c.restore();
-  }
+  });
 }
 
 /* 导入自定义按键图标：等比缩放后存为 dataURL（保留透明） */
@@ -2811,6 +2881,7 @@ $('#dlg-ok').addEventListener('click', () => {
 });
 $('#pause-btn').addEventListener('click', togglePause);
 $('#pause-resume').addEventListener('click', togglePause);
+$('#pause-restart').addEventListener('click', restartGame);
 $('#pause-quit').addEventListener('click', quitGame);
 $('#res-home').addEventListener('click', () => { goTitle(); });
 $('#res-again').addEventListener('click', () => startFromClock());
@@ -2937,7 +3008,7 @@ $('#shade-range').addEventListener('input', e => {
   syncBgUI(); applyBackground(); saveSettings();
 });
 $('#keysize-range').addEventListener('input', e => {
-  settings.keyScale = clamp(Number(e.target.value) / 100, 0.5, 1.8);
+  settings.keyScale = clamp(Number(e.target.value) / 100, 0.5, 1.5);
   $('#keysize-val').textContent = e.target.value + '%';
   renderKeySize();
   saveSettings();
