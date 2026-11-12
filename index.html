@@ -106,6 +106,11 @@
   .unit-head.collapsed .arrow{transform:rotate(-90deg);}
   .song-item.hidden,.unit-head.hidden{display:none;}
   .song-item .stars{display:flex;gap:3px;flex:0 0 auto;margin-left:2px;}
+  .song-item .fav{flex:0 0 auto;font-size:clamp(15px,2.6vh,21px);line-height:1;color:#394963;cursor:pointer;
+    padding:4px 1px;transition:color .15s,text-shadow .15s,transform .1s;user-select:none;}
+  .song-item .fav:hover{color:#ff7ba0;}
+  .song-item .fav:active{transform:scale(.85);}
+  .song-item .fav.on{color:#ff5e8a;text-shadow:0 0 10px rgba(255,94,138,.75);}
   .song-item .star{font-size:clamp(11px,1.8vh,15px);line-height:1;color:#3d4d66;cursor:pointer;
     transition:color .15s,text-shadow .15s,transform .1s;padding:2px 1px;}
   .song-item .star:active{transform:scale(1.25);}
@@ -132,13 +137,6 @@
   .card-cell .tj.judge{color:#ffd66b;}
   .card-cell .tj.heal{color:#7ff0a8;}
 
-  /* ---------- 演出内技能按钮 ---------- */
-  #skill-btn{position:fixed;right:calc(16px + env(safe-area-inset-right));bottom:17%;z-index:90;display:none;
-    width:66px;height:66px;border-radius:50%;border:2px solid rgba(255,214,107,.7);color:#ffd66b;
-    background:radial-gradient(circle at 35% 30%,rgba(255,214,107,.22),rgba(20,14,4,.6));
-    font-weight:900;font-size:13px;letter-spacing:.04em;box-shadow:0 0 18px rgba(255,214,107,.22);}
-  #skill-btn.ready{animation:skPulse 1.6s ease-in-out infinite;}
-  #skill-btn.used{opacity:.32;border-color:#5f7290;color:#5f7290;box-shadow:none;animation:none;}
   @keyframes skPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
   .song-item{position:relative;display:flex;align-items:center;gap:clamp(10px,1.6vw,16px);
     width:min(700px,76vw);margin:clamp(4px,0.9vh,8px) auto;padding:clamp(8px,1.4vh,12px) clamp(12px,2vw,20px);
@@ -625,7 +623,6 @@
     <canvas id="cv"></canvas>
     <div id="prog"><div id="prog-fill"></div></div>
     <button id="pause-btn">❚❚</button>
-    <button id="skill-btn">技能</button>
   </section>
 
   <!-- ================= 结算 ================= -->
@@ -667,6 +664,13 @@
         <div class="pill on" data-v="all">全 部</div>
         <div class="pill" data-v="yes">已 FC</div>
         <div class="pill" data-v="no">未 FC</div>
+      </div>
+    </div>
+    <div class="field">
+      <div class="lbl"><span>收藏</span></div>
+      <div class="pills" id="f-fav">
+        <div class="pill on" data-v="all">全 部</div>
+        <div class="pill" data-v="fav">收藏夹</div>
       </div>
     </div>
     <div class="field">
@@ -905,7 +909,7 @@ const CARDS = [
 const DEF_SET = { skin:'lumirect', bgMode:'album', bgCover:res('assets/covers/leoneed1.jpg'),
   bgCard:res('assets/cards/c11.jpg'), bgCardShade:0.45, customSkin:null, sfxVolume:0.5, speed:7.0, diff:'normal',
   keyScale:1.0, judgeLeniency:1.0, holdAlpha:0.5, judgeLift:0, myCards:[], lastSong:0, sound:'tap',
-  marks:{}, collapsedUnits:{}, teams:[], activeTeam:-1, songFilter:{ dur:'all', fc:'all', ap:'all' } };
+  marks:{}, favs:{}, collapsedUnits:{}, teams:[], activeTeam:-1, songFilter:{ dur:'all', fc:'all', ap:'all', fav:'all' } };
 let settings = Object.assign({}, DEF_SET);
 try {
   const raw = localStorage.getItem('sekai-fan-settings');
@@ -1042,10 +1046,17 @@ function setSongMark(s, i, v) {
   saveSettings();
 }
 
-/* ---------- 曲目筛选（时长 / FC / AP） ---------- */
+/* ---------- 曲目筛选（时长 / FC / AP / 收藏） ---------- */
+function isFav(s) { return !!(settings.favs && settings.favs[songKey(s)]); }
+function toggleFav(s) {
+  settings.favs = settings.favs || {};
+  const k = songKey(s);
+  if (settings.favs[k]) delete settings.favs[k]; else settings.favs[k] = 1;
+  saveSettings();
+}
 function songFilterState() {
   const f = settings.songFilter || {};
-  return { dur: f.dur || 'all', fc: f.fc || 'all', ap: f.ap || 'all' };
+  return { dur: f.dur || 'all', fc: f.fc || 'all', ap: f.ap || 'all', fav: f.fav || 'all' };
 }
 function songPassFilter(s) {
   const f = songFilterState();
@@ -1056,11 +1067,12 @@ function songPassFilter(s) {
   if (f.fc === 'no' && m[1]) return false;
   if (f.ap === 'yes' && !m[2]) return false;
   if (f.ap === 'no' && m[2]) return false;
+  if (f.fav === 'fav' && !isFav(s)) return false;
   return true;
 }
 function filterActive() {
   const f = songFilterState();
-  return f.dur !== 'all' || f.fc !== 'all' || f.ap !== 'all';
+  return f.dur !== 'all' || f.fc !== 'all' || f.ap !== 'all' || f.fav !== 'all';
 }
 /* 应用筛选：不匹配的曲目隐藏；分类下全部被隐藏时标题一并隐藏。 */
 function applySongFilter() {
@@ -1118,6 +1130,7 @@ function buildSongList() {
       const marks = songMarks(s);
       const starTips = ['完走时 HP > 200', 'FULL COMBO', 'ALL PERFECT'];
       el.innerHTML = `
+        <div class="fav${isFav(s) ? ' on' : ''}" title="收藏">♥</div>
         <div class="cover" data-cover="${s.cover || res('assets/covers/other1.jpg')}"></div>
         <div class="meta">
           <div class="name">${escapeHTML(s.title)}${s.full ? '<span class="full">【full】</span>' : ''}</div>
@@ -1128,6 +1141,12 @@ function buildSongList() {
           `<span class="star${marks[i] ? ' on' : ''}" data-s="${i}" title="${starTips[i]}">★</span>`).join('')}</div>
         <div class="dur">${durationText(s.duration)}</div>`;
       el.addEventListener('click', () => selectSong(s._i, true, true));
+      el.querySelector('.fav').addEventListener('click', e => {
+        e.stopPropagation();                     // 别触发选歌
+        toggleFav(s);
+        e.currentTarget.classList.toggle('on', isFav(s));
+        if (songFilterState().fav !== 'all') applySongFilter();   // 收藏夹筛选中实时生效
+      });
       el.querySelectorAll('.star').forEach(st => {
         st.addEventListener('click', e => {
           e.stopPropagation();                     // 别触发选歌
@@ -1877,7 +1896,7 @@ function initGame(song, buffer, notes, diff, speed) {
   G.judged = 0; G.comboPop = 0;
   // 队伍技能：确认演出时选的配队
   G.team = curTeam();
-  setupSkillButton();
+  setupSkillAuto();
   loadSkinImage().then(() => {
     if (myToken !== gameToken) return;      // 期间已经开了新局，这条音轨作废
     const ac = audioCtx();
@@ -1921,28 +1940,30 @@ function takeDamage(dmg) {
   G.hp = Math.max(0, G.hp - dmg);
   G.damage += dmg;
 }
-function activateSkill() {
-  if (!G.active || G.paused || G.finished || G.skillUsed || !G.skillType) return;
-  G.skillUsed = true;
-  G.skillUntil = G.now + 5;
-  const sk = teamSkill(G.team);
-  const sb = $('#skill-btn');
-  sb.classList.remove('ready'); sb.classList.add('used');
-  if (sk) addEffect(G.lanes >> 1, sk.card.name, sk.type === 'judge' ? '#ffd66b' : '#7ff0a8', null);
-  playHitSound();
+/* ---------- 队伍技能（自动发动） ----------
+   每隔 20~30 秒随机触发一次：从配队的卡里随机抽一张，
+   判卡 / 奶卡 → 发动 5 秒；其他卡没有效果，本次不发动。
+   发动状态显示在画面左上（HP 条下方）。 */
+function randSkillInterval() { return 20 + Math.random() * 10; }
+function setupSkillAuto() {
+  G.skillCards = (((G.team && G.team.cards) || []).map(id => CARD_MAP[id]).filter(Boolean)).slice(0, 5);
+  G.skillType = null; G.skillCard = null; G.skillUntil = -1;
+  G.skillNext = randSkillInterval();       // 相对谱面时间 G.now（倒计时结束后才开始计）
+  G.skillFailText = null; G.skillFailUntil = -1;
 }
-function setupSkillButton() {
-  const sb = $('#skill-btn');
-  const sk = teamSkill(G.team);
-  G.skillType = sk ? sk.type : null;
-  G.skillUsed = false; G.skillUntil = -1;
-  if (sk) {
-    sb.style.display = '';
-    sb.classList.remove('used'); sb.classList.add('ready');
-    sb.textContent = '技能';
-    sb.onclick = activateSkill;
+function updateSkillAuto() {
+  if (!G.skillCards || !G.skillCards.length) return;
+  const now = G.now;
+  if (G.skillType && now > G.skillUntil) { G.skillType = null; G.skillCard = null; }
+  if (G.skillFailText && now > G.skillFailUntil) G.skillFailText = null;
+  if (now < G.skillNext) return;
+  G.skillNext = now + randSkillInterval();
+  const card = G.skillCards[Math.floor(Math.random() * G.skillCards.length)];
+  if (card.type === 'judge' || card.type === 'heal') {
+    G.skillType = card.type; G.skillCard = card; G.skillUntil = now + 5;
   } else {
-    sb.style.display = 'none';
+    // 抽到无效果的卡：只给一条短暂提示，不发动
+    G.skillFailText = card.name; G.skillFailUntil = now + 2.2;
   }
 }
 
@@ -2178,6 +2199,7 @@ function loop(ts) {
   else if (G._ft < 0.026) G.lowFx = false;
   if (!G.paused && !G.finished) {
     G.now = advanceClock(dt);
+    updateSkillAuto();
     // 底部彩虹进度条
     if (G.progFill) {
       const pr = Math.min(1, Math.max(0, G.now / G.duration));
@@ -2758,6 +2780,43 @@ function drawHUD(g) {
   c.fillText(`HP ${Math.round(G.hp)} / ${G.maxHp}`, hbX, hbY + Math.max(6, g.H * 0.014) + Math.max(11, g.H * 0.02));
   c.restore();
 
+  // 队伍技能状态（HP 条下方）：发动中显示卡名与剩余时间，抽到无效果卡则短暂提示
+  if (G.skillType && G.skillCard) {
+    const remain = Math.max(0, G.skillUntil - G.now);
+    const isJ = G.skillType === 'judge';
+    const bx = g.W * 0.035, by = g.H * 0.225;
+    const bw = Math.min(g.W * 0.32, g.H * 0.66), bh = Math.max(34, g.H * 0.095);
+    roundRect(c, bx, by, bw, bh, 10);
+    c.fillStyle = isJ ? 'rgba(255,214,107,.13)' : 'rgba(127,240,168,.13)'; c.fill();
+    c.lineWidth = 1.5;
+    c.strokeStyle = isJ ? 'rgba(255,214,107,.7)' : 'rgba(127,240,168,.7)'; c.stroke();
+    c.save();
+    c.textAlign = 'left';
+    c.fillStyle = isJ ? '#ffd66b' : '#7ff0a8';
+    c.font = `900 ${Math.max(11, g.H * 0.021)}px ${FF}`;
+    c.fillText(`${G.skillCard.icon} ${G.skillCard.name}`, bx + 10, by + g.H * 0.036);
+    c.fillStyle = 'rgba(230,245,255,.85)';
+    c.font = `700 ${Math.max(9, g.H * 0.0155)}px ${FF}`;
+    c.fillText(`技能发动中 ${remain.toFixed(1)} 秒`, bx + 10, by + g.H * 0.062);
+    // 剩余时间条
+    const tw = bw - 20;
+    roundRect(c, bx + 10, by + bh - 9, Math.max(2, tw * remain / 5), 3.5, 99);
+    c.fillStyle = isJ ? 'rgba(255,214,107,.85)' : 'rgba(127,240,168,.85)'; c.fill();
+    c.restore();
+  } else if (G.skillFailText) {
+    const bx = g.W * 0.035, by = g.H * 0.225;
+    const bw = Math.min(g.W * 0.32, g.H * 0.66), bh = Math.max(26, g.H * 0.06);
+    roundRect(c, bx, by, bw, bh, 10);
+    c.fillStyle = 'rgba(120,140,170,.12)'; c.fill();
+    c.lineWidth = 1.5; c.strokeStyle = 'rgba(120,140,170,.5)'; c.stroke();
+    c.save();
+    c.textAlign = 'left';
+    c.fillStyle = 'rgba(185,205,230,.9)';
+    c.font = `700 ${Math.max(10, g.H * 0.0175)}px ${FF}`;
+    c.fillText(`${G.skillFailText} · 无效果`, bx + 10, by + bh * 0.62);
+    c.restore();
+  }
+
   // combo
   if (G.combo >= 2) {
     const pop = 1 + G.comboPop * 0.18;
@@ -2798,7 +2857,6 @@ function finishGame() {
   if (G.finished) return;
   G.finished = true; G.active = false;
   stopGameAudio();
-  $('#skill-btn').style.display = 'none';
   // 补齐未判定
   const rest = G.notes.filter(n => !n.judged).length;
   if (rest) {
@@ -2890,7 +2948,6 @@ function quitGame() {
   gameToken++;                 // 作废还在加载中的开局，避免退出后音轨自己响起来
   stopGameAudio();
   G.buffer = null;             // 释放解码音频
-  $('#skill-btn').style.display = 'none';
   try { AC.resume(); } catch (e) {}
   $('#modal-pause').classList.remove('show');
   goTitle();
@@ -3641,12 +3698,12 @@ $('#songs-ok').addEventListener('click', () => { stopPreview(); releasePreviewBu
 /* 筛选弹窗：时长 / FC / AP 三个维度，应用到曲目列表 */
 $('#songs-filter').addEventListener('click', () => {
   const f = songFilterState();
-  [['#f-dur', f.dur], ['#f-fc', f.fc], ['#f-ap', f.ap]].forEach(([sel, v]) => {
+  [['#f-dur', f.dur], ['#f-fc', f.fc], ['#f-ap', f.ap], ['#f-fav', f.fav]].forEach(([sel, v]) => {
     $$(sel + ' .pill').forEach(p => p.classList.toggle('on', p.dataset.v === v));
   });
   $('#modal-filter').classList.add('show');
 });
-['#f-dur', '#f-fc', '#f-ap'].forEach(sel => {
+['#f-dur', '#f-fc', '#f-ap', '#f-fav'].forEach(sel => {
   $(sel).addEventListener('click', e => {
     const p = e.target.closest('.pill');
     if (!p) return;
@@ -3655,7 +3712,7 @@ $('#songs-filter').addEventListener('click', () => {
   });
 });
 $('#f-clear').addEventListener('click', () => {
-  settings.songFilter = { dur: 'all', fc: 'all', ap: 'all' };
+  settings.songFilter = { dur: 'all', fc: 'all', ap: 'all', fav: 'all' };
   saveSettings();
   $('#modal-filter').classList.remove('show');
   applySongFilter();
@@ -3664,7 +3721,8 @@ $('#f-ok').addEventListener('click', () => {
   settings.songFilter = {
     dur: $('#f-dur .pill.on').dataset.v,
     fc: $('#f-fc .pill.on').dataset.v,
-    ap: $('#f-ap .pill.on').dataset.v
+    ap: $('#f-ap .pill.on').dataset.v,
+    fav: $('#f-fav .pill.on').dataset.v
   };
   saveSettings();
   $('#modal-filter').classList.remove('show');
