@@ -208,6 +208,9 @@
   @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
   .hint{font-size:clamp(10px,1.5vh,12px);color:#7b90ae;margin:0 0 12px;letter-spacing:.06em;}
   .skin-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(76px,1fr));gap:10px;}
+  .key-size-field{margin-top:14px;}
+  .keysize-prev{display:block;width:100%;height:58px;margin-top:10px;border-radius:10px;
+    background:rgba(8,14,26,.55);border:1px solid rgba(120,200,255,.12);}
   .skin{position:relative;aspect-ratio:1/1;border-radius:14px;background:rgba(255,255,255,.04);
     border:1px solid rgba(255,255,255,.08);overflow:hidden;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.18s;}
   .skin img{max-width:82%;max-height:82%;object-fit:contain;filter:drop-shadow(0 4px 6px rgba(0,0,0,.5));}
@@ -255,6 +258,9 @@
     border:2px solid transparent;cursor:pointer;transition:.18s;overflow:hidden;}
   .cov::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 60%,rgba(0,0,0,.6));}
   .cov span{position:absolute;left:6px;bottom:4px;z-index:2;font-size:9px;color:#dbe9ff;letter-spacing:.04em;}
+  .cov .del{position:absolute;top:3px;right:5px;z-index:3;font-style:normal;font-size:13px;line-height:1;
+    width:17px;height:17px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    color:#ffd7e6;background:rgba(10,14,24,.72);border:1px solid rgba(255,120,170,.35);cursor:pointer;}
   .cov.on{border-color:var(--cyan);box-shadow:0 0 22px rgba(37,226,255,.3);}
   .import-row{display:flex;align-items:center;gap:12px;margin-top:6px;flex-wrap:wrap;}
   .import-prev{width:120px;height:68px;border-radius:10px;background:rgba(255,255,255,.05) center/cover no-repeat;
@@ -270,6 +276,11 @@
   .url-row input{flex:1;min-width:0;height:38px;border-radius:10px;border:1px solid rgba(140,200,255,.25);
     background:rgba(8,14,26,.6);color:#dfeeff;padding:0 12px;font-size:12px;font-family:inherit;outline:none;}
   .url-row input:focus{border-color:rgba(37,226,255,.6);}
+  .card-dl{margin-top:10px;}
+  .card-dl-bar{height:6px;border-radius:99px;background:rgba(120,180,255,.14);overflow:hidden;}
+  .card-dl-bar i{display:block;height:100%;width:0;border-radius:99px;
+    background:linear-gradient(90deg,#25e2ff,#9b7bff,#ff5ea8);transition:width .15s linear;}
+  .card-dl span{display:block;margin-top:6px;font-size:11px;color:#8fa4c4;}
   .shade-field{margin-top:16px;}
   .bg-prev-row{display:flex;gap:16px;align-items:center;margin-top:12px;flex-wrap:wrap;}
   .bg-prev{position:relative;width:min(340px,56vw);aspect-ratio:16/9;border-radius:12px;overflow:hidden;
@@ -440,6 +451,11 @@
       <div class="panel on" id="panel-skin">
         <p class="hint">这里选择的是从屏幕上方落下的音符样式：默认为白色发光的圆角长方形，还可切换发光胶囊、经典蓝色长方形，或选择角色图案（短键会压扁小人，长键出现连续小人），也可以导入自己的图片（建议透明背景 PNG）。底部键盘固定为半透明按键。</p>
         <div class="skin-grid" id="skin-grid"></div>
+        <div class="field key-size-field">
+          <div class="lbl"><span>按键大小</span><b id="keysize-val">100%</b></div>
+          <input type="range" id="keysize-range" min="50" max="180" step="5" value="100">
+          <canvas id="keysize-prev" class="keysize-prev"></canvas>
+        </div>
         <input type="file" id="skin-file" accept="image/*" style="display:none">
       </div>
       <div class="panel" id="panel-sound">
@@ -475,8 +491,12 @@
             <input type="file" id="card-file" accept="image/*" style="display:none">
           </div>
           <div class="url-row">
-            <input type="url" id="card-url" placeholder="或粘贴卡面图片链接（https://…）">
-            <button class="btn ghost" id="btn-card-url">使用链接</button>
+            <input type="text" id="card-id" inputmode="numeric" maxlength="7" placeholder="输入卡面编号（纯数字，如 1337）">
+            <button class="btn ghost" id="btn-card-id">获取卡面</button>
+          </div>
+          <div class="card-dl" id="card-dl" style="display:none">
+            <div class="card-dl-bar"><i id="card-dl-fill"></i></div>
+            <span id="card-dl-txt">准备中…</span>
           </div>
           <div class="field shade-field">
             <div class="lbl"><span>遮罩明暗度</span><b id="shade-val">45%</b></div>
@@ -752,7 +772,8 @@ const CARDS = [
 
 /* ---------- 设置存储 ---------- */
 const DEF_SET = { skin:'lumirect', sound:'default', bgMode:'album', bgCover:res('assets/covers/leoneed1.jpg'),
-  bgCard:res('assets/cards/c11.jpg'), bgCardShade:0.45, customSkin:null, sfxVolume:0.5, speed:7.0, diff:'normal' };
+  bgCard:res('assets/cards/c11.jpg'), bgCardShade:0.45, customSkin:null, sfxVolume:0.5, speed:7.0, diff:'normal',
+  keyScale:1.0, myCards:[] };
 let settings = Object.assign({}, DEF_SET);
 try {
   const raw = localStorage.getItem('sekai-fan-settings');
@@ -762,6 +783,8 @@ try {
 if (settings.bgMode === 'cover' || settings.bgMode === 'image') settings.bgMode = 'album';
 if (!settings.bgCard && settings.bgImage) settings.bgCard = settings.bgImage;
 if (typeof settings.bgCardShade !== 'number') settings.bgCardShade = 0.45;
+if (typeof settings.keyScale !== 'number') settings.keyScale = 1.0;
+if (!Array.isArray(settings.myCards)) settings.myCards = [];
 // 按键样式：默认改为发光长方形（旧设置一次性迁移，之后可自由选择）
 if (!settings._skinV4) {
   if (settings.skin === 'rect' || settings.skin === 'pill') settings.skin = 'lumirect';
@@ -777,9 +800,10 @@ SONGS.forEach((s, i) => { s._i = i; if (CDN_BASE) { if (s.file) s.file = CDN_BAS
 /* ---------- 背景应用 ---------- */
 function applyBackground() {
   const coverEl = $('#bg-cover'), imgEl = $('#bg-img'), shadeEl = $('#bg-card-shade');
-  const mode = settings.bgMode === 'card' && settings.bgCard ? 'card' : 'album';
+  const cardBg = settings.bgMode === 'card' ? cardSrc(settings.bgCard) : '';
+  const mode = cardBg ? 'card' : 'album';
   if (mode === 'card') {
-    imgEl.style.backgroundImage = `url(${settings.bgCard})`;
+    imgEl.style.backgroundImage = `url(${cardBg})`;
     shadeEl.style.opacity = String(clamp(Number(settings.bgCardShade) || 0, 0, 0.9));
   } else {
     coverEl.style.backgroundImage = `url(${settings.bgCover || DEF_SET.bgCover})`;
@@ -1853,8 +1877,9 @@ let _keyCache = { key: '', normal: null, glow: null, rectNormal: null, rectGlow:
 function drawJudgmentLine(g) {
   const c = ctx2d;
   const left = g.cx - (G.lanes / 2) * g.laneW, right = g.cx + (G.lanes / 2) * g.laneW;
-  const cellH = Math.min(g.laneW * 0.26, g.H * 0.052);
-  const keyKey = `${g.W}x${g.H}x${G.lanes}`;
+  const keyScale = clamp(Number(settings.keyScale) || 1, 0.5, 1.8);
+  const cellH = Math.min(g.laneW * 0.26, g.H * 0.052) * keyScale;
+  const keyKey = `${g.W}x${g.H}x${G.lanes}x${keyScale.toFixed(2)}`;
   // 键盘格固定为蓝色半透明长方形；皮肤选项只影响下落的音符
   if (_keyCache.key !== keyKey) {
     _keyCache.key = keyKey; _keyCache.cellH = cellH;
@@ -2311,6 +2336,49 @@ function renderSkins() {
   grid.appendChild(cus);
 }
 
+/* 按键大小：滑块 + 实时预览 */
+function renderKeySize() {
+  const range = $('#keysize-range'), val = $('#keysize-val'), cvp = $('#keysize-prev');
+  if (!range) return;
+  const pct = Math.round(clamp(Number(settings.keyScale) || 1, 0.5, 1.8) * 100);
+  range.value = pct;
+  val.textContent = pct + '%';
+  if (!cvp) return;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const w = cvp.clientWidth || 420, h = cvp.clientHeight || 58;
+  if (!cvp.width || Math.abs(cvp.width / dpr - w) > 1) { cvp.width = Math.round(w * dpr); cvp.height = Math.round(h * dpr); }
+  const c = cvp.getContext('2d');
+  c.setTransform(dpr, 0, 0, dpr, 0, 0);
+  c.clearRect(0, 0, w, h);
+  const lanes = 6, gap = 4;
+  const laneW = (w - 16) / lanes;
+  const cellH = Math.min(h * 0.52, laneW * 0.5) * (pct / 100);
+  const y = h / 2 - cellH / 2;
+  // 判定线
+  c.save();
+  const lg = c.createLinearGradient(8, 0, w - 8, 0);
+  lg.addColorStop(0, 'rgba(150,120,255,0)');
+  lg.addColorStop(.5, 'rgba(226,214,255,.85)');
+  lg.addColorStop(1, 'rgba(255,94,168,0)');
+  c.strokeStyle = lg; c.lineWidth = 2;
+  c.shadowColor = 'rgba(168,130,255,.8)'; c.shadowBlur = 10;
+  c.beginPath(); c.moveTo(8, h / 2); c.lineTo(w - 8, h / 2); c.stroke();
+  c.restore();
+  for (let i = 0; i < lanes; i++) {
+    const x = 8 + i * laneW + gap / 2;
+    const cw = laneW - gap;
+    c.save();
+    const g2 = c.createLinearGradient(0, y, 0, y + cellH);
+    g2.addColorStop(0, 'rgba(196,178,255,.20)');
+    g2.addColorStop(.6, 'rgba(150,120,240,.13)');
+    g2.addColorStop(1, 'rgba(112,86,200,.10)');
+    roundRect(c, x, y, cw, cellH, Math.min(6, cellH / 2));
+    c.fillStyle = g2; c.fill();
+    c.strokeStyle = 'rgba(190,168,255,.46)'; c.lineWidth = 1.2; c.stroke();
+    c.restore();
+  }
+}
+
 /* 导入自定义按键图标：等比缩放后存为 dataURL（保留透明） */
 function importSkinImage(file) {
   if (!file) return;
@@ -2411,9 +2479,219 @@ function renderCovers() {
 }
 
 /* ---------- 卡面模式 ---------- */
+/* 用户下载的卡面（存 IndexedDB，localStorage 只存编号与名称） */
+const cardBlobs = {};          // key -> objectURL
+let _idbP = null;
+function idbOpen() {
+  if (_idbP) return _idbP;
+  _idbP = new Promise((resolve, reject) => {
+    if (!window.indexedDB) { reject(new Error('no indexedDB')); return; }
+    const rq = indexedDB.open('pjsk-fan-bg', 1);
+    rq.onupgradeneeded = () => { if (!rq.result.objectStoreNames.contains('cards')) rq.result.createObjectStore('cards'); };
+    rq.onsuccess = () => resolve(rq.result);
+    rq.onerror = () => reject(rq.error);
+  });
+  return _idbP;
+}
+async function idbPut(key, blob) {
+  const db = await idbOpen();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('cards', 'readwrite');
+    tx.objectStore('cards').put(blob, key);
+    tx.oncomplete = resolve;
+    tx.onerror = () => reject(tx.error);
+  });
+}
+async function idbGet(key) {
+  const db = await idbOpen();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('cards', 'readonly');
+    const rq = tx.objectStore('cards').get(key);
+    rq.onsuccess = () => resolve(rq.result || null);
+    rq.onerror = () => reject(rq.error);
+  });
+}
+async function idbDel(key) {
+  const db = await idbOpen();
+  return new Promise((resolve) => {
+    const tx = db.transaction('cards', 'readwrite');
+    tx.objectStore('cards').delete(key);
+    tx.oncomplete = resolve;
+    tx.onerror = () => resolve();
+  });
+}
+/* bgCard 可以是普通 URL，也可以是 'idb:key' */
+function cardSrc(v) {
+  if (!v) return '';
+  if (v.indexOf('idb:') === 0) return cardBlobs[v.slice(4)] || '';
+  return v;
+}
+/* 启动时把已下载的卡面读成 objectURL */
+async function initMyCards() {
+  if (!settings.myCards.length) return;
+  let changed = false;
+  for (const mc of settings.myCards.slice()) {
+    if (cardBlobs[mc.k]) continue;
+    try {
+      const b = await idbGet(mc.k);
+      if (b) cardBlobs[mc.k] = URL.createObjectURL(b);
+      else changed = true;
+    } catch (e) {}
+  }
+  if (changed) {
+    settings.myCards = settings.myCards.filter(mc => !!cardBlobs[mc.k]);
+    saveSettings();
+  }
+  renderCards(); applyBackground(); syncBgUI();
+}
+
+/* 卡面编号 -> assetbundleName 对照表（sekai-world master-db，jsDelivr 镜像） */
+const CARD_DB_SRC = [
+  'https://cdn.jsdelivr.net/gh/Sekai-World/sekai-master-db-tc-diff@main/cards.json',
+  'https://gcore.jsdelivr.net/gh/Sekai-World/sekai-master-db-tc-diff@main/cards.json',
+  'https://fastly.jsdelivr.net/gh/Sekai-World/sekai-master-db-tc-diff@main/cards.json'
+];
+const CARD_ASSET_BASE = 'https://storage.sekai.best/sekai-jp-assets/character/member/';
+let _cardMap = null;
+
+async function fetchTextProg(url, onProg) {
+  const r = await fetch(url);
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  const total = Number(r.headers.get('content-length')) || 0;
+  if (!r.body || !total) { const t = await r.text(); if (onProg) onProg(1); return t; }
+  const reader = r.body.getReader();
+  const chunks = []; let got = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value); got += value.length;
+    if (onProg) onProg(Math.min(0.99, got / total));
+  }
+  return new TextDecoder().decode(await new Blob(chunks).arrayBuffer());
+}
+async function fetchBlobProg(urls, onProg) {
+  if (typeof urls === 'string') urls = [urls];
+  let lastErr = new Error('download failed');
+  for (const url of urls) {
+    try {
+      const r = await fetch(url);
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const total = Number(r.headers.get('content-length')) || 0;
+      if (!r.body || !total) { const b = await r.blob(); if (onProg) onProg(1); return b; }
+      const reader = r.body.getReader();
+      const chunks = []; let got = 0;
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value); got += value.length;
+        if (onProg) onProg(Math.min(0.99, got / total));
+      }
+      return new Blob(chunks, { type: 'image/webp' });
+    } catch (e) { lastErr = e; }
+  }
+  throw lastErr;
+}
+
+async function loadCardMap(onProg) {
+  if (_cardMap) return _cardMap;
+  try {
+    const raw = localStorage.getItem('pjsk-cardmap-v1');
+    if (raw) {
+      const o = JSON.parse(raw);
+      if (o && o.m && Date.now() - o.t < 30 * 864e5) { _cardMap = o.m; return _cardMap; }
+    }
+  } catch (e) {}
+  let lastErr = new Error('card db failed');
+  for (const u of CARD_DB_SRC) {
+    try {
+      const txt = await fetchTextProg(u, p => onProg && onProg(p));
+      const arr = JSON.parse(txt);
+      const m = {};
+      for (const c of arr) m[c.id] = [c.assetbundleName, c.cardRarityType || ''];
+      _cardMap = m;
+      try { localStorage.setItem('pjsk-cardmap-v1', JSON.stringify({ t: Date.now(), m })); } catch (e) {}
+      return m;
+    } catch (e) { lastErr = e; }
+  }
+  throw lastErr;
+}
+
+function cardDlUI(show, pct, text) {
+  const box = $('#card-dl'), fill = $('#card-dl-fill'), txt = $('#card-dl-txt');
+  if (!box) return;
+  box.style.display = show ? '' : 'none';
+  if (typeof pct === 'number') fill.style.width = Math.round(clamp(pct, 0, 1) * 100) + '%';
+  if (typeof text === 'string') txt.textContent = text;
+}
+
+/* 下载一张卡面（特训前 + 特训后）并加入背景列表 */
+async function downloadCardById(rawId) {
+  const id = String(rawId || '').trim();
+  if (!/^\d{1,7}$/.test(id)) { cardDlUI(true, 0, '请输入纯数字的卡面编号'); return; }
+  const cid = Number(id);
+  if (settings.myCards.some(mc => mc.cid === cid)) { cardDlUI(true, 1, '这张卡面已经在列表里了'); return; }
+  const btn = $('#btn-card-id');
+  if (btn.disabled) return;
+  btn.disabled = true;
+  try {
+    cardDlUI(true, 0.02, '正在读取卡面数据…（首次较慢，之后会缓存）');
+    const map = await loadCardMap(p => cardDlUI(true, 0.02 + p * 0.35, `正在读取卡面数据… ${Math.round(p * 100)}%`));
+    const ent = map[cid];
+    if (!ent) { cardDlUI(true, 0, `没有找到编号 ${cid} 的卡面`); return; }
+    const [abn, rarity] = ent;
+    const trainable = rarity === 'rarity_3' || rarity === 'rarity_4';
+    const parts = trainable ? ['normal', 'after_training'] : ['normal'];
+    const labelPart = { normal: '特训前', after_training: '特训后' };
+    let done = 0;
+    for (const part of parts) {
+      const key = `card${cid}_${part}`;
+      const rel = `${abn}/${part === 'normal' ? 'card_normal' : 'card_after_training'}.webp`;
+      const direct = CARD_ASSET_BASE + rel;
+      // 官方资源站对第三方站点偶尔做跨域拦截 → 失败时走图片代理
+      const urls = [direct, `https://wsrv.nl/?url=${encodeURIComponent(direct)}&output=webp`];
+      cardDlUI(true, 0.37 + (done / parts.length) * 0.6, `正在下载${labelPart[part]}…`);
+      const blob = await fetchBlobProg(urls, p => cardDlUI(true, 0.37 + ((done + p) / parts.length) * 0.6, `正在下载${labelPart[part]}… ${Math.round(p * 100)}%`));
+      await idbPut(key, blob);
+      if (cardBlobs[key]) URL.revokeObjectURL(cardBlobs[key]);
+      cardBlobs[key] = URL.createObjectURL(blob);
+      settings.myCards.push({ k: key, cid, label: `卡面 #${cid} · ${labelPart[part]}` });
+      done++;
+    }
+    settings.bgCard = `idb:card${cid}_normal`;
+    settings.bgMode = 'card';
+    saveSettings();
+    renderCards(); syncBgUI(); applyBackground();
+    cardDlUI(true, 1, `已加入背景列表（${parts.length} 张）`);
+    setTimeout(() => cardDlUI(false), 1800);
+  } catch (e) {
+    console.error(e);
+    cardDlUI(true, 0, '下载失败，检查网络后重试（' + (e.message || 'error') + '）');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
 function renderCards() {
   const grid = $('#card-grid');
   grid.innerHTML = '';
+  // 用户通过卡面编号下载的卡面
+  (settings.myCards || []).forEach(mc => {
+    const url = cardBlobs[mc.k];
+    const el = document.createElement('div');
+    el.className = 'cov' + (settings.bgCard === 'idb:' + mc.k ? ' on' : '');
+    if (url) el.style.backgroundImage = `url(${url})`;
+    el.innerHTML = `<span>${mc.label}</span><i class="del" title="移除">×</i>`;
+    el.onclick = (ev) => {
+      if (ev.target && ev.target.classList && ev.target.classList.contains('del')) {
+        ev.stopPropagation();
+        deleteCard(mc.k);
+        return;
+      }
+      settings.bgCard = 'idb:' + mc.k; settings.bgMode = 'card';
+      saveSettings(); renderCards(); syncBgUI(); applyBackground();
+    };
+    grid.appendChild(el);
+  });
   CARDS.forEach(([src, label]) => {
     const el = document.createElement('div');
     el.className = 'cov' + (settings.bgCard === src ? ' on' : '');
@@ -2421,18 +2699,27 @@ function renderCards() {
     el.innerHTML = `<span>${label}</span>`;
     el.onclick = () => {
       settings.bgCard = src; settings.bgMode = 'card';
-      saveSettings(); renderCards(); applyBackground();
+      saveSettings(); renderCards(); syncBgUI(); applyBackground();
     };
     grid.appendChild(el);
   });
   const prev = $('#card-prev');
-  if (settings.bgCard && !CARDS.some(([src]) => src === settings.bgCard)) {
-    prev.style.backgroundImage = `url(${settings.bgCard})`;
+  const cur = cardSrc(settings.bgCard);
+  if (cur && !CARDS.some(([src]) => src === settings.bgCard)) {
+    prev.style.backgroundImage = `url(${cur})`;
     prev.textContent = '';
   } else {
     prev.style.backgroundImage = 'none';
     prev.textContent = '未导入';
   }
+}
+
+async function deleteCard(key) {
+  try { await idbDel(key); } catch (e) {}
+  if (cardBlobs[key]) { URL.revokeObjectURL(cardBlobs[key]); delete cardBlobs[key]; }
+  settings.myCards = (settings.myCards || []).filter(m => m.k !== key);
+  if (settings.bgCard === 'idb:' + key) settings.bgCard = DEF_SET.bgCard;
+  saveSettings(); renderCards(); syncBgUI(); applyBackground();
 }
 
 function syncBgUI() {
@@ -2443,7 +2730,7 @@ function syncBgUI() {
   const pct = Math.round(clamp(Number(settings.bgCardShade) || 0, 0, 0.9) * 100);
   $('#shade-range').value = pct;
   $('#shade-val').textContent = pct + '%';
-  const url = (isCard && settings.bgCard) || '';
+  const url = isCard ? cardSrc(settings.bgCard) : '';
   $('#bg-prev-img').style.backgroundImage = url ? `url(${url})` : 'none';
   $('#bg-prev-shade').style.opacity = String(pct / 100);
 }
@@ -2623,18 +2910,23 @@ $('#btn-clear-card').addEventListener('click', () => {
   settings.bgCard = DEF_SET.bgCard; settings.bgMode = 'card';
   saveSettings(); renderCards(); syncBgUI(); applyBackground();
 });
-$('#btn-card-url').addEventListener('click', () => {
-  const u = $('#card-url').value.trim();
-  if (!/^https?:\/\//i.test(u)) { alert('请输入以 https:// 开头的图片链接'); return; }
-  settings.bgCard = u; settings.bgMode = 'card';
-  saveSettings(); renderCards(); syncBgUI(); applyBackground();
-  $('#card-url').value = '';
+$('#btn-card-id').addEventListener('click', () => {
+  downloadCardById($('#card-id').value);
 });
-$('#card-url').addEventListener('keydown', e => { if (e.key === 'Enter') $('#btn-card-url').click(); });
+$('#card-id').addEventListener('input', e => {
+  e.target.value = e.target.value.replace(/\D/g, '').slice(0, 7);
+});
+$('#card-id').addEventListener('keydown', e => { if (e.key === 'Enter') $('#btn-card-id').click(); });
 $('#shade-range').addEventListener('input', e => {
   settings.bgCardShade = Number(e.target.value) / 100;
   $('#shade-val').textContent = e.target.value + '%';
   syncBgUI(); applyBackground(); saveSettings();
+});
+$('#keysize-range').addEventListener('input', e => {
+  settings.keyScale = clamp(Number(e.target.value) / 100, 0.5, 1.8);
+  $('#keysize-val').textContent = e.target.value + '%';
+  renderKeySize();
+  saveSettings();
 });
 $$('.tab').forEach(t => t.addEventListener('click', () => {
   if (t.dataset.tab !== 'sound') stopSfxPreview();
@@ -2642,6 +2934,7 @@ $$('.tab').forEach(t => t.addEventListener('click', () => {
   t.classList.add('on');
   $$('.panel').forEach(p => p.classList.remove('on'));
   $('#panel-' + t.dataset.tab).classList.add('on');
+  if (t.dataset.tab === 'skin') requestAnimationFrame(renderKeySize);
 }));
 
 /* 阻止双指缩放/长按菜单 */
@@ -2650,11 +2943,13 @@ document.addEventListener('contextmenu', e => e.preventDefault());
 
 /* 初始化 */
 renderSkins();
+renderKeySize();
 renderSounds();
 renderCovers();
 renderCards();
 syncBgUI();
 applyBackground();
+initMyCards();
 
 /* ---------- 按键图片导入 / 音效音量 ---------- */
 $('#skin-file').addEventListener('change', e => {
