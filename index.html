@@ -2351,6 +2351,41 @@ function drawNote(c, g, n, p, travel, now = G.now, skinImg = G.skinImg) {
   }
 }
 
+/* 带发光的文字统一在这里画。
+   部分 iPad / Safari 在「带缩放的 CTM」（我们为高分屏做了 ctx.scale(DPR)）下计算
+   canvas 文字阴影时，阴影的模糊矩形和字本体用的是不同坐标系，结果就是光晕和字错开。
+   做法：临时把 CTM 重置为恒等（设备像素坐标），坐标 / 字号 / 模糊半径自己乘 DPR，
+   这样阴影和文字永远在同一个坐标系里，任何机型都不会错位。 */
+function glowText(c, text, x, y, fontPx, o = {}) {
+  const px = Math.max(1, fontPx * DPR);
+  const X = x * DPR, Y = y * DPR;
+  c.save();
+  c.setTransform(1, 0, 0, 1, 0, 0);
+  if (o.alpha != null) c.globalAlpha *= o.alpha;
+  c.textAlign = o.align || 'center';
+  c.textBaseline = o.baseline || 'alphabetic';
+  c.font = `${o.style || ''} ${o.weight || 900} ${px}px ${FF}`.replace(/\s+/g, ' ').trim();
+  if (o.stops) {
+    // 渐变字（PERFECT）：渐变坐标同样用设备像素
+    const tw = c.measureText(text).width;
+    const gd = c.createLinearGradient(X - tw / 2, Y, X + tw / 2, Y);
+    o.stops.forEach(([pos, col]) => gd.addColorStop(pos, col));
+    c.fillStyle = gd;
+  } else {
+    c.fillStyle = o.color || '#fff';
+  }
+  const blur = o.blur == null ? 14 : o.blur;
+  if (blur > 0) {
+    // 注意 shadowColor 不能是渐变对象，渐变字要单独指定发光色
+    c.shadowColor = o.glow || o.color || '#fff';
+    c.shadowBlur = blur * DPR;
+  } else {
+    c.shadowBlur = 0;
+  }
+  c.fillText(text, X, Y);
+  c.restore();
+}
+
 function drawEffects(g) {
   const c = ctx2d;
   const now = performance.now();
@@ -2359,31 +2394,24 @@ function drawEffects(g) {
     const k = (now - e.t0) / 1000 / e.life;
     const a = 1 - k;
     const y = e.y - k * g.H * 0.055;
-    c.save();
-    c.globalAlpha = a;
-    c.textAlign = 'center';
-    c.font = `900 ${Math.max(14, g.H * (e.small ? 0.032 : 0.05))}px ${FF}`;
-    c.fillStyle = e.color;
-    // PERFECT 用白→粉→紫→蓝的渐变字（与结算页一致）
-    if (e.text === 'PERFECT') {
-      const twd = c.measureText(e.text).width;
-      const pg = c.createLinearGradient(e.x - twd / 2, 0, e.x + twd / 2, 0);
-      pg.addColorStop(0, '#ffffff');
-      pg.addColorStop(.42, '#ffc4e1');
-      pg.addColorStop(.72, '#c9a6ff');
-      pg.addColorStop(1, '#8fb4ff');
-      c.fillStyle = pg;
-    }
-    c.shadowColor = e.text === 'PERFECT' ? 'rgba(255,190,235,.85)' : c.fillStyle; c.shadowBlur = 14;
-    c.fillText(e.text, e.x, y);
+    const isPerfect = e.text === 'PERFECT';
+    glowText(c, e.text, e.x, y, Math.max(14, g.H * (e.small ? 0.032 : 0.05)), {
+      alpha: a,
+      color: e.color,
+      // PERFECT 用白→粉→紫→蓝的渐变字（与结算页一致）
+      stops: isPerfect
+        ? [[0, '#ffffff'], [.42, '#ffc4e1'], [.72, '#c9a6ff'], [1, '#8fb4ff']]
+        : null,
+      glow: isPerfect ? 'rgba(255,190,235,.85)' : e.color,
+      blur: 14
+    });
     // FAST / SLOW 小字（显示在判定文字上方）
     if (e.fs) {
-      c.font = `800 ${Math.max(10, g.H * 0.026)}px ${FF}`;
-      c.fillStyle = e.fs === 'FAST' ? '#ff5a6e' : '#4fa8ff';
-      c.shadowColor = c.fillStyle; c.shadowBlur = 12;
-      c.fillText(e.fs, e.x, y - g.H * 0.052);
+      const fc = e.fs === 'FAST' ? '#ff5a6e' : '#4fa8ff';
+      glowText(c, e.fs, e.x, y - g.H * 0.052, Math.max(10, g.H * 0.026), {
+        alpha: a, weight: 800, color: fc, glow: fc, blur: 12
+      });
     }
-    c.restore();
   });
 }
 
@@ -2423,17 +2451,13 @@ function drawHUD(g) {
     const pop = 1 + G.comboPop * 0.18;
     const cx = g.W - Math.max(18, g.W * 0.035);
     const cy = g.judgeY - g.H * 0.22;
-    c.save();
-    c.textAlign = 'right';
-    c.fillStyle = 'rgba(255,255,255,.95)';
-    c.shadowColor = 'rgba(37,226,255,.75)'; c.shadowBlur = 16;
-    c.font = `italic 900 ${Math.max(22, g.H * 0.1) * pop}px ${FF}`;
-    c.fillText(String(G.combo), cx, cy);
-    c.shadowBlur = 0;
-    c.fillStyle = 'rgba(150,215,255,.85)';
-    c.font = `800 ${Math.max(9, g.H * 0.019)}px ${FF}`;
-    c.fillText('COMBO', cx, cy + Math.max(12, g.H * 0.026));
-    c.restore();
+    glowText(c, String(G.combo), cx, cy, Math.max(22, g.H * 0.1) * pop, {
+      style: 'italic', align: 'right', color: 'rgba(255,255,255,.95)',
+      glow: 'rgba(37,226,255,.75)', blur: 16
+    });
+    glowText(c, 'COMBO', cx, cy + Math.max(12, g.H * 0.026), Math.max(9, g.H * 0.019), {
+      weight: 800, align: 'right', color: 'rgba(150,215,255,.85)', blur: 0
+    });
   }
 
   // 进度条
@@ -2450,14 +2474,10 @@ function drawHUD(g) {
     const left = -G.now;
     const n = Math.ceil(left);
     const k = 1 - (left % 1);
-    c.save();
-    c.textAlign = 'center';
-    c.globalAlpha = clamp(1.2 - k * 0.6, 0, 1);
-    c.fillStyle = '#eafaff';
-    c.shadowColor = 'rgba(37,226,255,.9)'; c.shadowBlur = 40;
-    c.font = `italic 900 ${Math.max(48, g.H * 0.24)}px ${FF}`;
-    c.fillText(n > 0 ? String(n) : 'START', g.cx, g.H * 0.52);
-    c.restore();
+    glowText(c, n > 0 ? String(n) : 'START', g.cx, g.H * 0.52, Math.max(48, g.H * 0.24), {
+      style: 'italic', alpha: clamp(1.2 - k * 0.6, 0, 1),
+      color: '#eafaff', glow: 'rgba(37,226,255,.9)', blur: 40
+    });
   }
 }
 
