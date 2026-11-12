@@ -1,0 +1,105 @@
+- generic [ref=e22]:
+  - generic [ref=e23]:
+    - heading [level=2] [ref=e24]:
+      - text: 设
+      - emphasis [ref=e25]: 置
+    - generic [ref=e26]: 设置会自动保存
+  - generic [ref=e27]:
+    - generic [ref=e28] [cursor=pointer]: 按键图案
+    - generic [ref=e29] [cursor=pointer]: 按键音效
+    - generic [ref=e30] [cursor=pointer]: 背景
+  - generic [ref=e32]:
+    - paragraph [ref=e33]: 这里选择的是从屏幕上方落下的音符样式：默认为白色发光的圆角长方形，还可切换发光胶囊、经典蓝色长方形，或选择角色图案（短键会压扁小人，长键出现连续小人），也可以导入自己的图片（建议透明背景 PNG）。底部键盘固定为半透明按键，下方的滑块只调整下落音符的大小。
+    - generic [ref=e34]:
+      - generic [ref=e35] [cursor=pointer]: 发光长方形
+      - generic [ref=e38] [cursor=pointer]: 发光胶囊
+      - generic [ref=e41] [cursor=pointer]: 蓝色长方形
+      - generic [ref=e44] [cursor=pointer]:
+        - img "星乃一歌" [ref=e45]
+        - generic [ref=e46]: 星乃一歌
+      - generic [ref=e47] [cursor=pointer]:
+        - img "天馬咲希" [ref=e48]
+        - generic [ref=e49]: 天馬咲希
+      - generic [ref=e50] [cursor=pointer]:
+        - img "望月穂波" [ref=e51]
+        - generic [ref=e52]: 望月穂波
+      - generic [ref=e53] [cursor=pointer]:
+        - img "日野森志歩" [ref=e54]
+        - generic [ref=e55]: 日野森志歩
+      - generic [ref=e56] [cursor=pointer]:
+        - img "花里みのり" [ref=e57]
+        - generic [ref=e58]: 花里みのり
+      - generic [ref=e59] [cursor=pointer]:
+        - img "桐谷遥" [ref=e60]
+        - generic [ref=e61]: 桐谷遥
+      - generic [ref=e62] [cursor=pointer]:
+        - img "桃井愛莉" [ref=e63]
+        - generic [ref=e64]: 桃井愛莉
+      - generic [ref=e65] [cursor=pointer]:
+        - img "日野森雫" [ref=e66]
+        - generic [ref=e67]: 日野森雫
+      - generic [ref=e68] [cursor=pointer]:
+        - img "小豆沢こはね" [ref=e69]
+        - generic [ref=e70]: 小豆沢こはね
+      - generic [ref=e71] [cursor=pointer]:
+        - img "白石杏" [ref=e72]
+        - generic [ref=e73]: 白石杏
+      - generic [ref=e74] [cursor=pointer]:
+        - img "東雲彰人" [ref=e75]
+        - generic [ref=e76]: 東雲彰人
+      - generic [ref=e77] [cursor=pointer]:
+        - img "青柳冬弥" [ref=e78]
+        - generic [ref=e79]: 青柳冬弥
+      - generic [ref=e80] [cursor=pointer]:
+        - img "天馬司" [ref=e81]
+        - generic [ref=e82]: 天馬司
+      - generic [ref=e83] [cursor=pointer]:
+        - img "鳳えむ" [ref=e84]
+        - generic [ref=e85]: 鳳えむ
+      - generic [ref=e86] [cursor=pointer]:
+        - img "草薙寧々" [ref=e87]
+        - generic [ref=e88]: 草薙寧々
+      - generic [ref=e89] [cursor=pointer]:
+        - img "神代類" [ref=e90]
+        - generic [ref=e91]: 神代類
+      - generic [ref=e92] [cursor=pointer]:
+        - img "宵崎奏" [ref=e93]
+        - generic [ref=e94]: 宵崎奏
+      - generic [ref=e95] [cursor=pointer]:
+        - img "朝比奈まふゆ" [ref=e96]
+        - generic [ref=e97]: 朝比奈まふゆ
+      - generic [ref=e98] [cursor=pointer]:
+        - img "東雲絵名" [ref=e99]
+        - generic [ref=e100]: 東雲絵名
+      - generic [ref=e101] [cursor=pointer]:
+        - img "暁山瑞希" [ref=e102]
+        - generic [ref=e103]: 暁山瑞希
+      - generic [ref=e104] [cursor=pointer]:
+        - img "初音ミク" [ref=e105]
+        - generic [ref=e106]: 初音ミク
+      - generic [ref=e107] [cursor=pointer]:
+        - img "鏡音リン" [ref=e108]
+        - generic [ref=e109]: 鏡音リン
+      - generic [ref=e110] [cursor=pointer]:
+        - img "鏡音レン" [ref=e111]
+        - generic [ref=e112]: 鏡音レン
+      - generic [ref=e113] [cursor=pointer]:
+        - img "巡音ルカ" [ref=e114]
+        - generic [ref=e115]: 巡音ルカ
+      - generic [ref=e116] [cursor=pointer]:
+        - img "MEIKO" [ref=e117]
+        - generic [ref=e118]: MEIKO
+      - generic [ref=e119] [cursor=pointer]:
+        - img "KAITO" [ref=e120]
+        - generic [ref=e121]: KAITO
+      - generic [ref=e122] [cursor=pointer]:
+        - generic [ref=e123]: ＋导入图片
+        - generic [ref=e124]: 自定义图片
+    - generic [ref=e125]:
+      - generic [ref=e126]:
+        - generic [ref=e127]: 音符大小
+        - generic [ref=e128]: 100%
+      - slider [ref=e129]: "100"
+  - generic [ref=e131]:
+    - button "返 回" [ref=e132] [cursor=pointer]
+    - generic [ref=e133]: 设置已自动保存

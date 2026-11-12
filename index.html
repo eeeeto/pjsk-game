@@ -101,6 +101,45 @@
   .unit-head .dot{width:8px;height:8px;border-radius:50%;box-shadow:0 0 12px currentColor;background:currentColor;}
   .unit-head .bar{flex:1;height:1px;background:linear-gradient(90deg,rgba(140,190,255,.25),transparent);}
   .unit-head .cnt{color:#5f7290;letter-spacing:.06em;font-weight:600;}
+  .unit-head{cursor:pointer;user-select:none;-webkit-user-select:none;}
+  .unit-head .arrow{color:#5f7290;font-size:.9em;transition:transform .2s;}
+  .unit-head.collapsed .arrow{transform:rotate(-90deg);}
+  .song-item.hidden,.unit-head.hidden{display:none;}
+  .song-item .stars{display:flex;gap:3px;flex:0 0 auto;margin-left:2px;}
+  .song-item .star{font-size:clamp(11px,1.8vh,15px);line-height:1;color:#3d4d66;cursor:pointer;
+    transition:color .15s,text-shadow .15s,transform .1s;padding:2px 1px;}
+  .song-item .star:active{transform:scale(1.25);}
+  .song-item .star.on{color:var(--gold);text-shadow:0 0 8px rgba(255,214,107,.75);}
+  .btn.on{border-color:var(--cyan);color:var(--cyan);box-shadow:0 0 14px rgba(37,226,255,.3);}
+
+  /* ---------- 配队 ---------- */
+  .team-list{display:flex;flex-direction:column;gap:10px;margin-top:10px;}
+  .team-row{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:12px;
+    background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);cursor:pointer;}
+  .team-row.on{border-color:rgba(90,220,255,.55);background:linear-gradient(100deg,rgba(37,226,255,.12),rgba(255,255,255,.03));}
+  .team-row .tname{font-weight:800;font-size:14px;color:#cfe6ff;min-width:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .team-row .tname small{display:block;font-weight:600;font-size:10px;color:#7d92b0;margin-top:3px;letter-spacing:.02em;}
+  .team-row .tminis{display:flex;gap:4px;flex:0 0 auto;}
+  .team-row .tmini{width:24px;height:24px;border-radius:6px;background:rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;font-size:12px;}
+  .team-row .tmini.judge{color:#ffd66b;}
+  .team-row .tmini.heal{color:#7ff0a8;}
+  .card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px;margin-top:10px;}
+  .card-cell{position:relative;padding:10px 8px 9px;border-radius:10px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07);
+    cursor:pointer;text-align:center;font-size:11px;color:#b7cfe9;font-weight:700;line-height:1.3;}
+  .card-cell small{display:block;font-size:9px;color:#7d92b0;font-weight:600;margin-top:4px;}
+  .card-cell.on{border-color:var(--cyan);background:linear-gradient(160deg,rgba(37,226,255,.16),rgba(255,255,255,.03));}
+  .card-cell .tj{position:absolute;top:5px;right:7px;font-size:10px;}
+  .card-cell .tj.judge{color:#ffd66b;}
+  .card-cell .tj.heal{color:#7ff0a8;}
+
+  /* ---------- 演出内技能按钮 ---------- */
+  #skill-btn{position:fixed;right:calc(16px + env(safe-area-inset-right));bottom:17%;z-index:90;display:none;
+    width:66px;height:66px;border-radius:50%;border:2px solid rgba(255,214,107,.7);color:#ffd66b;
+    background:radial-gradient(circle at 35% 30%,rgba(255,214,107,.22),rgba(20,14,4,.6));
+    font-weight:900;font-size:13px;letter-spacing:.04em;box-shadow:0 0 18px rgba(255,214,107,.22);}
+  #skill-btn.ready{animation:skPulse 1.6s ease-in-out infinite;}
+  #skill-btn.used{opacity:.32;border-color:#5f7290;color:#5f7290;box-shadow:none;animation:none;}
+  @keyframes skPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
   .song-item{position:relative;display:flex;align-items:center;gap:clamp(10px,1.6vw,16px);
     width:min(700px,76vw);margin:clamp(4px,0.9vh,8px) auto;padding:clamp(8px,1.4vh,12px) clamp(12px,2vw,20px);
     border-radius:14px;background:rgba(255,255,255,.028);border:1px solid rgba(255,255,255,.05);
@@ -431,12 +470,13 @@
   <section id="screen-songs" class="screen">
     <div class="page-head">
       <h2>选 <em>曲</em></h2>
-      <div class="tip">点击曲目试听 · 上下滑动浏览<br><span class="tip-sub">由于制作者个人喜好，添加了一些「世界」以外的歌曲</span></div>
+      <div class="tip">点击曲目试听 · 上下滑动浏览<br><span class="tip-sub">由于制作者个人喜好加入了一些其他世界的歌曲</span></div>
     </div>
     <div id="song-scroll"></div>
     <div class="bottom-bar">
       <button class="btn ghost" id="songs-back">返 回</button>
       <div class="center" id="songs-now"></div>
+      <button class="btn ghost" id="songs-filter">筛选</button>
       <button class="btn ghost" id="songs-random">随机曲目</button>
       <button class="btn pink" id="songs-ok">确认曲目</button>
     </div>
@@ -452,6 +492,7 @@
       <div class="tab on" data-tab="skin">按键图案</div>
       <div class="tab" data-tab="sound">按键音效</div>
       <div class="tab" data-tab="bg">背景</div>
+      <div class="tab" data-tab="team">配队选择</div>
     </div>
     <div class="settings-body">
       <div class="panel on" id="panel-skin">
@@ -530,6 +571,25 @@
           </div>
         </div>
       </div>
+      <div class="panel" id="panel-team">
+        <p class="hint">自定义你的演出配队：从卡池里挑最多 5 张卡组成一支队伍并起名字。队伍技能取队伍里第一张有效果的卡——<b>判卡</b>：发动后 5 秒内打中的所有音符都算 PERFECT；<b>奶卡</b>：发动后 5 秒内不扣血；其余卡（加分、体力等）暂无实际效果。每场演出可发动一次技能。在选歌后的确认界面选择本次使用的配队。</p>
+        <div class="team-list" id="team-list"></div>
+        <div class="pills" style="margin-top:12px">
+          <div class="pill" id="team-new">＋ 新建配队</div>
+        </div>
+        <div id="team-editor" style="display:none">
+          <div class="field">
+            <div class="lbl"><span>队伍名称</span></div>
+            <input type="text" id="team-name" maxlength="16" placeholder="例如：主打判卡" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:10px;color:#cfe6ff;padding:9px 12px;font-size:13px;font-weight:700;outline:none">
+          </div>
+          <div class="sub-lbl">卡池（点击加入 / 移出，最多 5 张）</div>
+          <div class="card-grid" id="card-grid"></div>
+          <div class="pills" style="margin-top:12px">
+            <div class="pill" id="team-save">保存配队</div>
+            <div class="pill" id="team-cancel">取消</div>
+          </div>
+        </div>
+      </div>
     </div>
     <div class="bottom-bar">
       <button class="btn ghost" id="settings-back">返 回</button>
@@ -565,6 +625,7 @@
     <canvas id="cv"></canvas>
     <div id="prog"><div id="prog-fill"></div></div>
     <button id="pause-btn">❚❚</button>
+    <button id="skill-btn">技能</button>
   </section>
 
   <!-- ================= 结算 ================= -->
@@ -589,6 +650,40 @@
 </div>
 
 <!-- ================= 确认弹窗 ================= -->
+<div class="modal" id="modal-filter">
+  <div class="dialog">
+    <div class="dlg-title">筛选<span>曲目</span></div>
+    <div class="field">
+      <div class="lbl"><span>时长</span></div>
+      <div class="pills" id="f-dur">
+        <div class="pill on" data-v="all">全 部</div>
+        <div class="pill" data-v="full">full</div>
+        <div class="pill" data-v="short">short</div>
+      </div>
+    </div>
+    <div class="field">
+      <div class="lbl"><span>FC（全连）</span></div>
+      <div class="pills" id="f-fc">
+        <div class="pill on" data-v="all">全 部</div>
+        <div class="pill" data-v="yes">已 FC</div>
+        <div class="pill" data-v="no">未 FC</div>
+      </div>
+    </div>
+    <div class="field">
+      <div class="lbl"><span>AP（全 PERFECT）</span></div>
+      <div class="pills" id="f-ap">
+        <div class="pill on" data-v="all">全 部</div>
+        <div class="pill" data-v="yes">已 AP</div>
+        <div class="pill" data-v="no">未 AP</div>
+      </div>
+    </div>
+    <div class="dlg-actions">
+      <button class="btn ghost" id="f-clear">清空筛选</button>
+      <button class="btn pink" id="f-ok">应 用</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal" id="modal-confirm">
   <div class="dialog">
     <div class="dlg-title">确认<span>演出</span></div>
@@ -601,7 +696,7 @@
     </div>
     <div class="field">
       <div class="lbl"><span>难度</span></div>
-      <div class="pills">
+      <div class="pills" id="dc-diffs">
         <div class="pill on" data-diff="normal">中 等</div>
         <div class="pill" data-diff="hard">稍 高</div>
         <div class="pill" data-diff="ultra">超 高</div>
@@ -610,6 +705,10 @@
     <div class="field">
       <div class="lbl"><span>流速（按键速度）</span><b id="speed-val">7.0</b></div>
       <input type="range" id="speed-range" min="5" max="24" step="0.1" value="7">
+    </div>
+    <div class="field">
+      <div class="lbl"><span>配队（队伍技能）</span></div>
+      <div class="pills" id="dc-teams" style="flex-wrap:wrap"></div>
     </div>
     <div class="dlg-actions">
       <button class="btn ghost" id="dlg-back">返 回</button>
@@ -696,11 +795,14 @@ const UNITS = [
   { key: 'wxs',     label: 'ワンダーランズ×ショウタイム', jp: 'ワンダショ', color: '#ffd66b' },
   { key: 'n25',     label: '25時、ナイトコードで。', jp: 'ニーゴ', color: '#b48bff' },
   { key: 'vocaloid',label: 'ボカロ', jp: 'VIRTUAL SINGER', color: '#39d2c0' },
-  { key: 'other',   label: '其 他', jp: 'OTHERS', color: '#9aa7bd' },
-  { key: 'zijiang', label: '枝江娱乐', jp: 'A-SOUL', color: '#ff8fd0' },
-  { key: 'egirls',  label: 'E-girls', jp: 'Flower / 鷲尾伶菜', color: '#ffc46b' }
+  { key: 'other',   label: '联动曲/混活曲', jp: 'COLLAB / MIX', color: '#9aa7bd' },
+  // 枝江与 E-girls 合并成一个分类展示
+  { key: 'otherworld', label: '其他世界的歌曲', jp: 'OTHER WORLDS', color: '#ff9f7f', keys: ['zijiang', 'egirls'] }
 ];
 const UNIT_MAP = Object.fromEntries(UNITS.map(u => [u.key, u]));
+// 枝江 / E-girls 的歌曲在「当前曲目」等处也显示为合并后的分类名
+UNIT_MAP.zijiang = UNIT_MAP.otherworld;
+UNIT_MAP.egirls = UNIT_MAP.otherworld;
 
 /* 在线托管：部署在 GitHub Pages 上时，音频/图片改走 jsDelivr CDN（国内直连快得多）；
    本地双击打开时保持相对路径，离线可用。
@@ -802,7 +904,8 @@ const CARDS = [
 /* ---------- 设置存储 ---------- */
 const DEF_SET = { skin:'lumirect', bgMode:'album', bgCover:res('assets/covers/leoneed1.jpg'),
   bgCard:res('assets/cards/c11.jpg'), bgCardShade:0.45, customSkin:null, sfxVolume:0.5, speed:7.0, diff:'normal',
-  keyScale:1.0, judgeLeniency:1.0, holdAlpha:0.5, judgeLift:0, myCards:[], lastSong:0, sound:'tap' };
+  keyScale:1.0, judgeLeniency:1.0, holdAlpha:0.5, judgeLift:0, myCards:[], lastSong:0, sound:'tap',
+  marks:{}, collapsedUnits:{}, teams:[], activeTeam:-1, songFilter:{ dur:'all', fc:'all', ap:'all' } };
 let settings = Object.assign({}, DEF_SET);
 try {
   const raw = localStorage.getItem('sekai-fan-settings');
@@ -822,6 +925,12 @@ if (!settings._sfxV2) {
   if (settings.sound === 'default' || settings.sound == null) settings.sound = 'tap';
   settings._sfxV2 = 1;
   saveSettings();
+}
+// 配队：默认内置一支示例队伍，方便直接体验队伍技能
+if (!Array.isArray(settings.teams)) settings.teams = [];
+if (!settings.teams.length) {
+  settings.teams = [{ name: '我的配队', cards: ['judge_r', 'heal_g', 'score1', 'life1', 'wild1'] }];
+  settings.activeTeam = 0;
 }
 // 按键样式：默认改为发光长方形（旧设置一次性迁移，之后可自由选择）
 if (!settings._skinV4) {
@@ -919,6 +1028,58 @@ function durationText(sec) {
   return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
 }
 
+/* ---------- 曲目星标（完走血量>200 / FC / AP，可手动点也可演出达成自动点亮） ---------- */
+function songKey(s) { return s.title + (s.full ? '|F' : '|S'); }
+function songMarks(s) {
+  const m = settings.marks && settings.marks[songKey(s)];
+  return Array.isArray(m) && m.length === 3 ? m : [false, false, false];
+}
+function setSongMark(s, i, v) {
+  settings.marks = settings.marks || {};
+  const m = songMarks(s).slice();
+  m[i] = v;
+  settings.marks[songKey(s)] = m;
+  saveSettings();
+}
+
+/* ---------- 曲目筛选（时长 / FC / AP） ---------- */
+function songFilterState() {
+  const f = settings.songFilter || {};
+  return { dur: f.dur || 'all', fc: f.fc || 'all', ap: f.ap || 'all' };
+}
+function songPassFilter(s) {
+  const f = songFilterState();
+  if (f.dur === 'full' && !s.full) return false;
+  if (f.dur === 'short' && s.full) return false;
+  const m = songMarks(s);
+  if (f.fc === 'yes' && !m[1]) return false;
+  if (f.fc === 'no' && m[1]) return false;
+  if (f.ap === 'yes' && !m[2]) return false;
+  if (f.ap === 'no' && m[2]) return false;
+  return true;
+}
+function filterActive() {
+  const f = songFilterState();
+  return f.dur !== 'all' || f.fc !== 'all' || f.ap !== 'all';
+}
+/* 应用筛选：不匹配的曲目隐藏；分类下全部被隐藏时标题一并隐藏。 */
+function applySongFilter() {
+  $('#songs-filter').classList.toggle('on', filterActive());
+  $$('#song-scroll .unit-head').forEach(h => {
+    const unit = h.dataset.unit;
+    const collapsed = !!(settings.collapsedUnits && settings.collapsedUnits[unit]);
+    let shown = 0;
+    $$('#song-scroll .song-item[data-unit="' + unit + '"]').forEach(el => {
+      const s = SONGS[Number(el.dataset.i)];
+      const pass = songPassFilter(s);
+      el.classList.toggle('hidden', !pass || collapsed);
+      if (pass) shown++;
+    });
+    h.classList.toggle('hidden', filterActive() && !shown);
+    h.querySelector('.cnt').textContent = shown + ' 曲';
+  });
+}
+
 function buildSongList() {
   const wrap = $('#song-scroll');
   wrap.innerHTML = '';
@@ -930,18 +1091,32 @@ function buildSongList() {
     return;
   }
   UNITS.forEach(u => {
-    const list = SONGS.filter(s => s.unit === u.key);
+    const keys = u.keys || [u.key];
+    const list = SONGS.filter(s => keys.includes(s.unit));
     if (!list.length) return;
     const head = document.createElement('div');
-    head.className = 'unit-head';
+    const collapsed = !!(settings.collapsedUnits && settings.collapsedUnits[u.key]);
+    head.className = 'unit-head' + (collapsed ? ' collapsed' : '');
     head.style.color = u.color;
+    head.dataset.unit = u.key;
     head.innerHTML = `<span class="dot"></span><span style="color:#cfe0f5">${u.label}</span>
-      <span class="bar"></span><span class="cnt">${list.length} 曲</span>`;
+      <span class="bar"></span><span class="cnt">${list.length} 曲</span><span class="arrow">▼</span>`;
+    // 点击分类标题：收起 / 展开该分类
+    head.addEventListener('click', () => {
+      settings.collapsedUnits = settings.collapsedUnits || {};
+      settings.collapsedUnits[u.key] = !settings.collapsedUnits[u.key];
+      saveSettings();
+      applySongFilter();
+    });
     wrap.appendChild(head);
     list.forEach(s => {
       const el = document.createElement('div');
       el.className = 'song-item';
       el.dataset.i = s._i;
+      el.dataset.unit = u.key;
+      el.classList.toggle('hidden', collapsed);
+      const marks = songMarks(s);
+      const starTips = ['完走时 HP > 200', 'FULL COMBO', 'ALL PERFECT'];
       el.innerHTML = `
         <div class="cover" data-cover="${s.cover || res('assets/covers/other1.jpg')}"></div>
         <div class="meta">
@@ -949,12 +1124,23 @@ function buildSongList() {
           <div class="artist"><b>${escapeHTML(s.artist || '')}</b>${s.credit ? `<i> · ${escapeHTML(s.credit)}</i>` : ''}</div>
         </div>
         <div class="eq"><i></i><i></i><i></i></div>
+        <div class="stars">${[0, 1, 2].map(i =>
+          `<span class="star${marks[i] ? ' on' : ''}" data-s="${i}" title="${starTips[i]}">★</span>`).join('')}</div>
         <div class="dur">${durationText(s.duration)}</div>`;
       el.addEventListener('click', () => selectSong(s._i, true, true));
+      el.querySelectorAll('.star').forEach(st => {
+        st.addEventListener('click', e => {
+          e.stopPropagation();                     // 别触发选歌
+          const i = Number(st.dataset.s);
+          setSongMark(s, i, !songMarks(s)[i]);
+          st.classList.toggle('on', songMarks(s)[i]);
+        });
+      });
       wrap.appendChild(el);
       songItems.push(el);
     });
   });
+  applySongFilter();
   // 封面懒加载：滚动到可见区域才请求图片，避免 65 张封面同时抢带宽
   lazyCoverEls = $$('.song-item .cover[data-cover]');
   if ('IntersectionObserver' in window) {
@@ -1158,7 +1344,9 @@ function openConfirm() {
   $('#dc-cover').style.backgroundImage = `url(${s.cover || res('assets/covers/other1.jpg')})`;
   $('#dc-title').textContent = s.title + (s.full ? ' 【full】' : '');
   $('#dc-artist').textContent = s.artist || '';
-  $$('#modal-confirm .pill').forEach(p => p.classList.toggle('on', p.dataset.diff === settings.diff));
+  $$('#dc-diffs .pill').forEach(p => p.classList.toggle('on', p.dataset.diff === settings.diff));
+  pendingTeam = Number(settings.activeTeam) || -1;
+  renderConfirmTeams();
   $('#speed-range').value = settings.speed;
   $('#speed-val').textContent = Number(settings.speed).toFixed(1);
   $('#modal-confirm').classList.add('show');
@@ -1687,6 +1875,9 @@ function initGame(song, buffer, notes, diff, speed) {
   G.laneFlash.fill(0); G.speed = speed; G.diff = diff;
   G.totalNotes = G.notes.length + G.notes.filter(n => n.type === 'hold').length;
   G.judged = 0; G.comboPop = 0;
+  // 队伍技能：确认演出时选的配队
+  G.team = curTeam();
+  setupSkillButton();
   loadSkinImage().then(() => {
     if (myToken !== gameToken) return;      // 期间已经开了新局，这条音轨作废
     const ac = audioCtx();
@@ -1721,6 +1912,40 @@ function addEffect(lane, text, color, fs) {
   G.effects.push({ x: g.cx, y: g.judgeY - g.H * 0.09, text, color, fs, life: 0.55, t0: performance.now() });
 }
 
+/* ---------- 队伍技能 ---------- */
+function skillJudge() { return G.skillType === 'judge' && G.now <= G.skillUntil; }
+function skillHeal()  { return G.skillType === 'heal'  && G.now <= G.skillUntil; }
+/* 奶卡激活时不扣血（combo / 判定结果照常） */
+function takeDamage(dmg) {
+  if (skillHeal()) return;
+  G.hp = Math.max(0, G.hp - dmg);
+  G.damage += dmg;
+}
+function activateSkill() {
+  if (!G.active || G.paused || G.finished || G.skillUsed || !G.skillType) return;
+  G.skillUsed = true;
+  G.skillUntil = G.now + 5;
+  const sk = teamSkill(G.team);
+  const sb = $('#skill-btn');
+  sb.classList.remove('ready'); sb.classList.add('used');
+  if (sk) addEffect(G.lanes >> 1, sk.card.name, sk.type === 'judge' ? '#ffd66b' : '#7ff0a8', null);
+  playHitSound();
+}
+function setupSkillButton() {
+  const sb = $('#skill-btn');
+  const sk = teamSkill(G.team);
+  G.skillType = sk ? sk.type : null;
+  G.skillUsed = false; G.skillUntil = -1;
+  if (sk) {
+    sb.style.display = '';
+    sb.classList.remove('used'); sb.classList.add('ready');
+    sb.textContent = '技能';
+    sb.onclick = activateSkill;
+  } else {
+    sb.style.display = 'none';
+  }
+}
+
 function applyJudge(kind, note, lane) {
   G.counts[kind]++;
   if (note) { note.judged = true; G.judged++; }
@@ -1732,9 +1957,7 @@ function applyJudge(kind, note, lane) {
   } else {
     if (G.combo > 2) G.effects.push({ x: geometry().cx, y: geometry().judgeY - geometry().H * 0.2, text: 'COMBO BREAK', color: '#ff6b8a', life: .5, small: true, t0: performance.now() });
     G.combo = 0;
-    const dmg = kind === 'miss' ? 80 : kind === 'bad' ? 50 : 20;
-    G.hp = Math.max(0, G.hp - dmg);
-    G.damage += dmg;
+    takeDamage(kind === 'miss' ? 80 : kind === 'bad' ? 50 : 20);
   }
   addEffect(lane, JUDGE_LABEL[kind], JUDGE_COLOR[kind]);
   playHitSound();
@@ -1758,7 +1981,8 @@ function judgePress(cell) {
   }
   if (!best) return;
   let kind;
-  if (bd <= w.perfect) kind = 'perfect';
+  if (skillJudge()) kind = 'perfect';           // 判卡发动中：打中就 PERFECT
+  else if (bd <= w.perfect) kind = 'perfect';
   else if (bd <= w.great) kind = 'great';
   else if (bd <= w.good) kind = 'good';
   else if (bd <= w.bad) kind = 'bad';
@@ -1766,7 +1990,7 @@ function judgePress(cell) {
   if (kind === 'bad') {
     best.judged = true; best.holdState = 3; G.judged++;
     G.counts.bad++; G.combo = 0;
-    G.hp = Math.max(0, G.hp - 50); G.damage += 50;
+    takeDamage(50);
     addEffect(lane, 'BAD', JUDGE_COLOR.bad, best.t - now > 0 ? 'FAST' : 'SLOW');
     playHitSound();
     return;
@@ -1777,7 +2001,7 @@ function judgePress(cell) {
     // GOOD 也断连（combo 只累计 GREAT / PERFECT）
     if (G.combo > 2) G.effects.push({ x: geometry().cx, y: geometry().judgeY - geometry().H * 0.2, text: 'COMBO BREAK', color: '#ff6b8a', life: .5, small: true, t0: performance.now() });
     G.combo = 0;
-    G.hp = Math.max(0, G.hp - 20); G.damage += 20;
+    takeDamage(20);
   } else {
     G.combo++; G.maxCombo = Math.max(G.maxCombo, G.combo); G.comboPop = 1;
   }
@@ -1801,8 +2025,7 @@ function applyTail(kind, n, fs) {
     G.counts[kind]++;
     if (G.combo > 2) G.effects.push({ x: geometry().cx, y: geometry().judgeY - geometry().H * 0.2, text: 'COMBO BREAK', color: '#ff6b8a', life: .5, small: true, t0: performance.now() });
     G.combo = 0;
-    const dmg = kind === 'miss' ? 80 : kind === 'bad' ? 50 : 20;
-    G.hp = Math.max(0, G.hp - dmg); G.damage += dmg;
+    takeDamage(kind === 'miss' ? 80 : kind === 'bad' ? 50 : 20);
   }
   addEffect(n.lane, JUDGE_LABEL[kind], JUDGE_COLOR[kind], kind !== 'perfect' ? fs : null);
   playHitSound();
@@ -1823,7 +2046,8 @@ function releaseLane(lane) {
     return;
   }
   const ad = Math.abs(d);
-  const kind = ad <= w.perfect ? 'perfect' : ad <= w.great ? 'great' : ad <= w.good ? 'good' : 'bad';
+  // 判卡发动中：只要没松得太早，尾判都算 PERFECT
+  const kind = skillJudge() ? 'perfect' : ad <= w.perfect ? 'perfect' : ad <= w.great ? 'great' : ad <= w.good ? 'good' : 'bad';
   n.holdState = 2;
   applyTail(kind, n, d > 0 ? 'SLOW' : 'FAST');
 }
@@ -2574,6 +2798,7 @@ function finishGame() {
   if (G.finished) return;
   G.finished = true; G.active = false;
   stopGameAudio();
+  $('#skill-btn').style.display = 'none';
   // 补齐未判定
   const rest = G.notes.filter(n => !n.judged).length;
   if (rest) {
@@ -2584,7 +2809,11 @@ function finishGame() {
   const c = G.counts;
   const total = c.perfect + c.great + c.good + c.bad + c.miss;
   const isAP = c.perfect === total && total > 0;
-  const isFC = G.damage === 0 && total > 0;
+  const isFC = G.maxCombo >= G.totalNotes && G.totalNotes > 0;   // 全连 = 全部判定都进了连击
+  // 星标自动点亮（只点亮不熄灭）：完走时 HP>200 / FC / AP
+  if (G.song) {
+    [G.hp > 200, isFC, isAP].forEach((v, i) => { if (v) setSongMark(G.song, i, true); });
+  }
 
   $('#res-song').innerHTML = `<b>${escapeHTML(G.song.title)}</b> · ${G.diff === 'ultra' ? '超高' : (G.diff === 'hard' ? '稍高' : '中等')} · 流速 ${Number(G.speed).toFixed(1)}`;
   const banner = $('#res-banner');
@@ -2596,7 +2825,8 @@ function finishGame() {
   $('#res-stats').innerHTML = ['perfect','great','good','bad','miss'].map(k =>
     `<div class="res-row ${k}"><div class="l">${JUDGE_LABEL[k]}</div><div class="n">${pad(c[k])}</div></div>`).join('');
   $('#res-combo').textContent = pad(G.maxCombo);
-  $('#res-extra').innerHTML = `音符 <b>${total}</b> · 剩余 HP <b>${Math.round(G.hp)}</b>`;
+  const teamName = G.team ? escapeHTML(G.team.name || '未命名配队') : '';
+  $('#res-extra').innerHTML = `音符 <b>${total}</b> · 剩余 HP <b>${Math.round(G.hp)}</b>${teamName ? ` · 配队 <b>${teamName}</b>` : ''}`;
   show('result');
   // 释放解码后的整首音频（移动端一首 3~5 分钟的歌要占几十 MB，留着容易把标签页挤崩）
   G.buffer = null;
@@ -2660,6 +2890,7 @@ function quitGame() {
   gameToken++;                 // 作废还在加载中的开局，避免退出后音轨自己响起来
   stopGameAudio();
   G.buffer = null;             // 释放解码音频
+  $('#skill-btn').style.display = 'none';
   try { AC.resume(); } catch (e) {}
   $('#modal-pause').classList.remove('show');
   goTitle();
@@ -2940,6 +3171,128 @@ function renderSounds() {
     list.appendChild(el);
   });
 }
+/* ---------- 配队 ---------- */
+const TEAM_CARDS = [
+  { id:'judge_r', name:'判定辅助·彩虹', type:'judge', icon:'✦', desc:'发动后 5 秒内打中的音符全部算 PERFECT' },
+  { id:'judge_g', name:'判定辅助·金',   type:'judge', icon:'✧', desc:'发动后 5 秒内打中的音符全部算 PERFECT' },
+  { id:'heal_r',  name:'体力守护·彩虹', type:'heal',  icon:'✚', desc:'发动后 5 秒内不扣血' },
+  { id:'heal_g',  name:'体力守护·金',   type:'heal',  icon:'✚', desc:'发动后 5 秒内不扣血' },
+  { id:'score1',  name:'得分提升·小',   type:'none',  icon:'♪', desc:'暂无实际效果' },
+  { id:'score2',  name:'得分提升·大',   type:'none',  icon:'♪', desc:'暂无实际效果' },
+  { id:'life1',   name:'体力上限·小',   type:'none',  icon:'♥', desc:'暂无实际效果' },
+  { id:'life2',   name:'体力上限·大',   type:'none',  icon:'♥', desc:'暂无实际效果' },
+  { id:'combo1',  name:'连击加成',      type:'none',  icon:'∞', desc:'暂无实际效果' },
+  { id:'wild1',   name:'万能卡',        type:'none',  icon:'◇', desc:'暂无实际效果' }
+];
+const CARD_MAP = Object.fromEntries(TEAM_CARDS.map(c => [c.id, c]));
+/* 队伍技能：取队伍里第一张有效果的卡（判卡优先于奶卡） */
+function teamSkill(t) {
+  const cards = ((t && t.cards) || []).map(id => CARD_MAP[id]).filter(Boolean);
+  const judge = cards.find(x => x.type === 'judge');
+  const heal = cards.find(x => x.type === 'heal');
+  return judge ? { type: 'judge', card: judge } : (heal ? { type: 'heal', card: heal } : null);
+}
+function curTeam() {
+  const t = (settings.teams || [])[Number(settings.activeTeam)];
+  return t && (t.cards || []).length ? t : null;
+}
+
+let editingTeam = -2;      // -2 = 新建，>=0 = 编辑对应索引
+let editCards = [];
+function renderTeams() {
+  const list = $('#team-list');
+  list.innerHTML = '';
+  (settings.teams || []).forEach((t, i) => {
+    const row = document.createElement('div');
+    row.className = 'team-row' + (Number(settings.activeTeam) === i ? ' on' : '');
+    const sk = teamSkill(t);
+    const minis = (t.cards || []).map(id => {
+      const c = CARD_MAP[id];
+      return `<div class="tmini ${c ? c.type : ''}">${c ? c.icon : '·'}</div>`;
+    }).join('');
+    row.innerHTML = `<div class="tname">${escapeHTML(t.name || '未命名配队')}${sk
+      ? `<small>技能：${escapeHTML(sk.card.name)}（${sk.type === 'judge' ? '5秒全 PERFECT' : '5秒不扣血'}）</small>`
+      : '<small>无技能卡 · 点击标题切换使用的配队</small>'}</div>
+      <div class="tminis">${minis}</div>`;
+    row.addEventListener('click', () => {
+      settings.activeTeam = Number(settings.activeTeam) === i ? -1 : i;
+      saveSettings(); renderTeams();
+    });
+    const editBtn = document.createElement('div');
+    editBtn.className = 'tmini'; editBtn.textContent = '✎';
+    editBtn.addEventListener('click', e => { e.stopPropagation(); openTeamEditor(i); });
+    const delBtn = document.createElement('div');
+    delBtn.className = 'tmini'; delBtn.textContent = '✕';
+    delBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      if (!confirm('删除配队「' + (t.name || '未命名') + '」？')) return;
+      settings.teams.splice(i, 1);
+      if (Number(settings.activeTeam) === i) settings.activeTeam = -1;
+      else if (Number(settings.activeTeam) > i) settings.activeTeam--;
+      saveSettings(); renderTeams();
+    });
+    row.appendChild(editBtn);
+    row.appendChild(delBtn);
+    list.appendChild(row);
+  });
+}
+function openTeamEditor(idx) {
+  editingTeam = idx;
+  const t = idx === -2 ? { name: '', cards: [] } : settings.teams[idx];
+  editCards = (t.cards || []).slice();
+  $('#team-name').value = t.name || '';
+  $('#team-editor').style.display = '';
+  renderCardGrid();
+}
+function renderCardGrid() {
+  const g = $('#card-grid');
+  g.innerHTML = '';
+  TEAM_CARDS.forEach(c => {
+    const cell = document.createElement('div');
+    const inTeam = editCards.includes(c.id);
+    cell.className = 'card-cell' + (inTeam ? ' on' : '') + (!inTeam && editCards.length >= 5 ? ' dis' : '');
+    cell.innerHTML = `${c.type === 'judge' ? '<div class="tj judge">判</div>' : c.type === 'heal' ? '<div class="tj heal">奶</div>' : ''}
+      ${c.name}<small>${c.desc || ''}</small>`;
+    cell.addEventListener('click', () => {
+      const at = editCards.indexOf(c.id);
+      if (at >= 0) editCards.splice(at, 1);
+      else { if (editCards.length >= 5) return; editCards.push(c.id); }
+      renderCardGrid();
+    });
+    g.appendChild(cell);
+  });
+}
+$('#team-new').addEventListener('click', () => openTeamEditor(-2));
+$('#team-save').addEventListener('click', () => {
+  const name = $('#team-name').value.trim() || '未命名配队';
+  if (editingTeam === -2) { settings.teams.push({ name, cards: editCards.slice() }); settings.activeTeam = settings.teams.length - 1; }
+  else if (editingTeam >= 0) { settings.teams[editingTeam] = { name, cards: editCards.slice() }; settings.activeTeam = editingTeam; }
+  saveSettings();
+  $('#team-editor').style.display = 'none';
+  renderTeams();
+});
+$('#team-cancel').addEventListener('click', () => { $('#team-editor').style.display = 'none'; });
+
+/* 确认演出的弹窗里选择本次使用的配队 */
+let pendingTeam = -1;
+function renderConfirmTeams() {
+  const wrap = $('#dc-teams');
+  wrap.innerHTML = '';
+  const mk = (label, idx) => {
+    const p = document.createElement('div');
+    p.className = 'pill' + (pendingTeam === idx ? ' on' : '');
+    p.textContent = label;
+    p.addEventListener('click', () => {
+      pendingTeam = idx;
+      settings.activeTeam = idx; saveSettings();
+      renderConfirmTeams();
+    });
+    wrap.appendChild(p);
+  };
+  mk('不使用', -1);
+  (settings.teams || []).forEach((t, i) => mk(t.name || '未命名', i));
+}
+
 function renderCovers() {
   const grid = $('#cover-grid');
   grid.innerHTML = '';
@@ -3285,6 +3638,38 @@ $('#btn-dev').addEventListener('click', () => { show('dev'); applyBackground(); 
 $('#dev-back').addEventListener('click', () => { goTitle(); });
 $('#songs-back').addEventListener('click', () => { stopPreview(); releasePreviewBuffer(); goTitle(); });
 $('#songs-ok').addEventListener('click', () => { stopPreview(); releasePreviewBuffer(); openConfirm(); });
+/* 筛选弹窗：时长 / FC / AP 三个维度，应用到曲目列表 */
+$('#songs-filter').addEventListener('click', () => {
+  const f = songFilterState();
+  [['#f-dur', f.dur], ['#f-fc', f.fc], ['#f-ap', f.ap]].forEach(([sel, v]) => {
+    $$(sel + ' .pill').forEach(p => p.classList.toggle('on', p.dataset.v === v));
+  });
+  $('#modal-filter').classList.add('show');
+});
+['#f-dur', '#f-fc', '#f-ap'].forEach(sel => {
+  $(sel).addEventListener('click', e => {
+    const p = e.target.closest('.pill');
+    if (!p) return;
+    $$(sel + ' .pill').forEach(x => x.classList.remove('on'));
+    p.classList.add('on');
+  });
+});
+$('#f-clear').addEventListener('click', () => {
+  settings.songFilter = { dur: 'all', fc: 'all', ap: 'all' };
+  saveSettings();
+  $('#modal-filter').classList.remove('show');
+  applySongFilter();
+});
+$('#f-ok').addEventListener('click', () => {
+  settings.songFilter = {
+    dur: $('#f-dur .pill.on').dataset.v,
+    fc: $('#f-fc .pill.on').dataset.v,
+    ap: $('#f-ap .pill.on').dataset.v
+  };
+  saveSettings();
+  $('#modal-filter').classList.remove('show');
+  applySongFilter();
+});
 /* 随机曲目：从全部歌曲里随机抽一首（避开当前选中的），滚动到它并试听 */
 $('#songs-random').addEventListener('click', () => {
   if (!SONGS.length) return;
@@ -3294,8 +3679,8 @@ $('#songs-random').addEventListener('click', () => {
 });
 $('#settings-back').addEventListener('click', () => { stopSfxPreview(); applyBackground(); goTitle(); });
 
-$$('#modal-confirm .pill').forEach(p => p.addEventListener('click', () => {
-  $$('#modal-confirm .pill').forEach(x => x.classList.remove('on'));
+$$('#dc-diffs .pill').forEach(p => p.addEventListener('click', () => {
+  $$('#dc-diffs .pill').forEach(x => x.classList.remove('on'));
   p.classList.add('on');
   settings.diff = p.dataset.diff;
 }));
@@ -3467,6 +3852,7 @@ $$('.tab').forEach(t => t.addEventListener('click', () => {
   $$('.panel').forEach(p => p.classList.remove('on'));
   $('#panel-' + t.dataset.tab).classList.add('on');
   if (t.dataset.tab === 'skin') requestAnimationFrame(renderKeySize);
+  if (t.dataset.tab === 'team') renderTeams();
 }));
 
 /* 阻止双指缩放/长按菜单 */

@@ -1,0 +1,15 @@
+- generic [ref=e8]:
+  - generic [ref=e13]:
+    - paragraph [ref=e15]: 正在加载资源…
+    - paragraph [ref=e16]: 若长时间停留，请检查网络后刷新
+  - generic [ref=e17]:
+    - generic [ref=e18]: Fan Made Rhythm Game
+    - generic [ref=e19]:
+      - text: PROJECTSEKAI
+      - generic [ref=e20]: FAN STAGE
+    - generic [ref=e21]: セカイに、キミの音を。
+    - generic [ref=e22]:
+      - button "开 始 演 出" [ref=e23] [cursor=pointer]
+      - button "设 置" [ref=e24] [cursor=pointer]
+      - button "开发者相关" [ref=e25] [cursor=pointer]
+  - generic [ref=e26]: 非官方同人作品 · 仅用于交流学习 · 曲目版权归原作者所有
