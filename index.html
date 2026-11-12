@@ -1181,7 +1181,6 @@ function analyzeRhythm(buffer) {
   const step = 2;
   const dsLen = Math.floor(N / step);
   const ds = new Float32Array(dsLen);
-  const dsRms = new Float32Array(dsLen);
   for (let i = 0; i < dsLen; i++) {
     const a = src[i * step] || 0, b = src[i * step + 1] || 0;
     let v = (a + b) * 0.5;
@@ -1504,6 +1503,9 @@ async function startGame(song, diff, speed) {
   await new Promise(r => setTimeout(r, 60));
   try {
     const ac = audioCtx();
+    // 音频上下文可能被系统挂起（来电、切后台）：开局先确保它是 running，
+    // 否则 currentTime 不走，谱面会停在开头不动
+    if (ac.state !== 'running') { try { await ac.resume(); } catch (e) {} }
     const ab = await fetchRes(song.file);
     if (myToken !== gameToken) return;          // 已有更新的开局请求，本流程作废
     $('#load-txt').textContent = '正在解码音频…';
@@ -1582,6 +1584,7 @@ function loadSkinImage() {
 function initGame(song, buffer, notes, diff, speed) {
   const myToken = gameToken;     // 与开局令牌绑定：旧局延迟完成的回调不再启动音轨
   stopGameAudio();
+  G._ctPrev = undefined; G._ctStall = 0; G._wallAnchor = null;   // 重置时钟看门狗
   resizeCanvas();
   G.progFill = $('#prog-fill'); G.lastProg = -1;
   G.active = true; G.paused = false; G.finished = false;
@@ -1794,6 +1797,52 @@ window.addEventListener('keyup', e => {
   if (cell != null) { releaseLane(cell >> 1); G.pressed[cell] = 0; }
 });
 
+/* ---------- 谱面时钟 ----------
+   正常情况下 G.now 直接跟音频时钟走。但手机上来电、切后台、耳机切换、自动播放策略
+   都可能把 AudioContext 挂起：此时 currentTime 一动不动，谱面就会永远停在开头、
+   看起来像“谱面不显示/卡住”。这里做三级自愈：
+   1) 检测音频时钟静止超过 1s → 尝试 resume()
+   2) 超过 2s 仍不动 → 改用墙钟推进谱面（无声音也能继续打，不会卡死）
+   3) 音频恢复 → 把音轨从当前谱面位置重新接上，音画重新对齐 */
+function advanceClock(dt) {
+  const ac = AC;
+  if (!ac) return G.now;
+  const ct = ac.currentTime;
+  if (G._ctPrev === undefined) { G._ctPrev = ct; G._ctStall = 0; }
+  if (Math.abs(ct - G._ctPrev) < 1e-7) G._ctStall += dt; else G._ctStall = 0;
+  G._ctPrev = ct;
+
+  if (G._ctStall > 1.0 && ac.state !== 'running') {
+    try { const p = ac.resume(); if (p && p.catch) p.catch(() => {}); } catch (e) {}
+  }
+  if (G._ctStall > 2.0) {
+    if (!G._wallAnchor) G._wallAnchor = { now: G.now, perf: performance.now() };
+    return G._wallAnchor.now + (performance.now() - G._wallAnchor.perf) / 1000;
+  }
+  if (G._wallAnchor) {
+    G._wallAnchor = null;
+    const at = G.now;
+    try { restartAudioAt(at); } catch (e) {}
+  }
+  return ct - G.startAt;
+}
+
+/* 从谱面时间 offset 处重新起播音轨（音频被系统打断后恢复用） */
+function restartAudioAt(offset) {
+  if (!G.buffer || !isFinite(offset)) return;
+  if (offset < -0.05) return;                 // 还在倒计时，原音源稍后会自己响
+  const ac = audioCtx();
+  if (ac.state !== 'running') { try { ac.resume(); } catch (e) {} }
+  stopGameAudio();
+  const src = ac.createBufferSource();
+  src.buffer = G.buffer;
+  src.connect(ac.destination);
+  src.onended = () => { if (G.active && !G.finished) finishGame(); };
+  G.source = src;
+  G.startAt = ac.currentTime - offset;
+  src.start(0, Math.max(0, Math.min(offset, G.buffer.duration - 0.05)));
+}
+
 /* ---------- 主循环 ---------- */
 function loop(ts) {
   if (!G.active) return;
@@ -1803,7 +1852,7 @@ function loop(ts) {
   const dt = Math.min(0.05, (ts - (G.lastFrame || ts)) / 1000);
   G.lastFrame = ts;
   if (!G.paused && !G.finished) {
-    G.now = AC.currentTime - G.startAt;
+    G.now = advanceClock(dt);
     // 底部彩虹进度条
     if (G.progFill) {
       const pr = Math.min(1, Math.max(0, G.now / G.duration));
@@ -2373,6 +2422,8 @@ function finishGame() {
   $('#res-combo').textContent = pad(G.maxCombo);
   $('#res-extra').innerHTML = `音符 <b>${total}</b> · 剩余 HP <b>${Math.round(G.hp)}</b>`;
   show('result');
+  // 释放解码后的整首音频（移动端一首 3~5 分钟的歌要占几十 MB，留着容易把标签页挤崩）
+  G.buffer = null;
 }
 
 /* ---------- 暂停 ---------- */
@@ -2391,6 +2442,15 @@ function togglePause() {
 document.addEventListener('visibilitychange', () => {
   if (document.hidden && G.active && !G.paused && !G.finished) togglePause();
 });
+/* 全局兜底：未捕获异常只记录，不让页面卡成“白屏/闪退” */
+window.addEventListener('error', e => { console.error('页面异常：', e.message || e.error); });
+window.addEventListener('unhandledrejection', e => { console.error('未处理的异步异常：', e.reason); });
+/* 任意一次触摸/点击都顺手把被系统挂起的音频上下文唤醒 */
+['pointerdown', 'touchend', 'keydown'].forEach(ev => {
+  window.addEventListener(ev, () => {
+    if (AC && AC.state !== 'running' && !(G.paused && G.active)) { try { AC.resume(); } catch (e) {} }
+  }, { passive: true });
+});
 function hideAllModals() {
   $$('.modal').forEach(m => m.classList.remove('show'));
 }
@@ -2398,6 +2458,7 @@ function quitGame() {
   G.active = false; G.paused = false; G.finished = true;
   gameToken++;                 // 作废还在加载中的开局，避免退出后音轨自己响起来
   stopGameAudio();
+  G.buffer = null;             // 释放解码音频
   try { AC.resume(); } catch (e) {}
   $('#modal-pause').classList.remove('show');
   goTitle();
