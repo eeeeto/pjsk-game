@@ -140,16 +140,21 @@
   .card-cell .tj{position:absolute;top:5px;right:7px;font-size:10px;}
   .card-cell .tj.judge{color:#ffd66b;}
   .card-cell .tj.heal{color:#7ff0a8;}
-  /* 每张卡的数量步进器 */
-  .card-cell .stepper{display:flex;align-items:center;gap:6px;margin-top:7px;}
-  .card-cell .st-btn{width:24px;height:24px;line-height:22px;text-align:center;border-radius:7px;
-    background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);color:#cfe6ff;
-    font-weight:900;font-size:14px;cursor:pointer;user-select:none;flex:0 0 auto;transition:transform .08s;}
-  .card-cell .st-btn:active{transform:scale(.88);}
-  .card-cell .st-btn.dis{opacity:.32;pointer-events:none;}
-  .card-cell .st-num{width:36px;text-align:center;background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.1);
-    border-radius:7px;color:#fff;font-weight:800;font-size:13px;padding:3px 0;outline:none;font-family:inherit;}
-  .card-cell .odd{margin-top:5px;font-size:9px;color:#7d92b0;font-weight:600;}
+  /* 每张卡的数量步进器：大按钮 + 数字 + 单位，一眼看懂 */
+  .card-cell .stepper{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:9px;}
+  .card-cell .st-btn{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-size:20px;font-weight:900;cursor:pointer;user-select:none;flex:0 0 auto;line-height:1;
+    transition:transform .08s,box-shadow .15s,opacity .15s;}
+  .card-cell .st-btn.minus{background:rgba(120,145,180,.16);border:1.5px solid rgba(150,175,205,.5);color:#cfe6ff;}
+  .card-cell .st-btn.plus{background:linear-gradient(160deg,rgba(37,226,255,.3),rgba(37,226,255,.08));
+    border:1.5px solid rgba(37,226,255,.6);color:#7ceaff;box-shadow:0 0 12px rgba(37,226,255,.18);}
+  .card-cell .st-btn:active{transform:scale(.85);}
+  .card-cell .st-btn.dis{opacity:.25;pointer-events:none;box-shadow:none;}
+  .card-cell .st-mid{display:flex;align-items:baseline;gap:3px;flex:0 1 auto;}
+  .card-cell .st-num{width:44px;text-align:center;background:rgba(0,0,0,.35);border:1.5px solid rgba(255,255,255,.18);
+    border-radius:9px;color:#fff;font-weight:900;font-size:18px;padding:4px 0;outline:none;font-family:inherit;}
+  .card-cell .st-mid i{font-size:10px;color:#7d92b0;font-style:normal;font-weight:700;}
+  .card-cell .odd{margin-top:6px;font-size:10px;color:#8fe0ff;font-weight:700;}
 
   @keyframes skPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
   .song-item{position:relative;display:flex;align-items:center;gap:clamp(10px,1.6vw,16px);
@@ -594,8 +599,8 @@
             <div class="lbl"><span>队伍名称</span></div>
             <input type="text" id="team-name" maxlength="16" placeholder="例如：主打判卡" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:10px;color:#cfe6ff;padding:9px 12px;font-size:13px;font-weight:700;outline:none">
           </div>
-          <div class="sub-lbl">卡池（用 − / ＋ 或直接输入调整数量 · 共 <b id="team-count">0</b>/5 张 · 抽取概率按数量自动计算）</div>
-          <div class="card-grid" id="card-grid"></div>
+          <div class="sub-lbl">卡池：按每张卡下面的 <b style="color:#7ceaff">＋</b> / <b style="color:#cfe6ff">−</b> 增减张数（也可直接点数字输入）· 共 <b id="team-count">0</b>/5 张</div>
+          <div class="card-grid" id="team-card-grid"></div>
           <div class="pills" style="margin-top:12px">
             <div class="pill" id="team-save">保存配队</div>
             <div class="pill" id="team-cancel">取消</div>
@@ -1048,6 +1053,13 @@ function durationText(sec) {
 
 /* ---------- 曲目星标（完走血量>200 / FC / AP，可手动点也可演出达成自动点亮） ---------- */
 function songKey(s) { return s.title + (s.full ? '|F' : '|S'); }
+/* 显示用标题：把歌名里的「(Short…)」括号剥出来，统一成与【full】相同的标记样式 */
+function songDisp(s) {
+  let title = s.title, tag = s.full ? 'full' : '';
+  const m = title.match(/\s*[（(]\s*(short[^）)]*)\s*[）)]\s*/i);
+  if (m) { title = title.replace(m[0], '').trim(); tag = m[1].toLowerCase(); }
+  return { title, tag };
+}
 function songMarks(s) {
   const m = settings.marks && settings.marks[songKey(s)];
   return Array.isArray(m) && m.length === 3 ? m : [false, false, false];
@@ -1143,11 +1155,12 @@ function buildSongList() {
       el.classList.toggle('hidden', collapsed);
       const marks = songMarks(s);
       const starTips = ['完走时 HP > 200', 'FULL COMBO', 'ALL PERFECT'];
+      const dsp = songDisp(s);
       el.innerHTML = `
         <div class="fav${isFav(s) ? ' on' : ''}" title="收藏">♥</div>
         <div class="cover" data-cover="${s.cover || res('assets/covers/other1.jpg')}"></div>
         <div class="meta">
-          <div class="name">${escapeHTML(s.title)}${s.full ? '<span class="full">【full】</span>' : ''}</div>
+          <div class="name">${escapeHTML(dsp.title)}${dsp.tag ? `<span class="full">【${dsp.tag}】</span>` : ''}</div>
           <div class="artist"><b>${escapeHTML(s.artist || '')}</b>${s.credit ? `<i> · ${escapeHTML(s.credit)}</i>` : ''}</div>
         </div>
         <div class="eq"><i></i><i></i><i></i></div>
@@ -1224,7 +1237,8 @@ function selectSong(idx, play, scrollInto) {
     programmaticScrollUntil = performance.now() + 700;
     sc.scrollTo({ top: Math.max(0, target), behavior: changed ? 'smooth' : 'auto' });
   }
-  $('#songs-now').innerHTML = `<b>${escapeHTML(song.title)}</b> · ${UNIT_MAP[song.unit] ? UNIT_MAP[song.unit].label : ''}`;
+  const dsp = songDisp(song);
+  $('#songs-now').innerHTML = `<b>${escapeHTML(dsp.title)}</b>${dsp.tag ? `<span class="full">【${dsp.tag}】</span>` : ''} · ${UNIT_MAP[song.unit] ? UNIT_MAP[song.unit].label : ''}`;
   if (play) playPreview(song);
 }
 
@@ -1375,7 +1389,8 @@ function openConfirm() {
   const s = SONGS[selectedIdx];
   if (!s) return;
   $('#dc-cover').style.backgroundImage = `url(${s.cover || res('assets/covers/other1.jpg')})`;
-  $('#dc-title').textContent = s.title + (s.full ? ' 【full】' : '');
+  const dsp = songDisp(s);
+  $('#dc-title').textContent = dsp.title + (dsp.tag ? ` 【${dsp.tag}】` : '');
   $('#dc-artist').textContent = s.artist || '';
   $$('#dc-diffs .pill').forEach(p => p.classList.toggle('on', p.dataset.diff === settings.diff));
   pendingTeam = Number(settings.activeTeam) || -1;
@@ -1762,7 +1777,8 @@ async function startGame(song, diff, speed) {
   hideAllModals();
   const t0 = performance.now();
   $('#loading').classList.add('show');
-  $('#load-song').textContent = song.title + (song.full ? ' 【full】' : '');
+  const dsp = songDisp(song);
+  $('#load-song').textContent = dsp.title + (dsp.tag ? ` 【${dsp.tag}】` : '');
   $('#load-artist').textContent = song.artist || '';
   const cov = $('#load-cover');
   cov.style.backgroundImage = 'none';
@@ -3320,7 +3336,7 @@ function openTeamEditor(idx) {
 let editCounts = {};
 function cardsTotal() { return Object.values(editCounts).reduce((a, b) => a + b, 0); }
 function renderCardGrid() {
-  const g = $('#card-grid');
+  const g = $('#team-card-grid');
   g.innerHTML = '';
   const total = cardsTotal();
   $('#team-count').textContent = total;
@@ -3331,11 +3347,11 @@ function renderCardGrid() {
     cell.innerHTML = `${c.type === 'judge' ? '<div class="tj judge">判</div>' : c.type === 'heal' ? '<div class="tj heal">奶</div>' : ''}
       ${c.name}<small>${c.desc || ''}</small>
       <div class="stepper">
-        <span class="st-btn${n <= 0 ? ' dis' : ''}" data-act="-">−</span>
-        <input class="st-num" type="text" inputmode="numeric" value="${n}">
-        <span class="st-btn${total >= 5 ? ' dis' : ''}" data-act="+">＋</span>
+        <span class="st-btn minus${n <= 0 ? ' dis' : ''}" data-act="-">−</span>
+        <div class="st-mid"><input class="st-num" type="text" inputmode="numeric" value="${n}"><i>张</i></div>
+        <span class="st-btn plus${total >= 5 ? ' dis' : ''}" data-act="+">＋</span>
       </div>
-      ${n > 0 ? `<div class="odd">抽取概率 ${Math.round(n * 100 / Math.max(1, total))}%</div>` : ''}`;
+      ${n > 0 ? `<div class="odd">发动抽卡时 ${Math.round(n * 100 / Math.max(1, total))}% 抽到这张</div>` : ''}`;
     const setN = v => {
       v = Math.max(0, Math.min(5 - total + n, Math.round(Number(v)) || 0));
       if (v > 0) editCounts[c.id] = v; else delete editCounts[c.id];
