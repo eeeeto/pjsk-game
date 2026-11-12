@@ -1845,10 +1845,12 @@ function draw() {
   for (let i = list.length - 1; i >= 0; i--) {
     const n = list[i];
     const p = (n.t - G.now) / travel;
-    if (p > 1.02 || p < -0.25) continue;
     if (n.type === 'hold') {
-      if (n.holdState === 2 || n.holdState === 3 || n.holdState === 4) continue;
-    } else if (n.judged) continue;
+      // 长条按尾端时间剔除：尾部没完全越过判定线就继续画，
+      // 这样按住/松手/miss 后剩余部分会贴着判定线被逐渐"吃掉"，而不是整条瞬间消失
+      const pTail = (n.t + (n.dur || 0) - G.now) / travel;
+      if (p > 1.02 || pTail < -0.08) continue;
+    } else if (n.judged || p > 1.02 || p < -0.25) continue;
     vis.push({ n, p });
   }
   // 同时出现的相邻按键之间连横线
@@ -2046,9 +2048,9 @@ function drawNote(c, g, n, p, travel, now = G.now, skinImg = G.skinImg) {
   const y = laneY(tw, g);
   const size = g.laneW * 0.94 * scale * noteScale() * (n.span === 1 ? 0.52 : 1);
 
-  const holdLive = n.type === 'hold' && n.holdState !== 2 && n.holdState !== 3 && n.holdState !== 4;
+  const holdLive = n.type === 'hold';
   if (holdLive) {
-    const endT = n.t + n.dur;
+    const endT = n.t + (n.dur || 0);
     const pTail = (endT - now) / travel;
     const tTail = clamp(1 - clamp(pTail, 0, 1.15), 0, 1);   // 尾部时间更晚 → 更远
     const twTail = (0.38 * tTail + 0.31 * tTail * tTail) / 0.69;
@@ -2094,7 +2096,7 @@ function drawNote(c, g, n, p, travel, now = G.now, skinImg = G.skinImg) {
       c.fillRect(x - wHold / 2, g.judgeY - 2, wHold, 4);
       c.restore();
     }
-    if (skinImg) {
+    if (skinImg && pTail > -0.08) {
       // 长键：连续的小人（从尾端往头部排，位置和大小都跟着轨道透视变化）
       const stepY = Math.max(10, size * 0.55);
       const spanY = Math.max(1, y - yTail);
