@@ -481,7 +481,7 @@
         <input type="file" id="skin-file" accept="image/*" style="display:none">
       </div>
       <div class="panel" id="panel-sound">
-        <p class="hint">默认使用上传的 sound 音效，其余来自资源包「音效」文件夹。选中后会每 2 秒循环试听。</p>
+        <p class="hint">默认使用 Tap 音效，其余来自资源包「音效」文件夹。选中后会每 2 秒循环试听。</p>
         <div class="vol-row">
           <span class="vol-lbl">按键音效音量</span>
           <input type="range" id="sfx-vol" min="0" max="1" step="0.05" value="0.5">
@@ -775,6 +775,7 @@ const CHARS = [
   ['miku','初音ミク'],['rin','鏡音リン'],['len','鏡音レン'],['luka','巡音ルカ'],['meiko','MEIKO'],['kaito','KAITO']
 ];
 const SFX = [
+  ['tap','Tap 音效','音效 / tap'],
   ['default','默认音效','sound.mp3'],
   ['emu1','鳳えむ','音效 / emu1'],['emu2','鳳えむ 2','音效 / emu2'],
   ['mizuki1','暁山瑞希','音效 / mizuki1'],
@@ -799,9 +800,9 @@ const CARDS = [
 ];
 
 /* ---------- 设置存储 ---------- */
-const DEF_SET = { skin:'lumirect', sound:'default', bgMode:'album', bgCover:res('assets/covers/leoneed1.jpg'),
+const DEF_SET = { skin:'lumirect', bgMode:'album', bgCover:res('assets/covers/leoneed1.jpg'),
   bgCard:res('assets/cards/c11.jpg'), bgCardShade:0.45, customSkin:null, sfxVolume:0.5, speed:7.0, diff:'normal',
-  keyScale:1.0, judgeLeniency:1.0, holdAlpha:0.5, judgeLift:0, myCards:[], lastSong:0 };
+  keyScale:1.0, judgeLeniency:1.0, holdAlpha:0.5, judgeLift:0, myCards:[], lastSong:0, sound:'tap' };
 let settings = Object.assign({}, DEF_SET);
 try {
   const raw = localStorage.getItem('sekai-fan-settings');
@@ -816,6 +817,12 @@ settings.judgeLeniency = clamp(Number(settings.judgeLeniency) || 1, 0.5, 1.5);
 settings.holdAlpha = clamp(Number(settings.holdAlpha) || 0.5, 0.3, 0.9);
 settings.judgeLift = clamp(Number(settings.judgeLift) || 0, 0, 10);
 if (!Array.isArray(settings.myCards)) settings.myCards = [];
+// 按键音效：新默认为 Tap 音效（2026-11 更新）。曾用「默认音效」的一次性迁过去，选过其他的保持不变
+if (!settings._sfxV2) {
+  if (settings.sound === 'default' || settings.sound == null) settings.sound = 'tap';
+  settings._sfxV2 = 1;
+  saveSettings();
+}
 // 按键样式：默认改为发光长方形（旧设置一次性迁移，之后可自由选择）
 if (!settings._skinV4) {
   if (settings.skin === 'rect' || settings.skin === 'pill') settings.skin = 'lumirect';
