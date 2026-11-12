@@ -176,6 +176,17 @@ window.SONGS = [
   "cover": "assets/covers/wxs1.jpg"
  },
  {
+  "title": "どんな結末がお望みだい？ (feat. 天馬司&鳳えむ&草薙寧々&神代類&初音ミク)",
+  "artist": "ワンダーランズ×ショウタイム｜天馬司、鳳えむ、草薙寧々、神代類、初音ミク",
+  "credit": "",
+  "unit": "wxs",
+  "game": true,
+  "duration": 201.53,
+  "file": "songs/s76.mp3",
+  "full": true,
+  "cover": "assets/covers/wxs3.jpg"
+ },
+ {
   "title": "にっこり^^調査隊のテーマ",
   "artist": "ワンダーランズ×ショウタイム｜天馬司、鳳えむ、草薙寧々、神代類、初音ミク",
   "credit": "",
