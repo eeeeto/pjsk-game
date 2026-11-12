@@ -630,14 +630,16 @@
 /* 歌曲清单：GitHub Pages 上依次尝试多个镜像源（国内部分域名可能被墙），
    拿到内容后内联执行；本地打开直接用相对路径 */
 (function () {
-  /* 加时间戳绕过浏览器/CDN 对 manifest.js 的长期缓存（jsDelivr 的 @main 会缓存 7 天，
-     否则新增曲目要等一周才会出现在列表里） */
+  /* 加时间戳绕过浏览器缓存 */
   const bust = /^https?:$/.test(location.protocol) ? '?v=' + Date.now() : '';
+  /* 同源（GitHub Pages）优先：Pages 的清单在部署后立刻是最新的，而且文件只有十几 KB。
+     jsDelivr 的 @main 分支缓存按节点各自刷新，最长要 12 小时才同步到新提交，
+     放在前面会让新曲目「消失」好几天，因此只作为同源失败时的兜底 */
   const sources = location.hostname.endsWith('.github.io')
-    ? ['https://gcore.jsdelivr.net/gh/eeeeto/pjsk-game@main/songs/manifest.js' + bust,
-       'https://fastly.jsdelivr.net/gh/eeeeto/pjsk-game@main/songs/manifest.js' + bust,
+    ? ['songs/manifest.js' + bust,
        'https://cdn.jsdelivr.net/gh/eeeeto/pjsk-game@main/songs/manifest.js' + bust,
-       'songs/manifest.js' + bust]
+       'https://fastly.jsdelivr.net/gh/eeeeto/pjsk-game@main/songs/manifest.js' + bust,
+       'https://gcore.jsdelivr.net/gh/eeeeto/pjsk-game@main/songs/manifest.js' + bust]
     : ['songs/manifest.js' + bust];
   let loaded = false;
   for (const u of sources) {
