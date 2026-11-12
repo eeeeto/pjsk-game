@@ -801,7 +801,7 @@ const CARDS = [
 /* ---------- 设置存储 ---------- */
 const DEF_SET = { skin:'lumirect', sound:'default', bgMode:'album', bgCover:res('assets/covers/leoneed1.jpg'),
   bgCard:res('assets/cards/c11.jpg'), bgCardShade:0.45, customSkin:null, sfxVolume:0.5, speed:7.0, diff:'normal',
-  keyScale:1.0, judgeLeniency:1.0, holdAlpha:0.5, judgeLift:0, myCards:[] };
+  keyScale:1.0, judgeLeniency:1.0, holdAlpha:0.5, judgeLift:0, myCards:[], lastSong:0 };
 let settings = Object.assign({}, DEF_SET);
 try {
   const raw = localStorage.getItem('sekai-fan-settings');
@@ -865,17 +865,30 @@ function audioCtx() {
   if (!AC) {
     const Ctor = window.AudioContext || window.webkitAudioContext;
     AC = new Ctor({ latencyHint: 'interactive' });
-    // iOS/Safari：在首个用户手势里播一个静音 buffer 以解锁音频
-    try {
-      const b = AC.createBuffer(1, 1, AC.sampleRate);
-      const s = AC.createBufferSource();
-      s.buffer = b;
-      s.connect(AC.destination);
-      s.start(0);
-    } catch (e) {}
   }
-  if (AC.state === 'suspended') AC.resume();
+  // Safari 除了 'suspended' 还有专有的 'interrupted'（来电、切后台、锁屏、Siri 之后）。
+  // 只判断 === 'suspended' 会漏掉它，导致音频时钟永远不动、谱面靠墙钟硬撑、也没有声音。
+  if (AC.state !== 'running') resumeAudio(AC);
   return AC;
+}
+function resumeAudio(ac) {
+  try { const p = ac.resume(); if (p && p.catch) p.catch(() => {}); } catch (e) {}
+}
+/* 在用户手势的同步栈里调用：iOS/Safari 只认手势里发起的 resume / 播放，
+   过了 await 再恢复就会被拒，表现为「每次演出都提示音频被系统挂起，点屏幕也没用」。 */
+function primeAudio() {
+  const ac = audioCtx();
+  if (ac.state === 'running') return ac;
+  resumeAudio(ac);
+  // 手势内播一个静音 buffer，把 iOS 的音频输出通道真正打开
+  try {
+    const b = ac.createBuffer(1, 1, ac.sampleRate);
+    const s = ac.createBufferSource();
+    s.buffer = b;
+    s.connect(ac.destination);
+    s.start(0);
+  } catch (e) {}
+  return ac;
 }
 
 /* ============================================================
@@ -952,9 +965,16 @@ function buildSongList() {
   } else {
     lazyCoverEls.forEach(el => { el.style.backgroundImage = `url(${encodeURI(el.dataset.cover)})`; el.removeAttribute('data-cover'); });
   }
-  // 进入列表即预览第一首（保持用户手势上下文，避免被自动播放策略拦截）
+  // 进入列表时恢复上次演奏的那首（以前固定选第一首，列表却停在上次的位置，两者对不上）
   if (songItems.length) {
-    selectSong(Number(songItems[0].dataset.i), true, false);
+    const keep = clamp(Number(settings.lastSong) || 0, 0, songItems.length - 1);
+    selectSong(keep, true, false);
+    const el = songItems[keep], sc = $('#song-scroll');
+    if (el && sc) {
+      const scRect = sc.getBoundingClientRect(), r = el.getBoundingClientRect();
+      programmaticScrollUntil = performance.now() + 700;
+      sc.scrollTop = Math.max(0, sc.scrollTop + (r.top - scRect.top) - sc.clientHeight * 0.34 + r.height / 2);
+    }
   }
 }
 
@@ -1507,6 +1527,7 @@ function stopGameAudio() {
 
 async function startGame(song, diff, speed) {
   const myToken = ++gameToken;
+  primeAudio();           // 必须在这里（仍在点击手势的同步栈里）唤醒音频，晚了 Safari 会拒绝
   stopSfxPreview();
   stopPreview();          // 清掉选歌试听：它是独立的 <audio>，不停会与游戏音轨同时响
   stopGameAudio();
@@ -1873,8 +1894,13 @@ function advanceClock(dt) {
   if (Math.abs(ct - G._ctPrev) < 1e-7) G._ctStall += dt; else G._ctStall = 0;
   G._ctPrev = ct;
 
-  if (G._ctStall > 1.0 && ac.state !== 'running') {
-    try { const p = ac.resume(); if (p && p.catch) p.catch(() => {}); } catch (e) {}
+  if (G._ctStall > 0.8) {
+    // 时钟不动就周期性尝试恢复（含 Safari 专有的 'interrupted' 状态），最多每 2s 一次
+    if (!G._resumeTryAt || performance.now() - G._resumeTryAt > 2000) {
+      G._resumeTryAt = performance.now();
+      resumeAudio(ac);
+      if (ac.state !== 'running') primeAudio();
+    }
   }
   if (G._ctStall > 2.0) {
     if (!G._wallAnchor) {
@@ -2351,38 +2377,84 @@ function drawNote(c, g, n, p, travel, now = G.now, skinImg = G.skinImg) {
   }
 }
 
-/* 带发光的文字统一在这里画。
-   部分 iPad / Safari 在「带缩放的 CTM」（我们为高分屏做了 ctx.scale(DPR)）下计算
-   canvas 文字阴影时，阴影的模糊矩形和字本体用的是不同坐标系，结果就是光晕和字错开。
-   做法：临时把 CTM 重置为恒等（设备像素坐标），坐标 / 字号 / 模糊半径自己乘 DPR，
-   这样阴影和文字永远在同一个坐标系里，任何机型都不会错位。 */
-function glowText(c, text, x, y, fontPx, o = {}) {
-  const px = Math.max(1, fontPx * DPR);
-  const X = x * DPR, Y = y * DPR;
-  c.save();
-  c.setTransform(1, 0, 0, 1, 0, 0);
-  if (o.alpha != null) c.globalAlpha *= o.alpha;
-  c.textAlign = o.align || 'center';
-  c.textBaseline = o.baseline || 'alphabetic';
-  c.font = `${o.style || ''} ${o.weight || 900} ${px}px ${FF}`.replace(/\s+/g, ' ').trim();
+/* 判定字 / COMBO 的发光文字：先把「字 + 光晕」烘焙进一张离屏位图，再整张贴到主画布。
+   原因：Safari（尤其 iPad）在按 DPR 缩放的画布上渲染文字阴影时，光晕和字本体用的不是
+   同一套坐标系（WebKit #197689 一类的行为），光晕会横向/纵向错开，改 CTM 也治不好。
+   烘焙成一张图后两者不可能再分家；顺带把每帧重复的模糊运算变成一次性，移动端更省。 */
+const _glowCache = new Map();
+let _filterOK = null;
+function canvasFilterOK() {
+  if (_filterOK !== null) return _filterOK;
+  try {
+    const t = document.createElement('canvas');
+    t.width = 16; t.height = 16;
+    const c = t.getContext('2d');
+    c.filter = 'blur(2px)';
+    if (c.filter !== 'blur(2px)') { _filterOK = false; return false; }
+    c.fillStyle = '#fff';
+    c.fillRect(6, 6, 4, 4);
+    _filterOK = c.getImageData(2, 6, 1, 1).data[3] > 0;
+  } catch (e) { _filterOK = false; }
+  return _filterOK;
+}
+
+function glowSprite(text, fontPx, o) {
+  const stopsKey = o.stops ? o.stops.map(s => s[1]).join(',') : '';
+  const key = text + '|' + fontPx.toFixed(1) + '|' + (o.weight || 900) + (o.style || '') + '|' +
+    (o.color || '') + '|' + stopsKey + '|' + (o.glow || '') + '|' + (o.blur || 0);
+  const hit = _glowCache.get(key);
+  if (hit) return hit;
+
+  const font = `${o.style || ''} ${o.weight || 900} ${fontPx}px ${FF}`.replace(/\s+/g, ' ').trim();
+  const mc = document.createElement('canvas').getContext('2d');
+  mc.font = font;
+  const m = mc.measureText(text);
+  const tw = Math.max(1, m.width);
+  const asc = Math.max(1, m.actualBoundingBoxAscent || fontPx * 0.8);
+  const desc = Math.max(1, m.actualBoundingBoxDescent || fontPx * 0.24);
+  const blur = Math.max(0, Number(o.blur) || 0);
+  const pad = Math.ceil(blur * 1.3 + 4);
+  const w = Math.ceil(tw + pad * 2), h = Math.ceil(asc + desc + pad * 2);
+  const ss = Math.min(2, Math.max(1, window.devicePixelRatio || 1));
+  const cv = document.createElement('canvas');
+  cv.width = Math.max(1, Math.ceil(w * ss));
+  cv.height = Math.max(1, Math.ceil(h * ss));
+  const c = cv.getContext('2d');
+  c.scale(ss, ss);
+  c.font = font;
+  c.textAlign = 'left';
+  c.textBaseline = 'alphabetic';
+  const bx = pad, by = pad + asc;
+  // 光晕层：同一段文字模糊一份垫在下面（用 filter，不用 shadow，避免 Safari 的错位）
+  if (blur > 0 && canvasFilterOK()) {
+    c.save();
+    c.filter = `blur(${(blur * 0.5).toFixed(2)}px)`;
+    c.fillStyle = o.glow || o.color || '#fff';
+    c.fillText(text, bx, by);
+    c.restore();
+    c.filter = 'none';
+  }
   if (o.stops) {
-    // 渐变字（PERFECT）：渐变坐标同样用设备像素
-    const tw = c.measureText(text).width;
-    const gd = c.createLinearGradient(X - tw / 2, Y, X + tw / 2, Y);
+    const gd = c.createLinearGradient(bx, 0, bx + tw, 0);
     o.stops.forEach(([pos, col]) => gd.addColorStop(pos, col));
     c.fillStyle = gd;
   } else {
     c.fillStyle = o.color || '#fff';
   }
-  const blur = o.blur == null ? 14 : o.blur;
-  if (blur > 0) {
-    // 注意 shadowColor 不能是渐变对象，渐变字要单独指定发光色
-    c.shadowColor = o.glow || o.color || '#fff';
-    c.shadowBlur = blur * DPR;
-  } else {
-    c.shadowBlur = 0;
-  }
-  c.fillText(text, X, Y);
+  c.fillText(text, bx, by);
+
+  const sp = { cv, w, h, tw, ax: bx, ay: by };
+  if (_glowCache.size > 48) _glowCache.clear();
+  _glowCache.set(key, sp);
+  return sp;
+}
+
+function glowText(c, text, x, y, fontPx, o = {}) {
+  const sp = glowSprite(text, fontPx, o);
+  c.save();
+  if (o.alpha != null) c.globalAlpha *= o.alpha;
+  const cx = o.align === 'right' ? x - sp.tw / 2 : (o.align === 'left' ? x + sp.tw / 2 : x);
+  c.drawImage(sp.cv, cx - sp.tw / 2 - sp.ax, y - sp.ay, sp.w, sp.h);
   c.restore();
 }
 
@@ -2522,7 +2594,7 @@ function togglePause() {
     try { AC.suspend(); } catch (e) {}
     $('#modal-pause').classList.add('show');
   } else {
-    try { AC.resume(); } catch (e) {}
+    primeAudio();          // 仍在「继续」按钮的点击手势里，Safari 才认这次恢复
     $('#modal-pause').classList.remove('show');
     // 音源可能被系统/页面切换掐断（pagehide、来电），继续时按当前谱面时间接上
     if (!G.source && G.buffer) {
@@ -2555,11 +2627,14 @@ window.addEventListener('pageshow', e => {
     else $('#modal-pause').classList.add('show');
   }
 });
-/* 任意一次触摸/点击都顺手把被系统挂起的音频上下文唤醒 */
-['pointerdown', 'touchend', 'keydown'].forEach(ev => {
+/* 任意一次触摸/点击都顺手把被系统挂起的音频上下文唤醒。
+   用 capture 且不等待，保证在事件的最早阶段执行——Safari 认为手势已经结束时 resume 会失效。 */
+['pointerdown', 'touchstart', 'touchend', 'keydown'].forEach(ev => {
   window.addEventListener(ev, () => {
-    if (AC && AC.state !== 'running' && !(G.paused && G.active)) { try { AC.resume(); } catch (e) {} }
-  }, { passive: true });
+    if (G.paused && G.active) return;         // 暂停时由「继续」按钮处理
+    if (AC && AC.state === 'running') return; // 已经在跑，不做多余动作
+    primeAudio();
+  }, { capture: true, passive: true });
 });
 function hideAllModals() {
   $$('.modal').forEach(m => m.classList.remove('show'));
@@ -3184,7 +3259,7 @@ function importCard(file) {
    事件绑定
    ============================================================ */
 $('#btn-start').addEventListener('click', () => {
-  audioCtx();
+  primeAudio();
   show('songs');
   applyBackground();
   buildSongList();
@@ -3216,6 +3291,7 @@ $('#speed-range').addEventListener('input', e => {
 $('#dlg-back').addEventListener('click', closeConfirm);
 $('#dlg-ok').addEventListener('click', () => {
   closeConfirm();
+  settings.lastSong = selectedIdx;   // 记住这次选的曲目，下次进选歌页直接定位到它
   saveSettings();
   startGame(SONGS[selectedIdx], settings.diff, settings.speed);
 });
