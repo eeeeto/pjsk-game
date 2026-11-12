@@ -1052,12 +1052,22 @@ let audioHintShown = false;
 function showAudioHint() {
   if (audioHintShown) return;
   audioHintShown = true;
-  const el = document.createElement('div');
-  el.className = 'audio-hint';
-  el.textContent = '浏览器拦截了自动播放 · 点一下歌曲即可试听';
-  document.body.appendChild(el);
-  requestAnimationFrame(() => el.classList.add('show'));
-  setTimeout(() => { el.classList.remove('show'); setTimeout(() => el.remove(), 400); }, 3600);
+  showToast('浏览器拦截了自动播放 · 点一下歌曲即可试听', 3600);
+}
+
+/* 轻量提示条：替代 alert()——alert 会阻塞页面，移动端上很像卡死/闪退 */
+let _toastTimer = 0, _toastEl = null;
+function showToast(text, ms = 2600) {
+  if (!_toastEl) {
+    _toastEl = document.createElement('div');
+    _toastEl.className = 'audio-hint';
+    _toastEl.style.pointerEvents = 'none';
+    document.body.appendChild(_toastEl);
+  }
+  _toastEl.textContent = text;
+  _toastEl.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => { _toastEl.classList.remove('show'); }, ms);
 }
 
 function stopPreview() {
@@ -1407,6 +1417,18 @@ function buildChart(rh, difficulty, seed) {
    ============================================================ */
 const cv = $('#cv');
 const ctx2d = cv.getContext('2d', { alpha: true, desynchronized: true });
+/* 低帧率自动降级：shadowBlur（发光）是移动端最贵的绘制项。
+   在 ctx 上包一层，G.lowFx 一开阴影自动归零，所有绘制代码不用改。 */
+try {
+  const _desc = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(ctx2d), 'shadowBlur');
+  if (_desc && _desc.set) {
+    Object.defineProperty(ctx2d, 'shadowBlur', {
+      configurable: true,
+      get() { return _desc.get.call(this); },
+      set(v) { _desc.set.call(this, (typeof G !== 'undefined' && G.lowFx) ? 0 : v); }
+    });
+  }
+} catch (e) {}
 // 字体只取一次，避免每帧触发样式重算
 const FF = getComputedStyle(document.body).fontFamily || 'sans-serif';
 const G = {
@@ -1500,6 +1522,16 @@ async function startGame(song, diff, speed) {
   dEl.textContent = diff === 'hard' ? 'HARD' : (diff === 'ultra' ? 'MASTER' : 'MEDIUM');
   $('#load-txt').textContent = '正在读取音频…';
   show('game');
+  // 加载看门狗：任何环节卡死（弱网 / 解码异常 / 浏览器吞掉回调）最多等 45 秒，
+  // 然后体面地退回首页，而不是一直停在加载页被当成闪退
+  const wd = setTimeout(() => {
+    if (myToken !== gameToken) return;
+    gameToken++;
+    $('#loading').classList.remove('show');
+    G.active = false; G.finished = true;
+    showToast('加载超时了，换个网络或稍后再试');
+    goTitle();
+  }, 45000);
   await new Promise(r => setTimeout(r, 60));
   try {
     const ac = audioCtx();
@@ -1510,7 +1542,8 @@ async function startGame(song, diff, speed) {
     if (myToken !== gameToken) return;          // 已有更新的开局请求，本流程作废
     $('#load-txt').textContent = '正在解码音频…';
     await new Promise(r => setTimeout(r, 30));
-    const buffer = await ac.decodeAudioData(ab);
+    G.buffer = null;                       // 解码前先放掉上局音频，降低移动端内存峰值
+    const buffer = await decodeAudioSafe(ac, ab);
     if (myToken !== gameToken) return;
     $('#load-txt').textContent = '正在分析节奏 · 生成谱面…';
     await new Promise(r => setTimeout(r, 40));
@@ -1528,14 +1561,40 @@ async function startGame(song, diff, speed) {
     const wait = 1400 - (performance.now() - t0);
     if (wait > 0) await new Promise(r => setTimeout(r, wait));
     if (myToken !== gameToken) return;          // 等待期间又开了新局：不要启动这条音轨
+    clearTimeout(wd);
     initGame(song, buffer, notes, diff, speed);
     $('#loading').classList.remove('show');
   } catch (err) {
+    clearTimeout(wd);
     if (myToken !== gameToken) return;
     console.error(err);
     $('#loading').classList.remove('show');
-    alert('音频加载失败：' + (err && err.message ? err.message : err));
+    showToast('音频加载失败，已返回首页 · ' + (err && err.message ? err.message : err));
     goTitle();
+  }
+}
+
+/* 解码音频：部分移动浏览器上 decodeAudioData 可能既不 resolve 也不 reject（或被 OOM 拒绝），
+   这里加超时和一次重试，避免加载画面无限卡住被当成闪退 */
+async function decodeAudioSafe(ac, ab) {
+  const once = () => new Promise((resolve, reject) => {
+    let done = false;
+    const timer = setTimeout(() => {
+      if (!done) { done = true; reject(new Error('解码超时')); }
+    }, 25000);
+    const ok = b => { if (done) return; done = true; clearTimeout(timer); resolve(b); };
+    const bad = e => { if (done) return; done = true; clearTimeout(timer); reject(e || new Error('解码失败')); };
+    try {
+      const p = ac.decodeAudioData(ab, ok, bad);
+      if (p && p.then) p.then(ok, bad);
+    } catch (e) { bad(e); }
+  });
+  try {
+    return await once();
+  } catch (e) {
+    if (!ab || ab.byteLength === 0) throw e;      // 缓冲区已被消费，无法重试
+    await new Promise(r => setTimeout(r, 250));
+    return await once();
   }
 }
 
@@ -1585,6 +1644,7 @@ function initGame(song, buffer, notes, diff, speed) {
   const myToken = gameToken;     // 与开局令牌绑定：旧局延迟完成的回调不再启动音轨
   stopGameAudio();
   G._ctPrev = undefined; G._ctStall = 0; G._wallAnchor = null;   // 重置时钟看门狗
+  G.lowFx = false; G._ft = 1 / 60; G._stallHinted = 0;
   resizeCanvas();
   G.progFill = $('#prog-fill'); G.lastProg = -1;
   G.active = true; G.paused = false; G.finished = false;
@@ -1629,6 +1689,7 @@ const JUDGE_LABEL = { perfect: 'PERFECT', great: 'GREAT', good: 'GOOD', bad: 'BA
 function addEffect(lane, text, color, fs) {
   const g = geometry();
   // 判定结果显示在中轴、判定线上方
+  if (G.effects.length > 20) G.effects.shift();   // 上限保护：和弦爆发时不无限堆积
   G.effects.push({ x: g.cx, y: g.judgeY - g.H * 0.09, text, color, fs, life: 0.55, t0: performance.now() });
 }
 
@@ -1816,7 +1877,10 @@ function advanceClock(dt) {
     try { const p = ac.resume(); if (p && p.catch) p.catch(() => {}); } catch (e) {}
   }
   if (G._ctStall > 2.0) {
-    if (!G._wallAnchor) G._wallAnchor = { now: G.now, perf: performance.now() };
+    if (!G._wallAnchor) {
+      G._wallAnchor = { now: G.now, perf: performance.now() };
+      if (!G._stallHinted) { G._stallHinted = 1; showToast('音频被系统挂起了，画面继续 · 点一下屏幕恢复声音', 3400); }
+    }
     return G._wallAnchor.now + (performance.now() - G._wallAnchor.perf) / 1000;
   }
   if (G._wallAnchor) {
@@ -1851,6 +1915,10 @@ function loop(ts) {
   try {
   const dt = Math.min(0.05, (ts - (G.lastFrame || ts)) / 1000);
   G.lastFrame = ts;
+  // 帧时间平滑；持续掉帧就自动关掉发光阴影（弱设备防越玩越卡）
+  G._ft = (G._ft || 1 / 60) * 0.92 + dt * 0.08;
+  if (G._ft > 0.042) G.lowFx = true;
+  else if (G._ft < 0.026) G.lowFx = false;
   if (!G.paused && !G.finished) {
     G.now = advanceClock(dt);
     // 底部彩虹进度条
@@ -2436,6 +2504,11 @@ function togglePause() {
   } else {
     try { AC.resume(); } catch (e) {}
     $('#modal-pause').classList.remove('show');
+    // 音源可能被系统/页面切换掐断（pagehide、来电），继续时按当前谱面时间接上
+    if (!G.source && G.buffer) {
+      G._ctPrev = undefined; G._ctStall = 0; G._wallAnchor = null;
+      try { restartAudioAt(Math.max(0, G.now)); } catch (e) {}
+    }
   }
 }
 // 切到后台/息屏时自动暂停：否则回到前台音频已快进，音符会成片“消失”
@@ -2445,6 +2518,23 @@ document.addEventListener('visibilitychange', () => {
 /* 全局兜底：未捕获异常只记录，不让页面卡成“白屏/闪退” */
 window.addEventListener('error', e => { console.error('页面异常：', e.message || e.error); });
 window.addEventListener('unhandledrejection', e => { console.error('未处理的异步异常：', e.reason); });
+/* 离开页面（含 bfcache 往返、切应用）：暂停 + 立刻静音，避免回来时出现两条音轨或时间跳走 */
+window.addEventListener('pagehide', () => {
+  if (G.active && !G.finished) {
+    if (!G.paused) { G.paused = true; $('#modal-pause').classList.add('show'); }
+    try { AC.suspend(); } catch (e) {}
+  }
+  stopGameAudio();
+  stopPreview();
+});
+window.addEventListener('pageshow', e => {
+  if (!e.persisted) return;
+  // 从 bfcache 恢复：弹暂停框，用户点“继续”时会自动把音轨接回当前进度的位置
+  if (G.active && !G.finished) {
+    if (!G.paused) togglePause();
+    else $('#modal-pause').classList.add('show');
+  }
+});
 /* 任意一次触摸/点击都顺手把被系统挂起的音频上下文唤醒 */
 ['pointerdown', 'touchend', 'keydown'].forEach(ev => {
   window.addEventListener(ev, () => {
