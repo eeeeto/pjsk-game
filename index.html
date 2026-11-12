@@ -108,7 +108,11 @@
   .song-item .stars{display:flex;gap:3px;flex:0 0 auto;margin-left:2px;}
   .song-item .fav{flex:0 0 auto;font-size:clamp(15px,2.6vh,21px);line-height:1;color:#394963;cursor:pointer;
     padding:4px 1px;transition:color .15s,text-shadow .15s,transform .1s;user-select:none;}
-  .song-item .fav:hover{color:#ff7ba0;}
+  /* 移动端点按后 :hover 会一直粘住，让取消收藏后爱心看起来还是亮的，
+     所以悬停变色只在真正支持 hover 的设备（鼠标）上启用 */
+  @media (hover: hover) {
+    .song-item .fav:hover{color:#ff7ba0;}
+  }
   .song-item .fav:active{transform:scale(.85);}
   .song-item .fav.on{color:#ff5e8a;text-shadow:0 0 10px rgba(255,94,138,.75);}
   .song-item .star{font-size:clamp(11px,1.8vh,15px);line-height:1;color:#3d4d66;cursor:pointer;
