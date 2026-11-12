@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#070b17">
 <title>SEKAI FAN STAGE — 同人节奏演出</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="preconnect" href="https://gcore.jsdelivr.net" crossorigin>
+<link rel="preconnect" href="https://fastly.jsdelivr.net" crossorigin>
+<link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
 <style>
   :root{
     --cyan:#25e2ff; --pink:#ff5ea8; --purple:#9b7bff; --gold:#ffd66b;
@@ -651,10 +655,66 @@ const UNITS = [
 const UNIT_MAP = Object.fromEntries(UNITS.map(u => [u.key, u]));
 
 /* 在线托管：部署在 GitHub Pages 上时，音频/图片改走 jsDelivr CDN（国内直连快得多）；
-   本地双击打开时保持相对路径，离线可用 */
-const CDN_BASE = location.hostname.endsWith('.github.io')
-  ? 'https://cdn.jsdelivr.net/gh/eeeeto/pjsk-game@main/' : '';
+   本地双击打开时保持相对路径，离线可用。
+   维护三个镜像（主源 + gcore + fastly）：大文件抓取失败/超时自动换下一个源 */
+const CDN_MIRRORS = location.hostname.endsWith('.github.io')
+  ? ['https://cdn.jsdelivr.net/gh/eeeeto/pjsk-game@main/',
+     'https://gcore.jsdelivr.net/gh/eeeeto/pjsk-game@main/',
+     'https://fastly.jsdelivr.net/gh/eeeeto/pjsk-game@main/']
+  : [];
+const CDN_BASE = CDN_MIRRORS[0] || '';
 const res = p => CDN_BASE ? CDN_BASE + p : p;
+/* 把资源 URL 展开成所有镜像候选 */
+const mirrorUrls = u => {
+  if (!CDN_MIRRORS.length || typeof u !== 'string') return [u];
+  if (!u.startsWith(CDN_BASE)) return [u];
+  const p = u.slice(CDN_BASE.length);
+  return CDN_MIRRORS.map(m => m + p);
+};
+/* 带超时与镜像回退的资源抓取（音频等大文件），返回 ArrayBuffer */
+async function fetchRes(url, timeoutMs = 12000) {
+  const urls = mirrorUrls(url);
+  let lastErr = new Error('fetch failed');
+  for (const u of urls) {
+    const ctl = new AbortController();
+    const t = setTimeout(() => ctl.abort(), timeoutMs);
+    try {
+      const r = await fetch(encodeURI(u), { signal: ctl.signal });
+      if (r.ok) return await r.arrayBuffer();
+      lastErr = new Error('HTTP ' + r.status);
+    } catch (e) { lastErr = e; }
+    finally { clearTimeout(t); }
+  }
+  throw lastErr;
+}
+/* 图片按镜像顺序预加载，全部失败时回退主源 */
+function preloadImg(url) {
+  return new Promise(resolve => {
+    const urls = mirrorUrls(url);
+    let i = 0;
+    const im = new Image();
+    im.onload = () => resolve(urls[i]);
+    im.onerror = () => {
+      i++;
+      if (i < urls.length) im.src = encodeURI(urls[i]);
+      else resolve(url);
+    };
+    im.src = encodeURI(urls[0]);
+  });
+}
+/* 页面上的 <img> 加载失败时自动切换镜像 */
+if (CDN_MIRRORS.length) {
+  document.addEventListener('error', e => {
+    const el = e.target;
+    if (el && el.tagName === 'IMG' && typeof el.src === 'string' && el.src.startsWith(CDN_BASE)) {
+      const idx = parseInt(el.dataset.mirrorIdx || '0') + 1;
+      if (idx < CDN_MIRRORS.length) {
+        el.dataset.mirrorIdx = idx;
+        el.src = CDN_MIRRORS[idx] + el.src.slice(CDN_BASE.length);
+      }
+    }
+  }, true);
+}
 if (CDN_BASE) document.querySelectorAll('.dev-avatar img').forEach(img => { img.src = res('assets/dev-avatar.jpg'); });
 
 /* 角色（按键图案库） */
@@ -774,6 +834,8 @@ let previewAbort = null;
 let previewStopTimer = null;
 let previewAudioFallback = null;
 let songItems = [];
+let coverObserver = null;
+let lazyCoverEls = [];
 
 function durationText(sec) {
   const s = Math.max(0, Math.round(sec || 0));
@@ -804,7 +866,7 @@ function buildSongList() {
       el.className = 'song-item';
       el.dataset.i = s._i;
       el.innerHTML = `
-        <div class="cover" style="background-image:url(${s.cover || res('assets/covers/other1.jpg')})"></div>
+        <div class="cover" data-cover="${s.cover || res('assets/covers/other1.jpg')}"></div>
         <div class="meta">
           <div class="name">${escapeHTML(s.title)}${s.full ? '<span class="full">【full】</span>' : ''}</div>
           <div class="artist"><b>${escapeHTML(s.artist || '')}</b>${s.credit ? `<i> · ${escapeHTML(s.credit)}</i>` : ''}</div>
@@ -816,6 +878,23 @@ function buildSongList() {
       songItems.push(el);
     });
   });
+  // 封面懒加载：滚动到可见区域才请求图片，避免 65 张封面同时抢带宽
+  lazyCoverEls = $$('.song-item .cover[data-cover]');
+  if ('IntersectionObserver' in window) {
+    if (coverObserver) coverObserver.disconnect();
+    coverObserver = new IntersectionObserver(entries => {
+      for (const en of entries) {
+        if (!en.isIntersecting) continue;
+        const el = en.target;
+        coverObserver.unobserve(el);
+        el.style.backgroundImage = `url(${encodeURI(el.dataset.cover)})`;
+        el.removeAttribute('data-cover');
+      }
+    }, { root: $('#song-scroll') || null, rootMargin: '300px' });
+    lazyCoverEls.forEach(el => coverObserver.observe(el));
+  } else {
+    lazyCoverEls.forEach(el => { el.style.backgroundImage = `url(${encodeURI(el.dataset.cover)})`; el.removeAttribute('data-cover'); });
+  }
   // 进入列表即预览第一首（保持用户手势上下文，避免被自动播放策略拦截）
   if (songItems.length) {
     selectSong(Number(songItems[0].dataset.i), true, false);
@@ -878,7 +957,19 @@ function playPreview(song) {
     }
   });
   a.addEventListener('playing', () => { if (previewAudioFallback === a) setPreviewLoading(false); });
-  a.addEventListener('error', () => { if (previewAudioFallback === a) setPreviewLoading(false); });
+  a.addEventListener('error', () => {
+    if (previewAudioFallback !== a) return;
+    // 当前镜像加载失败 → 自动切换下一个镜像源
+    const idx = parseInt(a.dataset.mirrorIdx || '0') + 1;
+    if (idx < CDN_MIRRORS.length && a.dataset.file && a.dataset.file.startsWith(CDN_BASE)) {
+      a.dataset.mirrorIdx = idx;
+      a.src = encodeURI(CDN_MIRRORS[idx] + a.dataset.file.slice(CDN_BASE.length));
+      const pr = a.play();
+      if (pr && pr.catch) pr.catch(() => {});
+      return;
+    }
+    setPreviewLoading(false);
+  });
   previewAudioFallback = a;
   const pr = a.play();
   if (pr && pr.catch) pr.catch(() => { setPreviewLoading(false); showAudioHint(); });
@@ -1315,7 +1406,8 @@ async function startGame(song, diff, speed) {
   $('#load-song').textContent = song.title + (song.full ? ' 【full】' : '');
   $('#load-artist').textContent = song.artist || '';
   const cov = $('#load-cover');
-  cov.style.backgroundImage = song.cover ? `url(${encodeURI(song.cover)})` : 'none';
+  cov.style.backgroundImage = 'none';
+  if (song.cover) preloadImg(song.cover).then(u => { cov.style.backgroundImage = `url(${encodeURI(u)})`; });
   const dEl = $('#load-diff');
   dEl.textContent = diff === 'hard' ? 'HARD' : (diff === 'ultra' ? 'MASTER' : 'MEDIUM');
   $('#load-txt').textContent = '正在读取音频…';
@@ -1323,8 +1415,7 @@ async function startGame(song, diff, speed) {
   await new Promise(r => setTimeout(r, 60));
   try {
     const ac = audioCtx();
-    const resp = await fetch(encodeURI(song.file));
-    const ab = await resp.arrayBuffer();
+    const ab = await fetchRes(song.file);
     $('#load-txt').textContent = '正在解码音频…';
     await new Promise(r => setTimeout(r, 30));
     const buffer = await ac.decodeAudioData(ab);
@@ -1363,8 +1454,7 @@ async function loadHitSound() {
   try {
     const ac = audioCtx();
     const file = settings.sound === 'default' ? res('assets/sfx/default.mp3') : res(`assets/sfx/${settings.sound}.mp3`);
-    const r = await fetch(file);
-    const b = await r.arrayBuffer();
+    const b = await fetchRes(file);
     G.hitSound = await ac.decodeAudioData(b);
   } catch (e) { G.hitSound = null; }
 }
@@ -1854,11 +1944,11 @@ function drawNoteLinks(c, g, vis, travel) {
         const cy = (geo[l].cy + geo[r].cy) / 2;
         const hh = Math.min(geo[l].h, geo[r].h);
         c.save();
-        c.strokeStyle = 'rgba(255,255,255,.92)';
-        c.lineWidth = Math.max(2.5, hh * 0.42);
+        c.strokeStyle = 'rgba(255,255,255,.42)';
+        c.lineWidth = Math.max(1.4, hh * 0.20);
         c.lineCap = 'round';
-        c.shadowColor = 'rgba(186,228,255,.9)';
-        c.shadowBlur = 8;
+        c.shadowColor = 'rgba(186,228,255,.45)';
+        c.shadowBlur = 4;
         c.beginPath();
         c.moveTo(x1 - hh * 0.2, cy);
         c.lineTo(x2 + hh * 0.2, cy);
