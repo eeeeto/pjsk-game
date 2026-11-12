@@ -2405,9 +2405,9 @@ function glowSprite(text, fontPx, o) {
   const hit = _glowCache.get(key);
   if (hit) return hit;
 
-  const font = `${o.style || ''} ${o.weight || 900} ${fontPx}px ${FF}`.replace(/\s+/g, ' ').trim();
+  const fontAt = px => `${o.style || ''} ${o.weight || 900} ${px}px ${FF}`.replace(/\s+/g, ' ').trim();
   const mc = document.createElement('canvas').getContext('2d');
-  mc.font = font;
+  mc.font = fontAt(fontPx);
   const m = mc.measureText(text);
   const tw = Math.max(1, m.width);
   const asc = Math.max(1, m.actualBoundingBoxAscent || fontPx * 0.8);
@@ -2416,34 +2416,40 @@ function glowSprite(text, fontPx, o) {
   const pad = Math.ceil(blur * 1.3 + 4);
   const w = Math.ceil(tw + pad * 2), h = Math.ceil(asc + desc + pad * 2);
   const ss = Math.min(2, Math.max(1, window.devicePixelRatio || 1));
-  const cv = document.createElement('canvas');
-  cv.width = Math.max(1, Math.ceil(w * ss));
-  cv.height = Math.max(1, Math.ceil(h * ss));
-  const c = cv.getContext('2d');
-  c.scale(ss, ss);
-  c.font = font;
-  c.textAlign = 'left';
-  c.textBaseline = 'alphabetic';
-  const bx = pad, by = pad + asc;
-  // 光晕层：同一段文字模糊一份垫在下面（用 filter，不用 shadow，避免 Safari 的错位）
+  const cw = Math.max(1, Math.ceil(w * ss)), ch = Math.max(1, Math.ceil(h * ss));
+  /* 两个要点（都是给 Safari/WebKit 踩坑用的）：
+     1) 这里绝对不能用 ctx.scale()：WebKit 在「渐变文字 + 模糊/阴影 + 画布缩放 ≠ 1」时
+        会把字形画到偏移位置——PERFECT 的渐变字就是这样和光晕错开的（纯色字没事）。
+        所以保持 CTM 恒等，字号 / 坐标 / 模糊半径手动乘采样倍率 ss。
+     2) 光晕和字分到两张独立画布，避免「模糊层」与「渐变层」在同一画布上互相影响。 */
+  const mk = () => { const t = document.createElement('canvas'); t.width = cw; t.height = ch; return t.getContext('2d'); };
+  const gc = mk(), tc = mk();
+  [gc, tc].forEach(c => {
+    c.font = fontAt(fontPx * ss);
+    c.textAlign = 'left';
+    c.textBaseline = 'alphabetic';
+  });
+  const bx = pad * ss, by = (pad + asc) * ss, tws = tw * ss;
+  // 光晕：单独一张画布上模糊一份同色文字
   if (blur > 0 && canvasFilterOK()) {
-    c.save();
-    c.filter = `blur(${(blur * 0.5).toFixed(2)}px)`;
-    c.fillStyle = o.glow || o.color || '#fff';
-    c.fillText(text, bx, by);
-    c.restore();
-    c.filter = 'none';
+    gc.save();
+    gc.filter = `blur(${(blur * 0.5 * ss).toFixed(2)}px)`;
+    gc.fillStyle = o.glow || o.color || '#fff';
+    gc.fillText(text, bx, by);
+    gc.restore();
+    gc.filter = 'none';
   }
+  // 字：另一张画布上画清晰文字（PERFECT 是渐变）
   if (o.stops) {
-    const gd = c.createLinearGradient(bx, 0, bx + tw, 0);
+    const gd = tc.createLinearGradient(bx, 0, bx + tws, 0);
     o.stops.forEach(([pos, col]) => gd.addColorStop(pos, col));
-    c.fillStyle = gd;
+    tc.fillStyle = gd;
   } else {
-    c.fillStyle = o.color || '#fff';
+    tc.fillStyle = o.color || '#fff';
   }
-  c.fillText(text, bx, by);
+  tc.fillText(text, bx, by);
 
-  const sp = { cv, w, h, tw, ax: bx, ay: by };
+  const sp = { glow: (blur > 0 && canvasFilterOK()) ? gc.canvas : null, cv: tc.canvas, w, h, tw, ax: pad, ay: pad + asc };
   if (_glowCache.size > 48) _glowCache.clear();
   _glowCache.set(key, sp);
   return sp;
@@ -2453,8 +2459,11 @@ function glowText(c, text, x, y, fontPx, o = {}) {
   const sp = glowSprite(text, fontPx, o);
   c.save();
   if (o.alpha != null) c.globalAlpha *= o.alpha;
+  const dx = cx => cx - sp.tw / 2 - sp.ax;
   const cx = o.align === 'right' ? x - sp.tw / 2 : (o.align === 'left' ? x + sp.tw / 2 : x);
-  c.drawImage(sp.cv, cx - sp.tw / 2 - sp.ax, y - sp.ay, sp.w, sp.h);
+  const dy = y - sp.ay;
+  if (sp.glow) c.drawImage(sp.glow, dx(cx), dy, sp.w, sp.h);   // 先贴光晕
+  c.drawImage(sp.cv, dx(cx), dy, sp.w, sp.h);                  // 再贴字
   c.restore();
 }
 
