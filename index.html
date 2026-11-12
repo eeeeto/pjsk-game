@@ -1540,10 +1540,14 @@ function loadSkinImage() {
   return new Promise(done => {
     if (settings.skin === 'rect' || settings.skin === 'pill' || settings.skin === 'lumirect') { G.skinImg = null; done(); return; }
     if (settings.skin === 'custom' && !settings.customSkin) { G.skinImg = null; done(); return; }
+    let settled = false;
+    const finish = () => { if (settled) return; settled = true; done(); };
     const img = new Image();
-    img.onload = () => { G.skinImg = img; done(); };
-    img.onerror = () => { G.skinImg = null; done(); };
+    img.onload = () => { G.skinImg = img; finish(); };
+    img.onerror = () => { G.skinImg = null; finish(); };
     img.src = settings.skin === 'custom' ? settings.customSkin : res(`assets/keys/${settings.skin}.png`);
+    // 图片卡住（弱网）也不该让整局停在黑屏：4 秒后先开打，图案晚点生效
+    setTimeout(() => { if (!settled) { G.skinImg = null; finish(); } }, 4000);
   });
 }
 
@@ -1761,6 +1765,9 @@ window.addEventListener('keyup', e => {
 /* ---------- 主循环 ---------- */
 function loop(ts) {
   if (!G.active) return;
+  // 先排下一帧：即使本帧绘制/判定抛异常，动画也不会永久停住（曾导致轨道和音符一起不显示）
+  requestAnimationFrame(loop);
+  try {
   const dt = Math.min(0.05, (ts - (G.lastFrame || ts)) / 1000);
   G.lastFrame = ts;
   if (!G.paused && !G.finished) {
@@ -1802,7 +1809,10 @@ function loop(ts) {
     }
   }
   draw();
-  requestAnimationFrame(loop);
+  } catch (e) {
+    // 渲染出错只记录一次，避免每帧刷屏；下一帧仍会继续尝试
+    if (!G._drawErr) { G._drawErr = 1; console.error('draw error', e); }
+  }
 }
 
 function roundRect(c, x, y, w, h, r) {
@@ -1817,7 +1827,17 @@ function roundRect(c, x, y, w, h, r) {
 }
 
 let _bgCache = { key: '', grad: null };
+/* 每帧自检画布尺寸：手机旋转、地址栏收起、分屏、DPR 变化时 resize 事件可能错过/滞后，
+   一旦 backing store 与实际显示尺寸不一致，轨道和音符会整体错位甚至画到画布外 */
+function ensureCanvasSize() {
+  const w = cv.clientWidth, h = cv.clientHeight;
+  if (!w || !h) return;                       // 布局还没就绪，下一帧再试
+  const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+  if (w !== VW || h !== VH || dpr !== DPR) resizeCanvas();
+}
+
 function draw() {
+  ensureCanvasSize();
   const g = geometry();
   const c = ctx2d;
   c.clearRect(0, 0, g.W, g.H);
@@ -1865,7 +1885,7 @@ function draw() {
 let _laneCache = { key: '', grads: [] };
 function drawLanes(g) {
   const c = ctx2d;
-  const laneKey = `${g.W}x${g.H}x${G.lanes}`;
+  const laneKey = `${g.W}x${g.H}x${G.lanes}x${Math.round(g.topY)}x${Math.round(g.judgeY)}`;
   if (_laneCache.key !== laneKey) {
     _laneCache.key = laneKey;
     _laneCache.grads = [];
@@ -2335,6 +2355,10 @@ function togglePause() {
     $('#modal-pause').classList.remove('show');
   }
 }
+// 切到后台/息屏时自动暂停：否则回到前台音频已快进，音符会成片“消失”
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden && G.active && !G.paused && !G.finished) togglePause();
+});
 function hideAllModals() {
   $$('.modal').forEach(m => m.classList.remove('show'));
 }
