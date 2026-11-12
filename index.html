@@ -428,7 +428,7 @@
     </div>
     <div class="settings-body">
       <div class="panel on" id="panel-skin">
-        <p class="hint">默认图案为白色发光胶囊按键（两端的紫色圆点为装饰），可切回经典浅蓝长方形；选择角色后，短键会压扁小人，长键会出现连续的小人。也可以导入自己的图片作为按键图标（建议透明背景 PNG）。</p>
+        <p class="hint">默认图案为浅蓝色发光长方形；也可以切换为白色发光胶囊（两端紫色圆点为装饰）、选择角色图案（短键会压扁小人，长键出现连续小人），或导入自己的图片（建议透明背景 PNG）。</p>
         <div class="skin-grid" id="skin-grid"></div>
         <input type="file" id="skin-file" accept="image/*" style="display:none">
       </div>
@@ -685,7 +685,7 @@ const CARDS = [
 ];
 
 /* ---------- 设置存储 ---------- */
-const DEF_SET = { skin:'pill', sound:'default', bgMode:'album', bgCover:res('assets/covers/leoneed1.jpg'),
+const DEF_SET = { skin:'rect', sound:'default', bgMode:'album', bgCover:res('assets/covers/leoneed1.jpg'),
   bgCard:res('assets/cards/c11.jpg'), bgCardShade:0.45, customSkin:null, sfxVolume:0.5, speed:7.0, diff:'normal' };
 let settings = Object.assign({}, DEF_SET);
 try {
@@ -696,10 +696,10 @@ try {
 if (settings.bgMode === 'cover' || settings.bgMode === 'image') settings.bgMode = 'album';
 if (!settings.bgCard && settings.bgImage) settings.bgCard = settings.bgImage;
 if (typeof settings.bgCardShade !== 'number') settings.bgCardShade = 0.45;
-// 按键样式升级：老用户的「默认长方形」一次性切换为新的胶囊按键（之后仍可在设置里选回长方形）
-if (!settings._skinV2) {
-  if (settings.skin === 'rect') settings.skin = 'pill';
-  settings._skinV2 = 1;
+// 按键样式：默认回复经典长方形（上一版曾被自动切成胶囊，这里一次性迁回）
+if (!settings._skinV3) {
+  if (settings.skin === 'pill') settings.skin = 'rect';
+  settings._skinV3 = 1;
   saveSettings();
 }
 function saveSettings() {
@@ -1680,6 +1680,7 @@ function draw() {
   // 音符
   const travel = 12 / Math.max(5, G.speed);
   const list = G.notes;
+  const vis = [];
   for (let i = list.length - 1; i >= 0; i--) {
     const n = list[i];
     const p = (n.t - G.now) / travel;
@@ -1687,8 +1688,11 @@ function draw() {
     if (n.type === 'hold') {
       if (n.holdState === 2 || n.holdState === 3 || n.holdState === 4) continue;
     } else if (n.judged) continue;
-    drawNote(c, g, n, p, travel);
+    vis.push({ n, p });
   }
+  // 同时出现的相邻按键之间连横线
+  drawNoteLinks(c, g, vis, travel);
+  for (const v of vis) drawNote(c, g, v.n, v.p, travel);
 
   drawJudgmentLine(g);
   drawEffects(g);
@@ -1770,7 +1774,7 @@ function drawJudgmentLine(g) {
     _keyCache.normal = nm; _keyCache.glow = gl;
     _keyCache.rectNormal = rm; _keyCache.rectGlow = rg;
   }
-  // 判定线（原样保留）；胶囊模式画在按键下层，正好从按键间隙中穿过形成连接横线
+  // 判定线（原样保留，画在按键之上）
   const paintJudgeLine = () => {
     c.save();
     const grad = c.createLinearGradient(left, 0, right, 0);
@@ -1783,15 +1787,13 @@ function drawJudgmentLine(g) {
     c.beginPath(); c.moveTo(left, g.judgeY); c.lineTo(right, g.judgeY); c.stroke();
     c.restore();
   };
-  if (pill) paintJudgeLine();
   // 键盘格（每轨 2 格）
   const dotR = Math.max(1.8, cellH * 0.10);
   const dotInset = dotR + Math.max(2.5, cellH * 0.16);
-  const gap = Math.max(5, g.laneW * 0.045);   // 按键间距：留出缝隙让判定线在键之间露出来
   for (let i = 0; i < G.lanes; i++) {
     for (let h = 0; h < 2; h++) {
-      const x = g.cx + (i - (G.lanes - 1) / 2) * g.laneW - g.laneW / 2 + (h * g.laneW / 2) + gap;
-      const w = g.laneW / 2 - gap * 2;
+      const x = g.cx + (i - (G.lanes - 1) / 2) * g.laneW - g.laneW / 2 + (h * g.laneW / 2) + 2.5;
+      const w = g.laneW / 2 - 5;
       const y = g.judgeY - cellH / 2;
       const glow = G.pressed[i * 2 + h] > 0 || G.laneFlash[i] > 0.5;
       c.save();
@@ -1822,7 +1824,64 @@ function drawJudgmentLine(g) {
       }
     }
   }
-  if (!pill) paintJudgeLine();   // 旧样式：判定线画在按键上层，与原来一致
+  paintJudgeLine();
+}
+
+/* 音符的屏幕几何（与 drawNote 保持一致） */
+function noteGeo(n, p, travel, g) {
+  const t = 1 - clamp(p, 0, 1);
+  const tw = (0.38 * t + 0.31 * t * t) / 0.69;
+  const scale = lerp(0.38, 1, t);
+  const x = n.span === 1 ? laneXCell(n.cell, tw, g) : laneX(n.lane, tw, g);
+  const y = laneY(tw, g);
+  const size = g.laneW * 0.94 * scale * (n.span === 1 ? 0.52 : 1);
+  const w = size * 1.02, h = size * 0.33;
+  return { x, cy: y - h * 0.34, w, h };
+}
+
+/* 两个按键同时出现时，在它们之间连一条横线 */
+function drawNoteLinks(c, g, vis, travel) {
+  const TOL = 0.035;   // 时间差在 35ms 内视为同时出现
+  const geo = vis.map(v => noteGeo(v.n, v.p, travel, g));
+  // 按时间排序并分组，同组视为同时出现
+  const order = vis.map((_, i) => i).sort((a, b) => vis[a].n.t - vis[b].n.t);
+  let group = [], base = null;
+  const flush = () => {
+    if (group.length > 1) {
+      group.sort((a, b) => geo[a].x - geo[b].x);
+      for (let k = 0; k < group.length - 1; k++) {
+        const l = group[k], r = group[k + 1];
+        const x1 = geo[l].x + geo[l].w / 2;
+        const x2 = geo[r].x - geo[r].w / 2;
+        if (x2 <= x1) continue;   // 已经重叠或顺序异常，不画
+        const cy = (geo[l].cy + geo[r].cy) / 2;
+        const hh = Math.min(geo[l].h, geo[r].h);
+        c.save();
+        c.strokeStyle = 'rgba(255,255,255,.92)';
+        c.lineWidth = Math.max(2.5, hh * 0.42);
+        c.lineCap = 'round';
+        c.shadowColor = 'rgba(186,228,255,.9)';
+        c.shadowBlur = 8;
+        c.beginPath();
+        c.moveTo(x1 - hh * 0.2, cy);
+        c.lineTo(x2 + hh * 0.2, cy);
+        c.stroke();
+        c.restore();
+      }
+    }
+    group = [];
+  };
+  for (const i of order) {
+    if (base === null || vis[i].n.t - base <= TOL) {
+      if (base === null) base = vis[i].n.t;
+      group.push(i);
+    } else {
+      flush();
+      base = vis[i].n.t;
+      group.push(i);
+    }
+  }
+  flush();
 }
 
 function drawNote(c, g, n, p, travel) {
@@ -2093,18 +2152,18 @@ function quitGame() {
 function renderSkins() {
   const grid = $('#skin-grid');
   grid.innerHTML = '';
-  // 第一个选项：胶囊按键（新默认，按参考图）
-  const pill = document.createElement('div');
-  pill.className = 'skin pill' + (settings.skin === 'pill' ? ' on' : '');
-  pill.innerHTML = `<div class="pillprev"></div><div class="lbl">发光胶囊按键</div>`;
-  pill.onclick = () => { settings.skin = 'pill'; saveSettings(); renderSkins(); };
-  grid.appendChild(pill);
-  // 第二个选项：之前的浅蓝长方形按键
+  // 第一个选项：经典长方形（默认）
   const rect = document.createElement('div');
   rect.className = 'skin rect' + (settings.skin === 'rect' ? ' on' : '');
   rect.innerHTML = `<div class="rectprev"></div><div class="lbl">经典长方形</div>`;
   rect.onclick = () => { settings.skin = 'rect'; saveSettings(); renderSkins(); };
   grid.appendChild(rect);
+  // 第二个选项：发光胶囊按键
+  const pill = document.createElement('div');
+  pill.className = 'skin pill' + (settings.skin === 'pill' ? ' on' : '');
+  pill.innerHTML = `<div class="pillprev"></div><div class="lbl">发光胶囊</div>`;
+  pill.onclick = () => { settings.skin = 'pill'; saveSettings(); renderSkins(); };
+  grid.appendChild(pill);
   CHARS.forEach(([id, name]) => {
     const el = document.createElement('div');
     el.className = 'skin' + (settings.skin === id ? ' on' : '');
