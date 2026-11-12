@@ -434,7 +434,7 @@
     </div>
     <div class="settings-body">
       <div class="panel on" id="panel-skin">
-        <p class="hint">默认图案为白色发光的圆角长方形；还可切换发光胶囊、经典蓝色长方形，或选择角色图案（短键会压扁小人，长键出现连续小人），也可以导入自己的图片（建议透明背景 PNG）。</p>
+        <p class="hint">这里选择的是从屏幕上方落下的音符样式：默认为白色发光的圆角长方形，还可切换发光胶囊、经典蓝色长方形，或选择角色图案（短键会压扁小人，长键出现连续小人），也可以导入自己的图片（建议透明背景 PNG）。底部键盘固定为半透明按键。</p>
         <div class="skin-grid" id="skin-grid"></div>
         <input type="file" id="skin-file" accept="image/*" style="display:none">
       </div>
@@ -1765,10 +1765,7 @@ function drawJudgmentLine(g) {
   const left = g.cx - (G.lanes / 2) * g.laneW, right = g.cx + (G.lanes / 2) * g.laneW;
   const cellH = Math.min(g.laneW * 0.26, g.H * 0.052);
   const keyKey = `${g.W}x${g.H}x${G.lanes}`;
-  // 三种内置按键形态：lumirect 发光长方形 / pill 发光胶囊 / rect 蓝色长方形
-  // 角色图案、自定义图片时键盘格沿用发光胶囊
-  const style = settings.skin === 'rect' ? 'rect'
-    : (settings.skin === 'lumirect' ? 'lumirect' : 'pill');
+  // 键盘格固定为蓝色半透明长方形；皮肤选项只影响下落的音符
   if (_keyCache.key !== keyKey) {
     _keyCache.key = keyKey; _keyCache.cellH = cellH;
     const y = g.judgeY - cellH / 2;
@@ -1807,8 +1804,6 @@ function drawJudgmentLine(g) {
     c.restore();
   };
   // 键盘格（每轨 2 格）
-  const dotR = Math.max(1.8, cellH * 0.10);
-  const dotInset = dotR + Math.max(2.5, cellH * 0.16);
   for (let i = 0; i < G.lanes; i++) {
     for (let h = 0; h < 2; h++) {
       const x = g.cx + (i - (G.lanes - 1) / 2) * g.laneW - g.laneW / 2 + (h * g.laneW / 2) + 2.5;
@@ -1816,31 +1811,14 @@ function drawJudgmentLine(g) {
       const y = g.judgeY - cellH / 2;
       const glow = G.pressed[i * 2 + h] > 0 || G.laneFlash[i] > 0.5;
       c.save();
-      if (style === 'rect') {
-        // 蓝色长方形（半透明）
-        if (glow) { c.shadowColor = 'rgba(178,126,255,.95)'; c.shadowBlur = 12; }
-        roundRect(c, x, y, w, cellH, 6);
-        c.fillStyle = glow ? _keyCache.rectGlow : _keyCache.rectNormal;
-        c.fill();
-        c.strokeStyle = glow ? 'rgba(246,238,255,.95)' : 'rgba(190,168,255,.46)';
-        c.lineWidth = 1.4;
-        c.stroke();
-        c.restore();
-      } else {
-        // 发光按键（长方形 / 胶囊）+ 两端紫色圆点
-        if (glow) { c.shadowColor = 'rgba(178,126,255,.95)'; c.shadowBlur = 14; }
-        else { c.shadowColor = 'rgba(165,205,255,.6)'; c.shadowBlur = 7; }
-        roundRect(c, x, y, w, cellH, style === 'lumirect' ? Math.min(cellH * 0.22, 6) : cellH / 2);
-        c.fillStyle = glow ? _keyCache.glow : _keyCache.normal;
-        c.fill();
-        c.strokeStyle = glow ? 'rgba(252,246,255,.98)' : 'rgba(226,241,255,.92)';
-        c.lineWidth = 1.6;
-        c.stroke();
-        c.restore();
-        c.fillStyle = glow ? 'rgba(138,98,230,.95)' : 'rgba(148,130,208,.82)';
-        c.beginPath(); c.arc(x + dotInset, g.judgeY, dotR, 0, Math.PI * 2); c.fill();
-        c.beginPath(); c.arc(x + w - dotInset, g.judgeY, dotR, 0, Math.PI * 2); c.fill();
-      }
+      if (glow) { c.shadowColor = 'rgba(178,126,255,.95)'; c.shadowBlur = 12; }
+      roundRect(c, x, y, w, cellH, 6);
+      c.fillStyle = glow ? _keyCache.rectGlow : _keyCache.rectNormal;
+      c.fill();
+      c.strokeStyle = glow ? 'rgba(246,238,255,.95)' : 'rgba(190,168,255,.46)';
+      c.lineWidth = 1.4;
+      c.stroke();
+      c.restore();
     }
   }
   paintJudgeLine();
@@ -1983,30 +1961,56 @@ function drawNote(c, g, n, p, travel) {
       c.drawImage(G.skinImg, x - w / 2, y - h * 0.72, w, h);
       c.restore();
     } else {
-      // 默认皮肤：扁平发光的横条（近似 PJSK 按键）
+      // 内置音符皮肤：lumirect 发光长方形 / pill 发光胶囊 / rect 蓝色长方形（默认）
       const w = size * 1.02, h = size * 0.33;
       const cy = y - h * 0.34;
-      c.save();
-      const grad = c.createLinearGradient(x - w / 2, cy, x + w / 2, cy);
-      if (n.type === 'hold') {
-        grad.addColorStop(0, '#f2fff7'); grad.addColorStop(.42, '#9dffc8'); grad.addColorStop(1, '#22c96a');
+      if (settings.skin === 'lumirect' || settings.skin === 'pill') {
+        // 发光音符：上白下淡紫渐变 + 发光描边 + 两端紫色圆点
+        const r = settings.skin === 'pill' ? h / 2 : Math.min(h * 0.24, 6);
+        c.save();
+        const grad = c.createLinearGradient(0, cy - h / 2, 0, cy + h / 2);
+        grad.addColorStop(0, 'rgba(252,251,255,.97)');
+        grad.addColorStop(.55, 'rgba(230,224,250,.94)');
+        grad.addColorStop(1, 'rgba(198,190,234,.92)');
+        c.shadowColor = 'rgba(165,205,255,.85)';
+        c.shadowBlur = 9 * scale;
+        roundRect(c, x - w / 2, cy - h / 2, w, h, r);
+        c.fillStyle = grad; c.fill();
+        c.shadowBlur = 0;
+        c.strokeStyle = 'rgba(226,241,255,.95)';
+        c.lineWidth = Math.max(1, 1.4 * scale);
+        c.stroke();
+        c.restore();
+        // 两端的紫色圆点
+        const dotR = Math.max(1.5, h * 0.13);
+        const inset = dotR + Math.max(2, h * 0.22);
+        c.fillStyle = 'rgba(148,130,208,.9)';
+        c.beginPath(); c.arc(x - w / 2 + inset, cy, dotR, 0, Math.PI * 2); c.fill();
+        c.beginPath(); c.arc(x + w / 2 - inset, cy, dotR, 0, Math.PI * 2); c.fill();
       } else {
-        grad.addColorStop(0, '#ffffff'); grad.addColorStop(.38, '#d6f7ff'); grad.addColorStop(.72, '#7fdcff'); grad.addColorStop(1, '#35bdf5');
+        // 蓝色长方形（默认皮肤）：扁平发光的横条（近似 PJSK 按键）
+        c.save();
+        const grad = c.createLinearGradient(x - w / 2, cy, x + w / 2, cy);
+        if (n.type === 'hold') {
+          grad.addColorStop(0, '#f2fff7'); grad.addColorStop(.42, '#9dffc8'); grad.addColorStop(1, '#22c96a');
+        } else {
+          grad.addColorStop(0, '#ffffff'); grad.addColorStop(.38, '#d6f7ff'); grad.addColorStop(.72, '#7fdcff'); grad.addColorStop(1, '#35bdf5');
+        }
+        c.shadowColor = n.type === 'hold' ? 'rgba(60,235,150,.9)' : 'rgba(80,220,255,.9)';
+        c.shadowBlur = 9 * scale;
+        roundRect(c, x - w / 2, cy - h / 2, w, h, h * 0.42);
+        c.fillStyle = grad; c.fill();
+        c.shadowBlur = 0;
+        c.strokeStyle = 'rgba(255,255,255,.92)'; c.lineWidth = Math.max(1, 1.3 * scale); c.stroke();
+        // 顶部高光
+        c.save();
+        c.beginPath();
+        roundRect(c, x - w / 2 + h * 0.28, cy - h * 0.34, w - h * 0.56, h * 0.22, h * 0.1);
+        c.fillStyle = 'rgba(255,255,255,.72)';
+        c.fill();
+        c.restore();
+        c.restore();
       }
-      c.shadowColor = n.type === 'hold' ? 'rgba(60,235,150,.9)' : 'rgba(80,220,255,.9)';
-      c.shadowBlur = 9 * scale;
-      roundRect(c, x - w / 2, cy - h / 2, w, h, h * 0.42);
-      c.fillStyle = grad; c.fill();
-      c.shadowBlur = 0;
-      c.strokeStyle = 'rgba(255,255,255,.92)'; c.lineWidth = Math.max(1, 1.3 * scale); c.stroke();
-      // 顶部高光
-      c.save();
-      c.beginPath();
-      roundRect(c, x - w / 2 + h * 0.28, cy - h * 0.34, w - h * 0.56, h * 0.22, h * 0.1);
-      c.fillStyle = 'rgba(255,255,255,.72)';
-      c.fill();
-      c.restore();
-      c.restore();
     }
   }
 }
