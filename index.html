@@ -471,8 +471,8 @@
   .prof-head{display:flex;align-items:center;gap:12px;padding-left:clamp(14px,2.4vw,30px);padding-right:clamp(14px,2.4vw,30px);}
   .prof-head #profile-share{margin-left:auto;}
   .prof-head h2{display:none;}
-  .prof-scroll{flex:1;overflow-y:auto;padding:clamp(10px,2.2vh,24px) clamp(14px,2.6vw,34px) clamp(20px,4vh,44px);display:flex;}
-  .prof-card{flex:1;background:#e4e4e7;border-radius:clamp(10px,2vh,18px);padding:clamp(14px,2.6vh,28px);
+  .prof-scroll{flex:1;overflow-y:auto;padding:clamp(10px,2.2vh,24px) clamp(14px,2.6vw,34px) clamp(20px,4vh,44px);display:flex;align-items:center;}
+  .prof-card{flex:0 0 auto;width:100%;height:min(64vh,620px);background:#e4e4e7;border-radius:clamp(10px,2vh,18px);padding:clamp(14px,2.6vh,28px);
     display:flex;gap:clamp(14px,2.6vw,30px);min-width:0;min-height:0;}
   .prof-left{flex:0 0 50%;display:flex;flex-direction:column;gap:clamp(12px,2.4vh,26px);min-width:0;}
   .prof-right{flex:1;display:flex;flex-direction:column;gap:clamp(12px,2.4vh,26px);min-width:0;}
@@ -492,7 +492,7 @@
   .prof-big img{width:100%;height:100%;object-fit:cover;object-position:top center;}
   .prof-big .ph{color:#f0f0f2;font-size:clamp(16px,3vh,26px);font-weight:900;letter-spacing:.12em;text-align:center;padding:0 14px;}
   .prof-info{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:clamp(6px,1.4vh,13px);}
-  .prow{display:flex;align-items:baseline;gap:10px;font-size:clamp(13px,2.3vh,19px);font-weight:900;color:#545574;letter-spacing:.04em;min-width:0;}
+  .prow{display:flex;align-items:baseline;gap:10px;font-size:clamp(15px,2.9vh,24px);font-weight:900;color:#545574;letter-spacing:.04em;min-width:0;}
   .prow .k{flex:0 0 auto;}
   .prow .v{color:#545574;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;margin-left:auto;padding-left:12px;}
   .prow.click{cursor:pointer;}
@@ -817,6 +817,18 @@
       </div>
     </div>
   </section>
+</div>
+
+<!-- ================= 个人主页导出：选择竖版 / 横版 ================= -->
+<div class="modal" id="modal-pf-export">
+  <div class="dialog">
+    <div class="dlg-title">保存为图片<span>选择排版</span></div>
+    <div class="dlg-btns">
+      <button class="btn ghost" id="pf-exp-port">竖版</button>
+      <button class="btn" id="pf-exp-land">横版</button>
+    </div>
+    <button class="btn ghost" id="pf-exp-cancel" style="margin-top:10px">取消</button>
+  </div>
 </div>
 
 <!-- ================= 修改玩家id弹窗 ================= -->
@@ -4770,8 +4782,10 @@ function roundRectPath(c, x, y, w, h, r) {
   c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r);
   c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath();
 }
-async function renderProfileImage() {
-  const W = 1080, H = 1440;
+async function renderProfileImage(orient = 'portrait') {
+  // 竖版 1080×1440 / 横版 1600×1080，构图均为：左栏 修改id+大图，右栏 三格+信息列表
+  const W = orient === 'landscape' ? 1600 : 1080;
+  const H = orient === 'landscape' ? 1080 : 1440;
   const cv = document.createElement('canvas');
   cv.width = W; cv.height = H;
   const c = cv.getContext('2d');
@@ -4792,26 +4806,62 @@ async function renderProfileImage() {
   c.fillStyle = '#ffffff'; c.fill();
   c.fillStyle = '#17181c'; c.fillText(idText, W / 2, 68);
   c.textAlign = 'left'; c.textBaseline = 'alphabetic';
-  // 大卡片
-  const bx = 24, by = 140, bw = W - 48, bh = H - 190;
+  // 大卡片（不拉满高度，垂直居中偏上）
+  const cardH = orient === 'landscape' ? H - 320 : H - 380;
+  const bx = 24, by = Math.round((H - cardH) / 2) + 34, bw = W - 48, bh = cardH;
   roundRectPath(c, bx, by, bw, bh, 22);
   c.fillStyle = '#e6e6e9'; c.fill();
-  // 第一行：修改id pill + 三个格子
-  c.fillStyle = '#a9a9ad';
+  // 两栏
+  const pad = 34;
+  const colW = Math.round((bw - pad * 3) * (orient === 'landscape' ? 0.52 : 0.5));
+  const lx = bx + pad, rx = lx + colW + pad;
+  const colInner = colW;
+  // 左栏：修改id pill
   const nickText = p.id || '点击修改id';
   c.font = `900 32px ${FF}`;
-  const nkW = c.measureText(nickText).width + 64;
-  roundRectPath(c, bx + 34, by + 44, nkW, 62, 31); c.fill();
-  c.fillStyle = '#ffffff'; c.font = `900 32px ${FF}`;
-  c.fillText(nickText, bx + 34 + 32, by + 44 + 41);
-  const cellS = 150, cellGap = 18;
-  let cx = bx + bw - 34 - (cellS * 3 + cellGap * 2), cy = by + 30;
+  const nkW = Math.min(colInner, c.measureText(nickText).width + 64);
+  const ny = by + 44;
+  roundRectPath(c, lx, ny, nkW, 62, 31); c.fillStyle = '#a9a9ad'; c.fill();
+  c.fillStyle = '#ffffff'; c.fillText(nickText, lx + 32, ny + 41);
+  // 左栏：大图（白色实心阴影偏移）
+  const bigY = ny + 62 + 40;
+  const bigH = by + bh - pad - bigY;
+  const bigW = colInner;
+  c.save();
+  c.shadowColor = 'rgba(255,255,255,.95)'; c.shadowBlur = 34; c.shadowOffsetX = -10; c.shadowOffsetY = 14;
+  roundRectPath(c, lx, bigY, bigW, bigH, 6);
+  c.fillStyle = '#0b0b0e'; c.fill();
+  c.restore();
+  roundRectPath(c, lx, bigY, bigW, bigH, 6);
+  c.fillStyle = '#0b0b0e'; c.fill();
+  if (p.big) {
+    const url = p.big.key ? cardBlobs[p.big.key] : (p.big.type === 'char' ? res(`assets/keys/${p.big.v}.png`) : '');
+    if (url) {
+      try {
+        const im = await loadImageAsync(url);
+        const r = Math.max(bigW / im.naturalWidth, bigH / im.naturalHeight);
+        const dw = im.naturalWidth * r, dh = im.naturalHeight * r;
+        c.save();
+        roundRectPath(c, lx, bigY, bigW, bigH, 6); c.clip();
+        c.drawImage(im, lx + (bigW - dw) / 2, bigY + (bigH - dh) / 2, dw, dh);
+        c.restore();
+      } catch (e) {}
+    }
+  } else {
+    c.fillStyle = '#f0f0f2'; c.font = `900 30px ${FF}`; c.textAlign = 'center';
+    c.fillText('点击输入卡面id', lx + bigW / 2, bigY + bigH / 2);
+    c.textAlign = 'left';
+  }
+  // 右栏：三个格子
+  const cellS = orient === 'landscape' ? 140 : 132;
+  const cellGap = 16;
+  let cx = rx, cy = by + 30;
   for (let i = 0; i < 3; i++) {
     const item = p.cells[i];
     roundRectPath(c, cx, cy, cellS, cellS, 12); c.fillStyle = '#a9a9ad'; c.fill();
     if (item) {
       if (item.type === 'text') {
-        c.fillStyle = '#ffffff'; c.font = `900 72px ${FF}`; c.textAlign = 'center'; c.textBaseline = 'middle';
+        c.fillStyle = '#ffffff'; c.font = `900 68px ${FF}`; c.textAlign = 'center'; c.textBaseline = 'middle';
         c.fillText(item.v, cx + cellS / 2, cy + cellS / 2 + 4);
         c.textAlign = 'left'; c.textBaseline = 'alphabetic';
       } else {
@@ -4831,35 +4881,7 @@ async function renderProfileImage() {
     }
     cx += cellS + cellGap;
   }
-  // 第二行：左下大图（白色阴影：不模糊的实心白底偏移 + 柔和白影）
-  const bigW = 500, bigH = 400;
-  const gx = bx + 34, gy = cy + cellS + 60;
-  c.save();
-  c.shadowColor = 'rgba(255,255,255,.95)'; c.shadowBlur = 34; c.shadowOffsetX = -10; c.shadowOffsetY = 14;
-  roundRectPath(c, gx, gy, bigW, bigH, 6);
-  c.fillStyle = '#0b0b0e'; c.fill();
-  c.restore();
-  roundRectPath(c, gx, gy, bigW, bigH, 6);
-  c.fillStyle = '#0b0b0e'; c.fill();
-  if (p.big) {
-    const url = p.big.key ? cardBlobs[p.big.key] : (p.big.type === 'char' ? res(`assets/keys/${p.big.v}.png`) : '');
-    if (url) {
-      try {
-        const im = await loadImageAsync(url);
-        const r = Math.max(bigW / im.naturalWidth, bigH / im.naturalHeight);
-        const dw = im.naturalWidth * r, dh = im.naturalHeight * r;
-        c.save();
-        roundRectPath(c, gx, gy, bigW, bigH, 6); c.clip();
-        c.drawImage(im, gx + (bigW - dw) / 2, gy + (bigH - dh) / 2, dw, dh);
-        c.restore();
-      } catch (e) {}
-    }
-  } else {
-    c.fillStyle = '#f0f0f2'; c.font = `900 30px ${FF}`; c.textAlign = 'center';
-    c.fillText('点击输入卡面id', gx + bigW / 2, gy + bigH / 2);
-    c.textAlign = 'left';
-  }
-  // 右下信息列表
+  // 右栏：信息列表（一行 = 标签 … 值右对齐），文字色 #545574
   const top = topPlayedSong();
   const cnt = fcApCounts();
   const unit = UNIT_MAP[p.unit] ? UNIT_MAP[p.unit].label : '';
@@ -4871,20 +4893,24 @@ async function renderProfileImage() {
     ['本命组合', unit || '选择'],
     ['本命CP', p.cp || '填写']
   ];
-  const ix = gx + bigW + 50;
-  let iy = gy + 80;
-  c.font = `900 30px ${FF}`;
+  const ix = rx, iwEnd = bx + bw - pad;
+  const rowFont = orient === 'landscape' ? 32 : 34;
+  let iy = cy + cellS + 74;
+  const rowGap = orient === 'landscape' ? 72 : 78;
+  c.font = `900 ${rowFont}px ${FF}`;
   for (const [k, v] of rows) {
-    c.fillStyle = '#1b1c20';
+    c.fillStyle = '#545574';
     c.fillText(k, ix, iy);
-    c.fillStyle = '#33343a'; c.font = `800 28px ${FF}`;
-    const vt = v.length > 12 ? v.slice(0, 11) + '…' : v;
-    c.fillText(vt, ix, iy + 44);
-    c.font = `900 30px ${FF}`;
-    iy += 96;
+    c.textAlign = 'right';
+    const kw = c.measureText(k).width;
+    let vt = v || '';
+    while (kw + 24 + c.measureText(vt).width > iwEnd - ix && vt.length > 1) vt = vt.slice(0, vt.length - 2) + '…';
+    c.fillText(vt, iwEnd, iy);
+    c.textAlign = 'left';
+    iy += rowGap;
   }
   c.fillStyle = '#7a7a80'; c.font = `600 22px ${FF}`;
-  c.fillText('PROJECT SEKAI · FAN STAGE — 个人主页', bx + 34, by + bh - 30);
+  c.fillText('PROJECT SEKAI · FAN STAGE — 个人主页', bx + 34, Math.min(H - 30, by + bh + 34));
   return cv;
 }
 
@@ -5083,10 +5109,14 @@ $('#btn-profile').addEventListener('click', () => {
 $('#profile-back').addEventListener('click', goTitle);
 $('#profile-nick').addEventListener('click', openNickModal);
 $('#profile-id-top').addEventListener('click', openNickModal);
-$('#profile-share').addEventListener('click', async () => {
-  try { await shareCanvas(await renderProfileImage(), 'pjsk-profile.png', 'PJSK FAN STAGE 个人主页'); }
+$('#profile-share').addEventListener('click', () => { $('#modal-pf-export').classList.add('show'); });
+$$('#modal-pf-export .btn').forEach(b => b.addEventListener('click', async () => {
+  $('#modal-pf-export').classList.remove('show');
+  if (b.id === 'pf-exp-cancel') return;
+  const orient = b.id === 'pf-exp-land' ? 'landscape' : 'portrait';
+  try { await shareCanvas(await renderProfileImage(orient), `pjsk-profile-${orient === 'landscape' ? 'land' : 'port'}.png`, 'PJSK FAN STAGE 个人主页'); }
   catch (e) { console.warn('[profile share]', e); showToast('生成主页图片失败', 2200); }
-});
+}));
 $('#profile-big').addEventListener('click', () => openProfDialog({ kind: 'big' }));
 $$('#screen-profile .prof-cell').forEach(el => {
   el.addEventListener('click', () => openProfDialog({ kind: 'cell', i: Number(el.dataset.i) }));
