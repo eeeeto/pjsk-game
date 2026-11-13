@@ -4382,14 +4382,15 @@ async function downloadResCard(rawId) {
     const [abn, rarity] = ent;
     const parts = (rarity === 'rarity_3' || rarity === 'rarity_4') ? ['normal', 'after_training'] : ['normal'];
     let done = 0;
+    let chrDefaultKey = '';
     for (const part of parts) {
       const key = `res:${cid}_${part}`;
-      dlUI('#res-card-dl', true, 0.37 + (done / parts.length) * 0.55, `正在下载${labelPart[part]}…`);
+      dlUI('#res-card-dl', true, 0.37 + (done / parts.length) * 0.4, `正在下载${labelPart[part]}…`);
       const rel = `${abn}/${part === 'normal' ? 'card_normal' : 'card_after_training'}.webp`;
       const direct = CARD_ASSET_BASE + rel;
       const urls = [direct, `https://wsrv.nl/?url=${encodeURIComponent(direct)}&output=webp`];
-      const blob = await fetchBlobProg(urls, p => dlUI('#res-card-dl', true, 0.37 + ((done + p) / parts.length) * 0.55, `正在下载${labelPart[part]}… ${Math.round(p * 100)}%`));
-      dlUI('#res-card-dl', true, 0.92, `正在裁剪成 2:3 竖版…`);
+      const blob = await fetchBlobProg(urls, p => dlUI('#res-card-dl', true, 0.37 + ((done + p) / parts.length) * 0.4, `正在下载${labelPart[part]}… ${Math.round(p * 100)}%`));
+      dlUI('#res-card-dl', true, 0.77, `正在裁剪成 2:3 竖版…`);
       const cut = await cropRatio(blob, RES_RATIO, 600);
       await idbPut(key, cut);
       if (cardBlobs[key]) URL.revokeObjectURL(cardBlobs[key]);
@@ -4397,7 +4398,27 @@ async function downloadResCard(rawId) {
       if (!settings.resCards.some(m => m.key === key)) {
         settings.resCards.push({ key, cid, label: `#${cid} · ${labelPart[part]}` });
       }
+      // 透明底角色图（官方 member_cutout_trm 素材，普通卡只有 normal）
+      try {
+        const chrRel = `character/member_cutout_trm/${abn}/${part === 'normal' ? 'normal' : 'after_training'}.webp`;
+        const chrDirect = 'https://storage.sekai.best/sekai-jp-assets/' + chrRel;
+        dlUI('#res-card-dl', true, 0.8 + (done / parts.length) * 0.15, `正在下载${labelPart[part]}透明角色图…`);
+        const chrBlob = await fetchBlobProg([chrDirect, `https://wsrv.nl/?url=${encodeURIComponent(chrDirect)}&output=webp`], () => {});
+        const key2 = `res:${cid}_${part}_chr`;
+        await idbPut(key2, chrBlob);
+        if (cardBlobs[key2]) URL.revokeObjectURL(cardBlobs[key2]);
+        cardBlobs[key2] = URL.createObjectURL(chrBlob);
+        if (!settings.resCards.some(m => m.key === key2)) {
+          settings.resCards.push({ key: key2, cid, label: `#${cid} · ${labelPart[part]}透明`, chr: 1 });
+        }
+        chrDefaultKey = key2;   // 后下载的 after_training 优先作为默认
+      } catch (e) { /* 该卡没有透明图，跳过 */ }
       done++;
+    }
+    // 默认选用透明角色图
+    if (chrDefaultKey) {
+      const i = settings.resCards.findIndex(m => m.key === chrDefaultKey);
+      if (i >= 0) settings.resPick = i;
     }
     saveSettings(); renderResCards();
     dlUI('#res-card-dl', true, 1, `已加入结算人物列表（${done} 张）`);
@@ -4453,11 +4474,19 @@ async function initProfileAssets() {
   if (!settings._defSeeded) {
     settings._defSeeded = 1;
     if (!settings.profile.id) settings.profile.id = '「世界」的居民';
+    if (!settings.resCards.some(m => m.key === 'def:88_chr')) {
+      cardBlobs['def:88_chr'] = res('assets/cards/88/chr_after.webp');
+      settings.resCards.push({ key: 'def:88_chr', cid: 88, label: '#88 · 特训后透明', chr: 1 });
+    }
     if (!settings.resCards.some(m => m.key === 'def:88_after')) {
       cardBlobs['def:88_after'] = res('assets/cards/88/after_2x3.webp');
       settings.resCards.push({ key: 'def:88_after', cid: 88, label: '#88 · 特训后' });
     }
     if (!settings.resCards.length) settings.resPick = 0;
+    // 默认结算人物 = 透明角色图：当前选中的还是旧默认（裁剪卡图）或无效时才切换，尊重用户手动选择
+    const defChr = settings.resCards.findIndex(m => m.key === 'def:88_chr');
+    const cur = settings.resCards[settings.resPick];
+    if (defChr >= 0 && (!cur || cur.key === 'def:88_after')) settings.resPick = defChr;
     if (!settings.profile.big) {
       cardBlobs['def:88_normal'] = res('assets/cards/88/normal.webp');
       settings.profile.big = { type: 'card', key: 'def:88_normal' };
@@ -4526,6 +4555,8 @@ function applyResChar() {
   const url = meta ? cardBlobs[meta.key] : '';
   if (url) {
     img.src = url; img.style.display = ''; ph.style.display = 'none';
+    // 透明底角色图用 contain 完整显示，裁剪卡图用 cover 铺满
+    img.style.objectFit = meta.chr ? 'contain' : 'cover';
   } else {
     img.removeAttribute('src'); img.style.display = 'none'; ph.style.display = '';
   }
@@ -4608,6 +4639,8 @@ function openProfDialog(target) {
     if (cur.type === 'char') pfState.char = cur.v;
     if (cur.key) { pfState.key = cur.key; pfState.url = cardBlobs[cur.key] || ''; }
   }
+  // 大图只接受卡面
+  if (target.kind === 'big') pfState.type = 'card';
   $('#pf-text').value = pfState.text;
   $('#pf-text-warn').style.display = 'none';
   $('#pf-card-id').value = '';
@@ -4616,8 +4649,11 @@ function openProfDialog(target) {
   $('#modal-prof').classList.add('show');
 }
 function renderPfType() {
+  const isBig = pfTarget && pfTarget.kind === 'big';
+  // 大图只接受卡面：隐藏类型切换
+  $('#pf-type').style.display = isBig ? 'none' : '';
   $$('#pf-type .pill').forEach(p => p.classList.toggle('on', p.dataset.v === pfState.type));
-  $('#pf-row-card').style.display = pfState.type === 'card' ? '' : 'none';
+  $('#pf-row-card').style.display = (isBig || pfState.type === 'card') ? '' : 'none';
   $('#pf-row-char').style.display = pfState.type === 'char' ? '' : 'none';
   $('#pf-row-text').style.display = pfState.type === 'text' ? '' : 'none';
   $('#pf-row-img').style.display = pfState.type === 'img' ? '' : 'none';
@@ -4731,8 +4767,8 @@ function saveProfDialog() {
   else if (pfState.type === 'text' && pfState.text) item = { type: 'text', v: pfState.text };
   else if (pfState.type === 'img' && pfState.key) item = { type: 'img', key: pfState.key };
   if (pfTarget.kind === 'big') {
-    // 大图只接受卡面 / 角色 / 图片
-    if (item && item.type === 'text') { showToast('大图不支持一个字，请选卡面 / 角色 / 图片', 2400); return; }
+    // 大图只接受卡面
+    if (!item || item.type !== 'card') { showToast('大图只能设置卡面（输卡面编号获取）', 2400); return; }
     settings.profile.big = item;
   } else {
     settings.profile.cells[pfTarget.i] = item;
@@ -5101,12 +5137,19 @@ async function renderResultImage() {
   if (charUrl) {
     try {
       const im = await loadImageAsync(charUrl);
-      const r = Math.max(chW / im.naturalWidth, chH / im.naturalHeight);
-      const dw = im.naturalWidth * r, dh = im.naturalHeight * r;
-      c.save();
-      roundRectPath(c, chX, chY, chW, chH, 8); c.clip();
-      c.drawImage(im, chX + (chW - dw) / 2, chY + (chH - dh) / 2, dw, dh);
-      c.restore();
+      if (charMeta.chr) {
+        // 透明底角色图：contain 完整显示，不裁剪
+        const r = Math.min(chW / im.naturalWidth, chH / im.naturalHeight);
+        const dw = im.naturalWidth * r, dh = im.naturalHeight * r;
+        c.drawImage(im, chX + (chW - dw) / 2, chY + (chH - dh) / 2, dw, dh);
+      } else {
+        const r = Math.max(chW / im.naturalWidth, chH / im.naturalHeight);
+        const dw = im.naturalWidth * r, dh = im.naturalHeight * r;
+        c.save();
+        roundRectPath(c, chX, chY, chW, chH, 8); c.clip();
+        c.drawImage(im, chX + (chW - dw) / 2, chY + (chH - dh) / 2, dw, dh);
+        c.restore();
+      }
     } catch (e) {}
   } else {
     // 占位：圆 + 长条 + 「人物」字（与结算页占位一致）
