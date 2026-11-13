@@ -598,7 +598,7 @@
         </div>
       </div>
       <div class="panel" id="panel-team">
-        <p class="hint">自定义你的演出配队：用 − / ＋ 调整每种卡的张数（共最多 5 张）并起名字。演出中每 20~30 秒会从队里的卡中随机抽一张发动——<b>判卡</b>：5 秒内打中的所有音符都算 PERFECT，且这段期间连击不会断；<b>奶卡</b>：5 秒内不扣血；<b>体力守护 2</b>：发动瞬间恢复 200 HP，没有持续时间。抽中概率按张数分配，例如判卡×4 + 奶卡×1 就有 80% 抽到判卡。在选歌后的确认界面选择本次使用的配队。</p>
+        <p class="hint">自定义你的演出配队：用 − / ＋ 调整每种卡的张数（共最多 5 张）并起名字。演出中每 20~30 秒会从队里的卡中随机抽一张发动——<b>判卡</b>：5 秒内所有音符都算 PERFECT——按到的、漏掉的、长条松早的全部算 Perfect，且这段期间连击不会断；<b>奶卡</b>：5 秒内不扣血；<b>体力守护 2</b>：发动瞬间恢复 200 HP，没有持续时间。抽中概率按张数分配，例如判卡×4 + 奶卡×1 就有 80% 抽到判卡。在选歌后的确认界面选择本次使用的配队。</p>
         <div class="team-list" id="team-list"></div>
         <div class="pills" style="margin-top:12px">
           <div class="pill" id="team-new">＋ 新建配队</div>
@@ -2257,9 +2257,9 @@ function releaseLane(lane) {
   const d = G.now - end;            // > 0 表示松手偏晚
   const w = tailWindows();
   if (d < -w.bad) {
-    // 松得太早：长条断开，尾判 MISS
+    // 松得太早：长条断开。判卡发动中仍记 PERFECT，不漏失误
     n.holdState = 4;
-    applyTail('miss', n);
+    applyTail(skillJudge() ? 'perfect' : 'miss', n);
     return;
   }
   const ad = Math.abs(d);
@@ -2418,10 +2418,19 @@ function loop(ts) {
       }
       if (G.now - n.t > w.bad) {
         n.judged = true; G.judged++;
-        G.counts.miss++;
-        breakCombo();
-        G.hp = Math.max(0, G.hp - 80); G.damage += 80;
-        addEffect(n.lane, 'MISS', JUDGE_COLOR.miss);
+        if (skillJudge()) {
+          // 判卡发动中：漏掉没按的音符也直接记 PERFECT（不扣血、不断连）
+          G.counts.perfect++;
+          G.combo++;
+          G.maxCombo = Math.max(G.maxCombo, G.combo);
+          G.comboPop = 1;
+          addEffect(n.lane, JUDGE_LABEL.perfect, JUDGE_COLOR.perfect);
+        } else {
+          G.counts.miss++;
+          breakCombo();
+          G.hp = Math.max(0, G.hp - 80); G.damage += 80;
+          addEffect(n.lane, JUDGE_LABEL.miss, JUDGE_COLOR.miss);
+        }
         if (n.type === 'hold') { n.holdState = 4; G.holding.delete(n.lane); }
       }
     }
@@ -3474,7 +3483,7 @@ function renderSounds() {
 }
 /* ---------- 配队 ---------- */
 const TEAM_CARDS = [
-  { id:'judge', name:'判定辅助', type:'judge', icon:'✦', desc:'发动后 5 秒内打中的音符全部算 PERFECT，连击不会断' },
+  { id:'judge', name:'判定辅助', type:'judge', icon:'✦', desc:'发动后 5 秒内所有音符都算 PERFECT（漏掉的也不例外），连击不会断' },
   { id:'heal',  name:'体力守护', type:'heal',  icon:'✚', desc:'发动后 5 秒内不扣血' },
   { id:'heal2', name:'体力守护 2', type:'heal2', icon:'✚', desc:'发动瞬间恢复 200 HP，没有持续时间' }
 ];
@@ -3519,7 +3528,7 @@ function renderTeams() {
       return `<div class="tmini ${c ? c.type : ''}">${c ? c.icon : '·'}</div>`;
     }).join('');
     row.innerHTML = `<div class="tname">${escapeHTML(t.name || '未命名配队')}${sk
-      ? `<small>技能：${escapeHTML(sk.card.name)}（${sk.type === 'judge' ? '5秒全 PERFECT · 连击不断' : sk.type === 'heal' ? '5秒不扣血' : '瞬间回复 200 HP'}）</small>`
+      ? `<small>技能：${escapeHTML(sk.card.name)}（${sk.type === 'judge' ? '5秒全 PERFECT · 漏按也算 · 连击不断' : sk.type === 'heal' ? '5秒不扣血' : '瞬间回复 200 HP'}）</small>`
       : '<small>无技能卡 · 点击标题切换使用的配队</small>'}</div>
       <div class="tminis">${minis}</div>`;
     row.addEventListener('click', () => {
