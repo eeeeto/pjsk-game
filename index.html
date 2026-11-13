@@ -4640,11 +4640,12 @@ function renderProfile() {
 
 /* ---------- 个人主页：格子 / 大图编辑弹窗 ---------- */
 let pfTarget = null;          // {kind:'cell', i} | {kind:'big'}
-let pfState = { type: 'card', cid: '', char: '', text: '', key: '', url: '' };
+let pfState = { type: 'card', cid: '', char: '', text: '', key: '', url: '', cards: null, part: '' };
+// cards：本次「获取」下载到的各版本卡面 { normal:{key,url}, after_training:{key,url} }；part：当前选中要保存的版本
 
 function openProfDialog(target) {
   pfTarget = target;
-  pfState = { type: 'card', cid: '', char: '', text: '', key: '', url: '' };
+  pfState = { type: 'card', cid: '', char: '', text: '', key: '', url: '', cards: null, part: '' };
   const cur = target.kind === 'big' ? settings.profile.big : settings.profile.cells[target.i];
   if (cur) {
     pfState.type = cur.type === 'img' ? 'img' : (cur.type === 'char' ? 'char' : (cur.type === 'text' ? 'text' : 'card'));
@@ -4670,28 +4671,49 @@ function renderPfType() {
   $('#pf-row-char').style.display = pfState.type === 'char' ? '' : 'none';
   $('#pf-row-text').style.display = pfState.type === 'text' ? '' : 'none';
   $('#pf-row-img').style.display = pfState.type === 'img' ? '' : 'none';
-  // 已确定的内容回显
-  const row = $('#pf-row-card');
-  if (pfState.type === 'card' && pfState.url) {
-    let prev = $('#pf-card-prev');
-    if (!prev) {
-      prev = document.createElement('div');
-      prev.id = 'pf-card-prev';
-      prev.style.cssText = 'width:96px;aspect-ratio:2/3;border-radius:8px;background-size:cover;background-position:center;margin-top:8px;';
-      row.appendChild(prev);
+  // 已确定的内容回显（卡面可有多版本：特训前 / 特训后，并排预览、点选要用的那张）
+  const prevWrap = (() => {
+    let wrap = $('#pf-card-prevs');
+    if (!wrap) {
+      wrap = document.createElement('div');
+      wrap.id = 'pf-card-prevs';
+      wrap.style.cssText = 'display:flex;gap:14px;margin-top:8px;flex-wrap:wrap;';
     }
-    prev.style.backgroundImage = `url(${pfState.url})`;
-  } else if (pfState.type === 'img' && pfState.url) {
-    let prev = $('#pf-card-prev');
-    if (!prev) {
-      prev = document.createElement('div');
-      prev.id = 'pf-card-prev';
-      prev.style.cssText = 'width:96px;aspect-ratio:1/1;border-radius:8px;background-size:cover;background-position:center;margin-top:8px;';
-      $('#pf-row-img').appendChild(prev);
+    // 类型切换时把预览容器挂到当前可见的行里（appendChild 自带移动语义）
+    (pfState.type === 'img' ? $('#pf-row-img') : $('#pf-row-card')).appendChild(wrap);
+    return wrap;
+  })();
+  prevWrap.innerHTML = '';
+  if ((pfState.type === 'card' || pfState.type === 'img') && pfState.url) {
+    const makePrev = (url, part, label) => {
+      const d = document.createElement('div');
+      d.style.cssText = 'text-align:center;';
+      const prev = document.createElement('div');
+      prev.style.cssText = 'width:96px;aspect-ratio:' + (pfState.type === 'img' ? '1/1' : '2/3') +
+        ';border-radius:8px;background-size:cover;background-position:center;box-shadow:0 2px 10px rgba(0,0,0,.4);';
+      prev.style.backgroundImage = `url(${url})`;
+      if (pfState.cards && part) {
+        prev.style.cursor = 'pointer';
+        prev.style.outline = pfState.part === part ? '2px solid #7ceaff' : '2px solid transparent';
+        prev.style.outlineOffset = '2px';
+        prev.onclick = () => { pfState.part = part; renderPfType(); };
+      }
+      d.appendChild(prev);
+      if (label) {
+        const s = document.createElement('div');
+        s.style.cssText = 'font-size:11px;color:#8ea6c6;margin-top:4px;font-weight:700;';
+        s.textContent = label;
+        d.appendChild(s);
+      }
+      return d;
+    };
+    if (pfState.type === 'card' && pfState.cards) {
+      const hasBoth = pfState.cards.after_training && pfState.cards.normal;
+      if (pfState.cards.after_training) prevWrap.appendChild(makePrev(pfState.cards.after_training.url, 'after_training', hasBoth ? '特训后' : ''));
+      if (pfState.cards.normal) prevWrap.appendChild(makePrev(pfState.cards.normal.url, 'normal', hasBoth ? '特训前' : ''));
+    } else {
+      prevWrap.appendChild(makePrev(pfState.url, ''));
     }
-    prev.style.backgroundImage = `url(${pfState.url})`;
-  } else {
-    const prev = $('#pf-card-prev'); if (prev) prev.remove();
   }
 }
 function renderPfCharGrid() {
@@ -4722,18 +4744,28 @@ async function downloadProfileCard(cidNum) {
     }
     if (!ent) { dlUI('#pf-card-dl', true, 0, `没有找到编号 ${cidNum} 的卡面`); return false; }
     const [abn, rarity] = ent;
-    const part = (rarity === 'rarity_3' || rarity === 'rarity_4') ? 'after_training' : 'normal';
-    dlUI('#pf-card-dl', true, 0.4, '正在下载卡面…');
-    const rel = `${abn}/${part === 'normal' ? 'card_normal' : 'card_after_training'}.webp`;
-    const direct = CARD_ASSET_BASE + rel;
-    const urls = [direct, `https://wsrv.nl/?url=${encodeURIComponent(direct)}&output=webp`];
-    const blob = await fetchBlobProg(urls, p => dlUI('#pf-card-dl', true, 0.4 + p * 0.55, `正在下载… ${Math.round(p * 100)}%`));
-    const key = `${PF_CELL_KEYS[pfTarget.kind === 'big' ? 0 : pfTarget.i]}:card:${cidNum}`;
-    await idbPut(key, blob);
-    if (cardBlobs[key]) URL.revokeObjectURL(cardBlobs[key]);
-    cardBlobs[key] = URL.createObjectURL(blob);
-    pfState.key = key;
-    pfState.url = cardBlobs[key];
+    // 3★/4★ 同时下载特训后 + 特训前两版卡面；低稀有度只有特训前
+    const parts = (rarity === 'rarity_3' || rarity === 'rarity_4') ? ['after_training', 'normal'] : ['normal'];
+    const labelPart = { normal: '特训前', after_training: '特训后' };
+    const baseKey = `${PF_CELL_KEYS[pfTarget.kind === 'big' ? 0 : pfTarget.i]}:card:${cidNum}`;
+    pfState.cards = {};
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i];
+      dlUI('#pf-card-dl', true, 0.4 + (i / parts.length) * 0.55, `正在下载${labelPart[part]}卡面…`);
+      const rel = `${abn}/${part === 'normal' ? 'card_normal' : 'card_after_training'}.webp`;
+      const direct = CARD_ASSET_BASE + rel;
+      const urls = [direct, `https://wsrv.nl/?url=${encodeURIComponent(direct)}&output=webp`];
+      const blob = await fetchBlobProg(urls, p => dlUI('#pf-card-dl', true, 0.4 + ((i + p) / parts.length) * 0.55, `正在下载${labelPart[part]}卡面… ${Math.round(p * 100)}%`));
+      const key = baseKey + (parts.length > 1 ? (part === 'normal' ? ':n' : ':a') : '');
+      await idbPut(key, blob);
+      if (cardBlobs[key]) URL.revokeObjectURL(cardBlobs[key]);
+      cardBlobs[key] = URL.createObjectURL(blob);
+      pfState.cards[part] = { key, url: cardBlobs[key] };
+    }
+    // 默认选用主版本（3★/4★ 为特训后），可点另一张切换
+    pfState.part = parts[0];
+    pfState.key = pfState.cards[pfState.part].key;
+    pfState.url = pfState.cards[pfState.part].url;
     dlUI('#pf-card-dl', true, 1, '已获取，点「确定」保存');
     setTimeout(() => dlUI('#pf-card-dl', false), 1500);
     renderPfType();
@@ -4775,7 +4807,11 @@ function importProfileImage(file) {
 function saveProfDialog() {
   if (!pfTarget) return;
   let item = null;
-  if (pfState.type === 'card' && pfState.key) item = { type: 'card', key: pfState.key };
+  if (pfState.type === 'card') {
+    // 「获取」后按点选的版本保存（特训前 / 特训后）；旧数据回显走 key 分支
+    if (pfState.cards && pfState.part && pfState.cards[pfState.part]) item = { type: 'card', key: pfState.cards[pfState.part].key };
+    else if (pfState.key) item = { type: 'card', key: pfState.key };
+  }
   else if (pfState.type === 'char' && pfState.char) item = { type: 'char', v: pfState.char };
   else if (pfState.type === 'text' && pfState.text) item = { type: 'text', v: pfState.text };
   else if (pfState.type === 'img' && pfState.key) item = { type: 'img', key: pfState.key };
@@ -4834,7 +4870,8 @@ function openCpModal() {
 function openNickModal() {
   $('#nick-input').value = settings.profile.id || '';
   $('#modal-nick').classList.add('show');
-  setTimeout(() => $('#nick-input').focus(), 60);
+  // 必须同步聚焦：安卓上异步（setTimeout）focus 属于失去手势上下文，软键盘不会弹出
+  $('#nick-input').focus();
 }
 
 /* ---------- 个人主页：保存为图片 ---------- */
