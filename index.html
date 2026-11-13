@@ -428,7 +428,83 @@
   @keyframes rainbow{to{background-position:300% 0}}
   .res-extra{font-size:clamp(10px,1.5vh,12px);color:#8ea4c4;letter-spacing:.1em;}
   .res-extra b{color:#d9ecff;font-weight:800;}
-  .res-actions{display:flex;gap:12px;margin-top:clamp(4px,1.2vh,10px);}
+  .res-actions{display:flex;gap:12px;margin-top:clamp(4px,1.2vh,10px);justify-content:flex-end;padding:0 clamp(16px,3vw,40px) clamp(12px,2.4vh,26px);}
+  /* ---------- 新版结算（图一风格：白底黑字） ---------- */
+  #screen-result{background:#e9e9ec;}
+  #screen-result .bg{background:none;}
+  .res2-wrap{flex:1;display:flex;flex-direction:column;gap:clamp(10px,2.4vh,26px);
+    padding:clamp(12px,2.6vh,30px) clamp(16px,4vw,56px) 0;min-height:0;width:100%;max-width:1060px;margin:0 auto;}
+  .res2-top{display:flex;align-items:center;gap:clamp(10px,1.8vw,20px);
+    background:#d6d6da;border-radius:clamp(12px,2.4vh,26px);padding:clamp(10px,1.8vh,20px) clamp(14px,2.2vw,26px);
+    box-shadow:0 6px 22px rgba(0,0,0,.10);}
+  .res2-cover{width:clamp(44px,7.4vh,74px);height:clamp(44px,7.4vh,74px);border-radius:6px;flex:0 0 auto;
+    background-size:cover;background-position:center;background-color:#0a0d14;box-shadow:0 3px 10px rgba(0,0,0,.35);}
+  .res2-meta .t{font-size:clamp(15px,2.8vh,26px);font-weight:900;color:#101216;letter-spacing:.04em;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60vw;}
+  .res2-meta .d{font-size:clamp(11px,2vh,16px);font-weight:800;color:#3c4350;letter-spacing:.16em;margin-top:2px;}
+  .res2-main{flex:1;display:flex;gap:clamp(14px,3vw,44px);min-height:0;}
+  .res2-left{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:clamp(6px,1.6vh,18px);}
+  .res2-record{text-align:center;font-size:clamp(13px,2.6vh,24px);font-weight:900;color:#17181c;
+    letter-spacing:.14em;height:clamp(16px,3vh,28px);}
+  .res2-grid{display:flex;align-items:flex-start;gap:clamp(12px,3vw,46px);}
+  .res2-stats{display:flex;flex-direction:column;gap:clamp(2px,.8vh,7px);}
+  .res2-stats .row{display:flex;align-items:center;font-size:clamp(12px,2.4vh,22px);font-weight:900;letter-spacing:.06em;}
+  .res2-stats .row .l{width:clamp(78px,11vw,130px);color:#101216;}
+  .res2-stats .row .n{color:#101216;font-variant-numeric:tabular-nums;min-width:4.4em;}
+  .res2-combo .lbl{font-size:clamp(11px,2vh,17px);font-weight:900;letter-spacing:.2em;color:#2c313b;}
+  .res2-combo .num{font-size:clamp(24px,5.4vh,52px);font-weight:900;color:#101216;letter-spacing:.04em;font-variant-numeric:tabular-nums;}
+  .res2-fcap{font-size:clamp(20px,4.6vh,44px);font-weight:900;color:#111216;letter-spacing:.08em;min-height:clamp(20px,4.6vh,44px);}
+  .res2-extra{font-size:clamp(10px,1.8vh,14px);color:#565d68;letter-spacing:.06em;}
+  .res2-char{flex:0 0 clamp(120px,26vh,300px);position:relative;border-radius:4px;overflow:hidden;
+    display:flex;align-items:center;justify-content:center;min-height:clamp(150px,38vh,430px);}
+  .res2-char img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top center;}
+  .res2-char .ph{font-size:clamp(34px,9vh,90px);font-weight:900;color:#9a9aa2;letter-spacing:.3em;
+    text-align:center;line-height:1.2;}
+  /* ---------- 个人主页 ---------- */
+  .round-btn{width:40px;height:40px;border-radius:50%;border:none;background:#fff;color:#17181c;
+    font-size:19px;font-weight:900;display:flex;align-items:center;justify-content:center;cursor:pointer;
+    box-shadow:0 3px 12px rgba(0,0,0,.18);flex:0 0 auto;padding:0;}
+  .round-btn:active{transform:scale(.92);}
+  .id-pill{background:#fff;border-radius:999px;padding:8px 22px;font-weight:900;color:#17181c;font-size:clamp(13px,2.2vh,17px);
+    letter-spacing:.06em;cursor:pointer;box-shadow:0 3px 12px rgba(0,0,0,.15);white-space:nowrap;
+    overflow:hidden;text-overflow:ellipsis;max-width:52vw;}
+  .prof-head{display:flex;align-items:center;gap:12px;padding-left:clamp(14px,2.4vw,30px);padding-right:clamp(14px,2.4vw,30px);}
+  .prof-head h2{display:none;}
+  .prof-scroll{flex:1;overflow-y:auto;padding:clamp(10px,2.2vh,24px) clamp(14px,2.6vw,34px) clamp(20px,4vh,44px);display:flex;}
+  .prof-card{flex:1;background:#e4e4e7;border-radius:clamp(10px,2vh,18px);padding:clamp(14px,2.6vh,28px);
+    display:flex;flex-direction:column;gap:clamp(12px,2.4vh,26px);min-width:0;}
+  .prof-row1{display:flex;align-items:flex-start;justify-content:space-between;gap:clamp(10px,2vw,24px);flex-wrap:wrap;}
+  .prof-nick{background:#a9a9ad;color:#fff;font-weight:900;font-size:clamp(14px,2.4vh,20px);letter-spacing:.08em;
+    border-radius:999px;padding:9px 26px;cursor:pointer;white-space:nowrap;max-width:46vw;
+    overflow:hidden;text-overflow:ellipsis;}
+  .prof-cells{display:flex;gap:clamp(8px,1.4vw,14px);}
+  .prof-cell{width:clamp(64px,10vh,104px);height:clamp(64px,10vh,104px);border-radius:10px;background:#a9a9ad;
+    cursor:pointer;overflow:hidden;position:relative;display:flex;align-items:center;justify-content:center;
+    box-shadow:0 4px 14px rgba(0,0,0,.16);}
+  .prof-cell .add{color:#f2f2f4;font-size:26px;font-weight:900;}
+  .prof-cell img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+  .prof-cell .txt{color:#fff;font-size:clamp(26px,5vh,44px);font-weight:900;line-height:1;}
+  .prof-row2{display:flex;gap:clamp(12px,2.4vw,28px);align-items:stretch;flex-wrap:wrap;}
+  .prof-big{flex:0 0 clamp(220px,42vh,470px);height:clamp(160px,34vh,400px);background:#0b0b0e;border-radius:4px;
+    cursor:pointer;overflow:hidden;position:relative;display:flex;align-items:center;justify-content:center;
+    box-shadow:-8px 10px 0 #ffffff, -8px 10px 26px 6px rgba(255,255,255,.42);}
+  .prof-big img{width:100%;height:100%;object-fit:cover;object-position:top center;}
+  .prof-big .ph{color:#f0f0f2;font-size:clamp(16px,3vh,26px);font-weight:900;letter-spacing:.12em;text-align:center;padding:0 14px;}
+  .prof-info{flex:1;min-width:240px;display:flex;flex-direction:column;justify-content:center;gap:clamp(6px,1.4vh,13px);}
+  .prow{display:flex;align-items:baseline;gap:10px;font-size:clamp(13px,2.3vh,19px);font-weight:900;color:#1b1c20;letter-spacing:.04em;}
+  .prow .k{flex:0 0 auto;}
+  .prow .v{color:#17181c;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:44vw;}
+  .prow.click{cursor:pointer;}
+  .prow.click .v{border-bottom:2px dotted #7a7a80;padding-bottom:1px;}
+  .pf-char-grid{max-height:200px;overflow-y:auto;}
+  .pf-char-grid .cov{aspect-ratio:1/1;}
+  .pf-char-grid .cov span{font-size:9px;}
+  .pf-char-grid .cov img{position:absolute;inset:0;width:calc(100% - 8px);height:calc(100% - 8px);margin:4px;}
+  /* 主页格子编辑弹窗的类型 pills 与按钮排 */
+  .dlg-btns{display:flex;gap:10px;margin-top:14px;}
+  .dlg-btns .btn{flex:1;}
+  .res-card-grid .cov{aspect-ratio:2/3;}
+  .res-card-grid .cov span{font-size:9px;}
   /* 结算音乐开关（右上角） */
   #screen-result .res-music{position:absolute;top:clamp(8px,2vh,20px);right:clamp(8px,2vw,20px);z-index:3;
     width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;
@@ -485,6 +561,7 @@
       <div class="logo-sub">セカイに、キミの音を。</div>
       <div class="title-actions">
         <button class="btn" id="btn-start">开 始 演 出</button>
+        <button class="btn ghost" id="btn-profile">个 人 主 页</button>
         <button class="btn ghost" id="btn-settings">设 置</button>
         <button class="btn ghost" id="btn-dev">开发者相关</button>
       </div>
@@ -519,6 +596,7 @@
       <div class="tab" data-tab="sound">按键音效</div>
       <div class="tab" data-tab="bg">背景</div>
       <div class="tab" data-tab="team">配队选择</div>
+      <div class="tab" data-tab="result">打歌结算</div>
     </div>
     <div class="settings-body">
       <div class="panel on" id="panel-skin">
@@ -621,6 +699,24 @@
           </div>
         </div>
       </div>
+      <div class="panel" id="panel-result">
+        <p class="hint">打歌结算页可以放一张「结算人物」大图。输入卡面编号后，会把这张卡的<b>特训前卡图</b>与<b>特训后立绘</b>都裁剪成 2:3 竖版下载到下面的结算人物列表（图存在本机）。点击列表里的一张，打歌结算时就显示它；点右上角的 × 可以移除。</p>
+        <div class="url-row">
+          <input type="text" id="res-card-id" inputmode="numeric" maxlength="7" placeholder="输入卡面编号（纯数字，如 1337）">
+          <button class="btn ghost" id="btn-res-card">下载到结算列表</button>
+        </div>
+        <div class="card-dl" id="res-card-dl" style="display:none">
+          <div class="card-dl-bar"><i id="res-card-dl-fill"></i></div>
+          <span id="res-card-dl-txt">准备中…</span>
+        </div>
+        <div class="sub-lbl" style="margin-top:14px">结算人物列表<span style="color:#5f7896;font-weight:400">（点击选用 · 打歌结算页右侧大图）</span></div>
+        <div class="cover-grid res-card-grid" id="res-card-grid"></div>
+        <div class="sub-lbl" style="margin-top:14px">结算页其他显示</div>
+        <div class="field">
+          <div class="lbl"><span>判定统计下方</span><b>FULL COMBO / ALL PERFECT</b></div>
+          <div class="sub">达成 FC / AP 时会自动显示对应称号；有更高分时自动显示「♦新纪录!♦」（分数 = 判定加权 + 连击加成，按曲目与难度分开记录）</div>
+        </div>
+      </div>
     </div>
     <div class="bottom-bar">
       <button class="btn ghost" id="settings-back">返 回</button>
@@ -662,22 +758,142 @@
   <section id="screen-result" class="screen">
     <div class="bg"></div>
     <div class="res-music" id="res-music" title="结算音乐 开 / 关">♪</div>
-    <div class="res-song" id="res-song"></div>
-    <div class="res-panel">
-      <div class="res-list" id="res-stats"></div>
-      <div class="res-combo">
-        <div class="res-fcap" id="res-banner"></div>
-        <div class="lbl">COMBO</div>
-        <div class="num" id="res-combo">0000</div>
+    <div class="res2-wrap">
+      <div class="res2-top">
+        <div class="res2-cover" id="res2-cover"></div>
+        <div class="res2-meta">
+          <div class="t" id="res2-title"></div>
+          <div class="d" id="res2-diff"></div>
+        </div>
+      </div>
+      <div class="res2-main">
+        <div class="res2-left">
+          <div class="res2-record" id="res-record"></div>
+          <div class="res2-grid">
+            <div class="res2-stats" id="res-stats"></div>
+            <div class="res2-combo">
+              <div class="lbl">COMBO</div>
+              <div class="num" id="res-combo">0000</div>
+            </div>
+          </div>
+          <div class="res2-fcap" id="res-banner"></div>
+          <div class="res2-extra" id="res-extra"></div>
+        </div>
+        <div class="res2-char" id="res2-char">
+          <img id="res2-char-img" alt="" style="display:none">
+          <div class="ph" id="res2-char-ph">人<br>物</div>
+        </div>
       </div>
     </div>
-    <div class="res-extra" id="res-extra"></div>
     <div class="res-actions">
-      <button class="btn ghost" id="res-again">再次演奏</button>
-      <button class="btn pink" id="res-share">分 享</button>
-      <button class="btn" id="res-home">回到主页</button>
+      <button class="btn ghost" id="res-share">分享</button>
+      <button class="btn ghost" id="res-again">再次演出</button>
+      <button class="btn pink" id="res-home">完成演出</button>
     </div>
   </section>
+
+  <!-- ================= 个人主页 ================= -->
+  <section id="screen-profile" class="screen">
+    <div class="page-head prof-head">
+      <button class="round-btn" id="profile-back" title="返回">←</button>
+      <div class="id-pill" id="profile-id-top">同步的玩家id</div>
+      <button class="round-btn" id="profile-share" title="保存为图片">⤴</button>
+    </div>
+    <div class="prof-scroll">
+      <div class="prof-card">
+        <div class="prof-row1">
+          <div class="prof-nick" id="profile-nick">点击修改id</div>
+          <div class="prof-cells">
+            <div class="prof-cell" data-i="0"><span class="add">＋</span></div>
+            <div class="prof-cell" data-i="1"><span class="add">＋</span></div>
+            <div class="prof-cell" data-i="2"><span class="add">＋</span></div>
+          </div>
+        </div>
+        <div class="prof-row2">
+          <div class="prof-big" id="profile-big"><div class="ph">点击输入卡面id</div></div>
+          <div class="prof-info" id="prof-info"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ================= 修改玩家id弹窗 ================= -->
+<div class="modal" id="modal-nick">
+  <div class="dialog">
+    <div class="dlg-title">修改<span>玩家id</span></div>
+    <input type="text" id="nick-input" maxlength="16" placeholder="同步的玩家id" style="width:100%">
+    <div class="dlg-btns">
+      <button class="btn ghost" id="nick-cancel">取 消</button>
+      <button class="btn pink" id="nick-ok">确 定</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= 主页格子编辑弹窗 ================= -->
+<div class="modal" id="modal-prof">
+  <div class="dialog">
+    <div class="dlg-title">编辑<span>格子内容</span></div>
+    <div class="pills" id="pf-type">
+      <div class="pill on" data-v="card">卡面</div>
+      <div class="pill" data-v="char">角色</div>
+      <div class="pill" data-v="text">一个字</div>
+      <div class="pill" data-v="img">图片</div>
+    </div>
+    <div class="field" id="pf-row-card">
+      <div class="url-row" style="margin-top:4px">
+        <input type="text" id="pf-card-id" inputmode="numeric" maxlength="7" placeholder="输入卡面编号（纯数字，如 1337）">
+        <button class="btn ghost" id="btn-pf-card">获取</button>
+      </div>
+      <div class="card-dl" id="pf-card-dl" style="display:none">
+        <div class="card-dl-bar"><i id="pf-card-dl-fill"></i></div>
+        <span id="pf-card-dl-txt">准备中…</span>
+      </div>
+    </div>
+    <div class="field" id="pf-row-char" style="display:none">
+      <div class="sub-lbl">选择角色小人</div>
+      <div class="cover-grid pf-char-grid" id="pf-char-grid"></div>
+    </div>
+    <div class="field" id="pf-row-text" style="display:none">
+      <input type="text" id="pf-text" maxlength="8" placeholder="◆ ♡ ♢ 或 emoji，只能一个字" style="width:100%">
+      <div class="sub" id="pf-text-warn" style="color:#ff7ba0;display:none">只能放一个字（符号 / emoji），请删掉多余的</div>
+    </div>
+    <div class="field" id="pf-row-img" style="display:none">
+      <button class="btn ghost" id="btn-pf-img" style="width:100%">从相册导入图片</button>
+      <input type="file" id="pf-img-file" accept="image/*" style="display:none">
+    </div>
+    <div class="dlg-btns">
+      <button class="btn ghost" id="pf-clear">清 空</button>
+      <button class="btn ghost" id="pf-cancel">取 消</button>
+      <button class="btn pink" id="pf-ok">确 定</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= 本命组合选择弹窗 ================= -->
+<div class="modal" id="modal-unit">
+  <div class="dialog">
+    <div class="dlg-title">选择<span>本命组合</span></div>
+    <div class="pills" id="unit-list" style="flex-direction:column;align-items:stretch"></div>
+    <div class="dlg-btns">
+      <button class="btn ghost" id="unit-cancel">取 消</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= 本命CP编辑弹窗 ================= -->
+<div class="modal" id="modal-cp">
+  <div class="dialog">
+    <div class="dlg-title">填写<span>本命CP</span></div>
+    <input type="text" id="cp-text" maxlength="20" placeholder="直接填写，或从下方点选角色（如 一歌×咲希）" style="width:100%">
+    <div class="sub-lbl" style="margin-top:10px">点第 1 个角色填入名字，再点第 2 个自动拼成 CP</div>
+    <div class="cover-grid pf-char-grid" id="cp-char-grid"></div>
+    <div class="dlg-btns">
+      <button class="btn ghost" id="cp-clear">清 空</button>
+      <button class="btn ghost" id="cp-cancel">取 消</button>
+      <button class="btn pink" id="cp-ok">确 定</button>
+    </div>
+  </div>
 </div>
 
 <!-- ================= 确认弹窗 ================= -->
@@ -981,6 +1197,15 @@ settings.holdAlpha = clamp(Number(settings.holdAlpha) || 0.5, 0.3, 0.9);
 settings.judgeLift = clamp(Number(settings.judgeLift) || 0, 0, 10);
 settings.judgeOffset = clamp(Number(settings.judgeOffset) || 0, -150, 150);
 if (!Array.isArray(settings.myCards)) settings.myCards = [];
+// 结算人物列表 / 个人主页（图片本体存 IndexedDB，settings 只存元数据）
+if (!Array.isArray(settings.resCards)) settings.resCards = [];
+settings.resPick = clamp(Number(settings.resPick) || 0, 0, Math.max(0, settings.resCards.length - 1));
+if (!settings.plays || typeof settings.plays !== 'object' || Array.isArray(settings.plays)) settings.plays = {};
+if (!settings.best || typeof settings.best !== 'object' || Array.isArray(settings.best)) settings.best = {};
+if (!settings.profile || typeof settings.profile !== 'object') {
+  settings.profile = { id: '', big: null, cells: [null, null, null], unit: '', cp: '' };
+}
+if (!Array.isArray(settings.profile.cells) || settings.profile.cells.length !== 3) settings.profile.cells = [null, null, null];
 // 按键音效：新默认为 Tap 音效（2026-11 更新）。曾用「默认音效」的一次性迁过去，选过其他的保持不变
 if (!settings._sfxV2) {
   if (settings.sound === 'default' || settings.sound == null) settings.sound = 'tap';
@@ -3157,19 +3382,39 @@ function finishGame() {
   if (G.song) {
     [G.hp >= 200, isFC, isAP].forEach((v, i) => { if (v) setSongMark(G.song, i, true); });
   }
+  // 演出次数 / 新纪录（分数 = 判定加权 + 连击加成，按曲目与难度分开记录）
+  let isNewRecord = false;
+  if (G.song) {
+    addPlay(G.song);
+    const bk = songKey(G.song) + '|' + G.diff;
+    const score = resultScore(c, G.maxCombo);
+    const old = settings.best[bk];
+    if (old == null || score > old) { settings.best[bk] = score; isNewRecord = !!old; }
+    else isNewRecord = false;
+    G._newRecord = isNewRecord;
+    saveSettings();
+  }
 
-  $('#res-song').innerHTML = `<b>${escapeHTML(G.song.title)}</b> · ${G.diff === 'ultra' ? '超高' : (G.diff === 'hard' ? '稍高' : '中等')} · 流速 ${Number(G.speed).toFixed(1)}`;
+  // 顶部：封面 + 歌名 + 难度
+  const dsp = songDisp(G.song);
+  const coverUrl = G.song.cover || res('assets/covers/other1.jpg');
+  $('#res2-cover').style.backgroundImage = `url(${coverUrl})`;
+  $('#res2-title').textContent = dsp.title + (dsp.tag ? ` 【${dsp.tag}】` : '');
+  $('#res2-diff').textContent = '难度' + (G.diff === 'ultra' ? 'MASTER' : (G.diff === 'hard' ? 'HARD' : 'MEDIUM')) + ` · 流速 ${Number(G.speed).toFixed(1)}`;
+  const record = $('#res-record');
+  record.textContent = isNewRecord ? '◆新纪录!◆' : '';
   const banner = $('#res-banner');
-  banner.className = 'res-fcap';
-  if (isAP) { banner.classList.add('ap'); banner.textContent = '✦ ALL PERFECT ✦'; }
-  else if (isFC) { banner.classList.add('fc'); banner.textContent = '✦ FULL COMBO ✦'; }
-  else { banner.textContent = ''; }
+  banner.className = 'res2-fcap';
+  if (isAP) banner.textContent = 'ALL PERFECT';
+  else if (isFC) banner.textContent = 'FULL COMBO';
+  else banner.textContent = '';
   const pad = n => String(n).padStart(4, '0');
   $('#res-stats').innerHTML = ['perfect','great','good','bad','miss'].map(k =>
-    `<div class="res-row ${k}"><div class="l">${JUDGE_LABEL[k]}</div><div class="n">${pad(c[k])}</div></div>`).join('');
+    `<div class="row ${k}"><div class="l">${k.toUpperCase()}</div><div class="n">${pad(c[k])}</div></div>`).join('');
   $('#res-combo').textContent = pad(G.maxCombo);
   const teamName = G.team ? escapeHTML(G.team.name || '未命名配队') : '';
   $('#res-extra').innerHTML = `音符 <b>${total}</b> · 剩余 HP <b>${Math.round(G.hp)}</b>${teamName ? ` · 配队 <b>${teamName}</b>` : ''}`;
+  applyResChar();
   show('result');
   // 结算页播放刚打完的歌，从副歌开始（淡入，放完自动回到副歌）
   G.chorusAt = chorusSeekTime(G.duration);
@@ -4040,6 +4285,594 @@ function importCard(file) {
 }
 
 /* ============================================================
+   打歌结算 & 个人主页
+   ============================================================ */
+const RES_RATIO = 2 / 3;          // 结算人物图统一裁成 2:3 竖版
+const PF_CELL_KEYS = ['prof:cell0', 'prof:cell1', 'prof:cell2'];
+
+function loadImageAsync(url) {
+  return new Promise((ok, no) => {
+    const i = new Image();
+    i.onload = () => ok(i);
+    i.onerror = () => no(new Error('图片读取失败'));
+    i.src = url;
+  });
+}
+function canvasToBlob(cnv) {
+  return new Promise(ok => cnv.toBlob(b => ok(b), 'image/jpeg', 0.86));
+}
+
+/* ---------- 通用：按编号抓取一张卡图（blob） ---------- */
+async function fetchCardImage(cid, part, onProg) {
+  const map = await loadCardMap(p => onProg && onProg(0.02 + p * 0.15));
+  let ent = map[cid];
+  if (!ent && _cardMapFromIndex) {
+    const full = await loadCardDbRemote(p => onProg && onProg(0.17 + p * 0.2));
+    ent = full[cid];
+  }
+  if (!ent) throw new Error(`没有找到编号 ${cid} 的卡面`);
+  const [abn] = ent;
+  const rel = `${abn}/${part === 'normal' ? 'card_normal' : 'card_after_training'}.webp`;
+  const direct = CARD_ASSET_BASE + rel;
+  const urls = [direct, `https://wsrv.nl/?url=${encodeURIComponent(direct)}&output=webp`];
+  return await fetchBlobProg(urls, p => onProg && onProg(0.37 + p * 0.6));
+}
+/* 进度条 UI（复用设置页卡面下载的样式，每个栏位独立一套 id） */
+function dlUI(prefix, show, pct, text) {
+  const box = $(prefix), fill = $(prefix + '-fill'), txt = $(prefix + '-txt');
+  if (!box) return;
+  box.style.display = show ? '' : 'none';
+  if (typeof pct === 'number') fill.style.width = Math.round(clamp(pct, 0, 1) * 100) + '%';
+  if (typeof text === 'string') txt.textContent = text;
+}
+
+/* ---------- 结算人物列表：下载（2:3 裁剪） / 渲染 / 选用 ---------- */
+async function cropRatio(blob, ratio, outW) {
+  const url = URL.createObjectURL(blob);
+  try {
+    const img = await loadImageAsync(url);
+    const iw = img.naturalWidth, ih = img.naturalHeight;
+    let sw = iw, sh = ih, sx = 0, sy = 0;
+    if (iw / ih > ratio) { sw = ih * ratio; sx = (iw - sw) / 2; }
+    else { sh = iw / ratio; sy = (ih - sh) / 2; }
+    const w = Math.min(outW, Math.round(sw)), h = Math.round(w / ratio);
+    const cnv = document.createElement('canvas');
+    cnv.width = w; cnv.height = h;
+    cnv.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, w, h);
+    return await canvasToBlob(cnv);
+  } finally { URL.revokeObjectURL(url); }
+}
+
+async function downloadResCard(rawId) {
+  const id = String(rawId || '').trim();
+  if (!/^\d{1,7}$/.test(id)) { dlUI('#res-card-dl', true, 0, '请输入纯数字的卡面编号'); return; }
+  const cid = Number(id);
+  const btn = $('#btn-res-card');
+  if (btn.disabled) return;
+  btn.disabled = true;
+  const labelPart = { normal: '特训前', after_training: '特训后' };
+  try {
+    dlUI('#res-card-dl', true, 0.02, '正在读取卡面数据…');
+    // 先探测这张卡有哪些版本（决定下载几张）
+    const map = await loadCardMap(p => dlUI('#res-card-dl', true, 0.02 + p * 0.15, `正在读取卡面数据… ${Math.round(p * 100)}%`));
+    let ent = map[cid];
+    if (!ent && _cardMapFromIndex) {
+      dlUI('#res-card-dl', true, 0.17, '索引中没有该编号，正在读取完整日服数据库…（仅首次较慢）');
+      ent = (await loadCardDbRemote(p => dlUI('#res-card-dl', true, 0.17 + p * 0.2, `正在读取完整日服数据库… ${Math.round(p * 100)}%`)))[cid];
+    }
+    if (!ent) { dlUI('#res-card-dl', true, 0, `没有找到编号 ${cid} 的卡面`); return; }
+    const [abn, rarity] = ent;
+    const parts = (rarity === 'rarity_3' || rarity === 'rarity_4') ? ['normal', 'after_training'] : ['normal'];
+    let done = 0;
+    for (const part of parts) {
+      const key = `res:${cid}_${part}`;
+      dlUI('#res-card-dl', true, 0.37 + (done / parts.length) * 0.55, `正在下载${labelPart[part]}…`);
+      const rel = `${abn}/${part === 'normal' ? 'card_normal' : 'card_after_training'}.webp`;
+      const direct = CARD_ASSET_BASE + rel;
+      const urls = [direct, `https://wsrv.nl/?url=${encodeURIComponent(direct)}&output=webp`];
+      const blob = await fetchBlobProg(urls, p => dlUI('#res-card-dl', true, 0.37 + ((done + p) / parts.length) * 0.55, `正在下载${labelPart[part]}… ${Math.round(p * 100)}%`));
+      dlUI('#res-card-dl', true, 0.92, `正在裁剪成 2:3 竖版…`);
+      const cut = await cropRatio(blob, RES_RATIO, 600);
+      await idbPut(key, cut);
+      if (cardBlobs[key]) URL.revokeObjectURL(cardBlobs[key]);
+      cardBlobs[key] = URL.createObjectURL(cut);
+      if (!settings.resCards.some(m => m.key === key)) {
+        settings.resCards.push({ key, cid, label: `#${cid} · ${labelPart[part]}` });
+      }
+      done++;
+    }
+    saveSettings(); renderResCards();
+    dlUI('#res-card-dl', true, 1, `已加入结算人物列表（${done} 张）`);
+    setTimeout(() => dlUI('#res-card-dl', false), 1800);
+  } catch (e) {
+    console.error(e);
+    dlUI('#res-card-dl', true, 0, '下载失败，检查网络后重试（' + (e.message || 'error') + '）');
+  } finally { btn.disabled = false; }
+}
+
+function renderResCards() {
+  const grid = $('#res-card-grid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  settings.resCards.forEach((m, i) => {
+    const el = document.createElement('div');
+    el.className = 'cov' + (settings.resPick === i ? ' on' : '');
+    const url = cardBlobs[m.key];
+    if (url) el.style.backgroundImage = `url(${url})`;
+    el.innerHTML = `<span>${m.label}</span><i class="del" title="移除">×</i>`;
+    el.onclick = (ev) => {
+      if (ev.target && ev.target.classList && ev.target.classList.contains('del')) {
+        ev.stopPropagation();
+        removeResCard(i);
+        return;
+      }
+      settings.resPick = i;
+      saveSettings(); renderResCards();
+    };
+    grid.appendChild(el);
+  });
+  if (!settings.resCards.length) {
+    const ph = document.createElement('div');
+    ph.style.cssText = 'grid-column:1/-1;color:#5f7896;font-size:12px;padding:8px 2px;letter-spacing:.08em;';
+    ph.textContent = '还没有结算人物：上方输入卡面编号下载（存在本机）';
+    grid.appendChild(ph);
+  }
+}
+
+async function removeResCard(i) {
+  const m = settings.resCards[i];
+  if (!m) return;
+  try { await idbDel(m.key); } catch (e) {}
+  if (cardBlobs[m.key]) { URL.revokeObjectURL(cardBlobs[m.key]); delete cardBlobs[m.key]; }
+  settings.resCards.splice(i, 1);
+  if (settings.resPick >= settings.resCards.length) settings.resPick = Math.max(0, settings.resCards.length - 1);
+  saveSettings(); renderResCards();
+}
+
+/* 启动时把结算人物 / 主页资源从 IndexedDB 读成 objectURL */
+async function initProfileAssets() {
+  const keys = [];
+  settings.resCards.forEach(m => keys.push(m.key));
+  (settings.profile.cells || []).forEach(c => { if (c && c.key) keys.push(c.key); });
+  const big = settings.profile.big;
+  if (big && big.key) keys.push(big.key);
+  for (const k of keys) {
+    if (cardBlobs[k]) continue;
+    try {
+      const b = await idbGet(k);
+      if (b) cardBlobs[k] = URL.createObjectURL(b);
+    } catch (e) {}
+  }
+}
+
+/* ---------- 结算统计：演出次数 / 分数新纪录 ---------- */
+function resultScore(c, maxCombo) {
+  return c.perfect * 1000 + c.great * 500 + c.good * 100 + c.bad * 50 + maxCombo * 10;
+}
+function addPlay(s) {
+  const k = songKey(s);
+  settings.plays[k] = (settings.plays[k] || 0) + 1;
+}
+function topPlayedSong() {
+  let bk = null, max = 0;
+  for (const k in settings.plays) {
+    if (settings.plays[k] > max) { max = settings.plays[k]; bk = k; }
+  }
+  return bk ? { title: bk.split('|')[0], count: max } : null;
+}
+function fcApCounts() {
+  const ms = settings.marks || {};
+  let fc = 0, ap = 0;
+  for (const k in ms) { if (ms[k] && ms[k][1]) fc++; if (ms[k] && ms[k][2]) ap++; }
+  return { fc, ap };
+}
+
+/* ---------- 结算人物图应用到结算页 ---------- */
+function applyResChar() {
+  const img = $('#res2-char-img'), ph = $('#res2-char-ph');
+  if (!img || !ph) return;
+  const meta = settings.resCards[clamp(settings.resPick || 0, 0, Math.max(0, settings.resCards.length - 1))];
+  const url = meta ? cardBlobs[meta.key] : '';
+  if (url) {
+    img.src = url; img.style.display = ''; ph.style.display = 'none';
+  } else {
+    img.removeAttribute('src'); img.style.display = 'none'; ph.style.display = '';
+  }
+}
+
+/* ---------- 个人主页：渲染 ---------- */
+function skinDisplayName() {
+  if (settings.skin === 'lumirect') return '发光长方形（默认）';
+  if (settings.skin === 'pill') return '发光胶囊';
+  if (settings.skin === 'rect') return '蓝色长方形';
+  if (settings.skin === 'custom') return '自定义图片';
+  const ch = CHARS.find(c => c[0] === settings.skin);
+  return ch ? `${ch[1]}（角色小人）` : settings.skin;
+}
+function profileItemHTML(item, cls) {
+  if (!item) return `<span class="add">＋</span>`;
+  if (item.type === 'text') return `<span class="txt">${escapeHTML(item.v)}</span>`;
+  const url = item.key ? (cardBlobs[item.key] || '') : (item.type === 'char' ? res(`assets/keys/${item.v}.png`) : '');
+  if (item.type === 'char' || item.type === 'img' || item.type === 'card') {
+    return url ? `<img src="${url}" alt="">` : `<span class="add">＋</span>`;
+  }
+  return `<span class="add">＋</span>`;
+}
+function renderProfile() {
+  const p = settings.profile;
+  const nick = p.id || '点击修改id';
+  $('#profile-nick').textContent = nick;
+  $('#profile-id-top').textContent = p.id || '同步的玩家id';
+  // 三个格子
+  $$('#screen-profile .prof-cell').forEach((el, i) => {
+    const item = p.cells[i];
+    el.classList.toggle('filled', !!item);
+    el.innerHTML = item ? profileItemHTML(item) : '<span class="add">＋</span>';
+  });
+  // 左下大图
+  const big = $('#profile-big');
+  if (p.big) {
+    const url = p.big.key ? (cardBlobs[p.big.key] || '') : (p.big.type === 'char' ? res(`assets/keys/${p.big.v}.png`) : '');
+    big.innerHTML = url ? `<img src="${url}" alt="">` : '<div class="ph">点击输入卡面id</div>';
+  } else {
+    big.innerHTML = '<div class="ph">点击输入卡面id</div>';
+  }
+  // 信息列表
+  const top = topPlayedSong();
+  const cnt = fcApCounts();
+  const unit = UNIT_MAP[p.unit] ? UNIT_MAP[p.unit].label : '';
+  $('#prof-info').innerHTML = [
+    ['当前使用按键皮肤', skinDisplayName(), ''],
+    ['演出最多的歌曲', top ? `${top.title}（${top.count} 次）` : '（自动统计）', ''],
+    ['FC 歌曲数', String(cnt.fc), ''],
+    ['AP 歌曲数', String(cnt.ap), ''],
+    ['本命组合', unit || '选择', 'unit'],
+    ['本命CP', p.cp || '填写', 'cp']
+  ].map(([k, v, act]) =>
+    `<div class="prow${act ? ' click' : ''}"${act ? ` data-act="${act}"` : ''}><span class="k">${k}</span><b class="v">${escapeHTML(v)}</b></div>`
+  ).join('');
+  $$('#prof-info .prow.click').forEach(row => {
+    row.onclick = () => {
+      if (row.dataset.act === 'unit') openUnitModal();
+      else if (row.dataset.act === 'cp') openCpModal();
+    };
+  });
+}
+
+/* ---------- 个人主页：格子 / 大图编辑弹窗 ---------- */
+let pfTarget = null;          // {kind:'cell', i} | {kind:'big'}
+let pfState = { type: 'card', cid: '', char: '', text: '', key: '', url: '' };
+
+function openProfDialog(target) {
+  pfTarget = target;
+  pfState = { type: 'card', cid: '', char: '', text: '', key: '', url: '' };
+  const cur = target.kind === 'big' ? settings.profile.big : settings.profile.cells[target.i];
+  if (cur) {
+    pfState.type = cur.type === 'img' ? 'img' : (cur.type === 'char' ? 'char' : (cur.type === 'text' ? 'text' : 'card'));
+    if (cur.type === 'text') pfState.text = cur.v;
+    if (cur.type === 'char') pfState.char = cur.v;
+    if (cur.key) { pfState.key = cur.key; pfState.url = cardBlobs[cur.key] || ''; }
+  }
+  $('#pf-text').value = pfState.text;
+  $('#pf-text-warn').style.display = 'none';
+  $('#pf-card-id').value = '';
+  dlUI('#pf-card-dl', false);
+  renderPfType(); renderPfCharGrid();
+  $('#modal-prof').classList.add('show');
+}
+function renderPfType() {
+  $$('#pf-type .pill').forEach(p => p.classList.toggle('on', p.dataset.v === pfState.type));
+  $('#pf-row-card').style.display = pfState.type === 'card' ? '' : 'none';
+  $('#pf-row-char').style.display = pfState.type === 'char' ? '' : 'none';
+  $('#pf-row-text').style.display = pfState.type === 'text' ? '' : 'none';
+  $('#pf-row-img').style.display = pfState.type === 'img' ? '' : 'none';
+  // 已确定的内容回显
+  const row = $('#pf-row-card');
+  if (pfState.type === 'card' && pfState.url) {
+    let prev = $('#pf-card-prev');
+    if (!prev) {
+      prev = document.createElement('div');
+      prev.id = 'pf-card-prev';
+      prev.style.cssText = 'width:96px;aspect-ratio:2/3;border-radius:8px;background-size:cover;background-position:center;margin-top:8px;';
+      row.appendChild(prev);
+    }
+    prev.style.backgroundImage = `url(${pfState.url})`;
+  } else if (pfState.type === 'img' && pfState.url) {
+    let prev = $('#pf-card-prev');
+    if (!prev) {
+      prev = document.createElement('div');
+      prev.id = 'pf-card-prev';
+      prev.style.cssText = 'width:96px;aspect-ratio:1/1;border-radius:8px;background-size:cover;background-position:center;margin-top:8px;';
+      $('#pf-row-img').appendChild(prev);
+    }
+    prev.style.backgroundImage = `url(${pfState.url})`;
+  } else {
+    const prev = $('#pf-card-prev'); if (prev) prev.remove();
+  }
+}
+function renderPfCharGrid() {
+  const grid = $('#pf-char-grid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  CHARS.forEach(([id, name]) => {
+    const el = document.createElement('div');
+    el.className = 'cov' + (pfState.char === id ? ' on' : '');
+    el.innerHTML = `<img src="${res('assets/keys/' + id + '.png')}" alt="${name}" loading="lazy" style="object-fit:contain"><span>${name}</span>`;
+    el.onclick = () => { pfState.char = id; renderPfCharGrid(); };
+    grid.appendChild(el);
+  });
+}
+
+/* 弹窗内下载卡面（不裁剪，直接存原始 webp；主页显示用 object-fit 裁切） */
+async function downloadProfileCard(cidNum) {
+  const btn = $('#btn-pf-card');
+  if (btn.disabled) return false;
+  btn.disabled = true;
+  try {
+    dlUI('#pf-card-dl', true, 0.02, '正在读取卡面数据…');
+    const map = await loadCardMap(p => dlUI('#pf-card-dl', true, 0.02 + p * 0.15, `正在读取卡面数据… ${Math.round(p * 100)}%`));
+    let ent = map[cidNum];
+    if (!ent && _cardMapFromIndex) {
+      dlUI('#pf-card-dl', true, 0.17, '索引中没有该编号，正在读取完整日服数据库…（仅首次较慢）');
+      ent = (await loadCardDbRemote(p => dlUI('#pf-card-dl', true, 0.17 + p * 0.2, `正在读取完整日服数据库… ${Math.round(p * 100)}%`)))[cidNum];
+    }
+    if (!ent) { dlUI('#pf-card-dl', true, 0, `没有找到编号 ${cidNum} 的卡面`); return false; }
+    const [abn, rarity] = ent;
+    const part = (rarity === 'rarity_3' || rarity === 'rarity_4') ? 'after_training' : 'normal';
+    dlUI('#pf-card-dl', true, 0.4, '正在下载卡面…');
+    const rel = `${abn}/${part === 'normal' ? 'card_normal' : 'card_after_training'}.webp`;
+    const direct = CARD_ASSET_BASE + rel;
+    const urls = [direct, `https://wsrv.nl/?url=${encodeURIComponent(direct)}&output=webp`];
+    const blob = await fetchBlobProg(urls, p => dlUI('#pf-card-dl', true, 0.4 + p * 0.55, `正在下载… ${Math.round(p * 100)}%`));
+    const key = `${PF_CELL_KEYS[pfTarget.kind === 'big' ? 0 : pfTarget.i]}:card:${cidNum}`;
+    await idbPut(key, blob);
+    if (cardBlobs[key]) URL.revokeObjectURL(cardBlobs[key]);
+    cardBlobs[key] = URL.createObjectURL(blob);
+    pfState.key = key;
+    pfState.url = cardBlobs[key];
+    dlUI('#pf-card-dl', true, 1, '已获取，点「确定」保存');
+    setTimeout(() => dlUI('#pf-card-dl', false), 1500);
+    renderPfType();
+    return true;
+  } catch (e) {
+    console.error(e);
+    dlUI('#pf-card-dl', true, 0, '下载失败（' + (e.message || 'error') + '）');
+    return false;
+  } finally { btn.disabled = false; }
+}
+
+/* 相册导入：压缩存 IndexedDB */
+function importProfileImage(file) {
+  const img = new Image();
+  const url = URL.createObjectURL(file);
+  img.onload = async () => {
+    try {
+      const maxDim = 640;
+      const k = Math.min(1, maxDim / Math.max(img.naturalWidth, img.naturalHeight));
+      const cnv = document.createElement('canvas');
+      cnv.width = Math.max(1, Math.round(img.naturalWidth * k));
+      cnv.height = Math.max(1, Math.round(img.naturalHeight * k));
+      cnv.getContext('2d').drawImage(img, 0, 0, cnv.width, cnv.height);
+      const blob = await new Promise(ok => cnv.toBlob(ok, 'image/jpeg', 0.85));
+      const key = `${PF_CELL_KEYS[pfTarget.i]}:img:${Date.now()}`;
+      await idbPut(key, blob);
+      if (cardBlobs[key]) URL.revokeObjectURL(cardBlobs[key]);
+      cardBlobs[key] = URL.createObjectURL(blob);
+      pfState.key = key;
+      pfState.url = cardBlobs[key];
+      renderPfType();
+    } catch (e) { dlUI('#pf-card-dl', true, 0, '图片保存失败'); }
+    URL.revokeObjectURL(url);
+  };
+  img.onerror = () => { dlUI('#pf-card-dl', true, 0, '图片读取失败'); URL.revokeObjectURL(url); };
+  img.src = url;
+}
+
+function saveProfDialog() {
+  if (!pfTarget) return;
+  let item = null;
+  if (pfState.type === 'card' && pfState.key) item = { type: 'card', key: pfState.key };
+  else if (pfState.type === 'char' && pfState.char) item = { type: 'char', v: pfState.char };
+  else if (pfState.type === 'text' && pfState.text) item = { type: 'text', v: pfState.text };
+  else if (pfState.type === 'img' && pfState.key) item = { type: 'img', key: pfState.key };
+  if (pfTarget.kind === 'big') {
+    // 大图只接受卡面 / 角色 / 图片
+    if (item && item.type === 'text') { showToast('大图不支持一个字，请选卡面 / 角色 / 图片', 2400); return; }
+    settings.profile.big = item;
+  } else {
+    settings.profile.cells[pfTarget.i] = item;
+  }
+  saveSettings(); renderProfile();
+  $('#modal-prof').classList.remove('show');
+}
+
+/* ---------- 本命组合 / 本命CP / 修改id 弹窗 ---------- */
+function openUnitModal() {
+  const list = $('#unit-list');
+  list.innerHTML = '';
+  UNITS.filter(u => !u.keys).forEach(u => {
+    const el = document.createElement('div');
+    el.className = 'pill' + (settings.profile.unit === u.key ? ' on' : '');
+    el.style.cssText = 'padding:10px 16px;font-size:14px;text-align:left;';
+    el.textContent = u.label;
+    el.onclick = () => {
+      settings.profile.unit = settings.profile.unit === u.key ? '' : u.key;
+      saveSettings(); renderProfile();
+      $('#modal-unit').classList.remove('show');
+    };
+    list.appendChild(el);
+  });
+  $('#modal-unit').classList.add('show');
+}
+let cpSel = [];
+function renderCpGrid() {
+  const grid = $('#cp-char-grid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  CHARS.forEach(([id, name]) => {
+    const el = document.createElement('div');
+    el.className = 'cov';
+    el.innerHTML = `<img src="${res('assets/keys/' + id + '.png')}" alt="${name}" loading="lazy" style="object-fit:contain"><span>${name}</span>`;
+    el.onclick = () => {
+      const t = $('#cp-text');
+      if (!cpSel.length) { cpSel = [name]; t.value = name; }
+      else { if (!t.value.includes('×')) t.value = cpSel[0] + '×' + name; cpSel = []; }
+    };
+    grid.appendChild(el);
+  });
+}
+function openCpModal() {
+  cpSel = [];
+  $('#cp-text').value = settings.profile.cp || '';
+  renderCpGrid();
+  $('#modal-cp').classList.add('show');
+}
+function openNickModal() {
+  $('#nick-input').value = settings.profile.id || '';
+  $('#modal-nick').classList.add('show');
+  setTimeout(() => $('#nick-input').focus(), 60);
+}
+
+/* ---------- 个人主页：保存为图片 ---------- */
+async function shareCanvas(canvas, filename, title) {
+  const blob = await new Promise(ok => canvas.toBlob(ok, 'image/png'));
+  if (!blob) return;
+  const file = new File([blob], filename, { type: 'image/png' });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    navigator.share({ files: [file], title }).catch(() => {});
+  } else {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    showToast('图片已保存到下载', 2600);
+  }
+}
+function roundRectPath(c, x, y, w, h, r) {
+  c.beginPath();
+  c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r);
+  c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath();
+}
+async function renderProfileImage() {
+  const W = 1080, H = 1440;
+  const cv = document.createElement('canvas');
+  cv.width = W; cv.height = H;
+  const c = cv.getContext('2d');
+  const FF = '"Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif';
+  const p = settings.profile;
+  c.fillStyle = '#d6d6d9'; c.fillRect(0, 0, W, H);
+  // 顶栏：返回圆钮 + id pill + 分享圆钮
+  c.fillStyle = '#ffffff';
+  c.beginPath(); c.arc(66, 66, 34, 0, Math.PI * 2); c.fill();
+  c.beginPath(); c.arc(W - 66, 66, 34, 0, Math.PI * 2); c.fill();
+  c.fillStyle = '#17181c'; c.font = `900 34px ${FF}`; c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.fillText('←', 66, 68);
+  c.fillText('⤴', W - 66, 68);
+  const idText = p.id || '同步的玩家id';
+  c.font = `900 30px ${FF}`;
+  const idW = Math.min(W - 260, c.measureText(idText).width + 64);
+  roundRectPath(c, (W - idW) / 2, 36, idW, 60, 30);
+  c.fillStyle = '#ffffff'; c.fill();
+  c.fillStyle = '#17181c'; c.fillText(idText, W / 2, 68);
+  c.textAlign = 'left'; c.textBaseline = 'alphabetic';
+  // 大卡片
+  const bx = 24, by = 140, bw = W - 48, bh = H - 190;
+  roundRectPath(c, bx, by, bw, bh, 22);
+  c.fillStyle = '#e6e6e9'; c.fill();
+  // 第一行：修改id pill + 三个格子
+  c.fillStyle = '#a9a9ad';
+  const nickText = p.id || '点击修改id';
+  c.font = `900 32px ${FF}`;
+  const nkW = c.measureText(nickText).width + 64;
+  roundRectPath(c, bx + 34, by + 44, nkW, 62, 31); c.fill();
+  c.fillStyle = '#ffffff'; c.font = `900 32px ${FF}`;
+  c.fillText(nickText, bx + 34 + 32, by + 44 + 41);
+  const cellS = 150, cellGap = 18;
+  let cx = bx + bw - 34 - (cellS * 3 + cellGap * 2), cy = by + 30;
+  for (let i = 0; i < 3; i++) {
+    const item = p.cells[i];
+    roundRectPath(c, cx, cy, cellS, cellS, 12); c.fillStyle = '#a9a9ad'; c.fill();
+    if (item) {
+      if (item.type === 'text') {
+        c.fillStyle = '#ffffff'; c.font = `900 72px ${FF}`; c.textAlign = 'center'; c.textBaseline = 'middle';
+        c.fillText(item.v, cx + cellS / 2, cy + cellS / 2 + 4);
+        c.textAlign = 'left'; c.textBaseline = 'alphabetic';
+      } else {
+        const url = item.key ? cardBlobs[item.key] : (item.type === 'char' ? res(`assets/keys/${item.v}.png`) : '');
+        if (url) {
+          try {
+            const im = await loadImageAsync(url);
+            const r = Math.max(cellS / im.naturalWidth, cellS / im.naturalHeight);
+            const dw = im.naturalWidth * r, dh = im.naturalHeight * r;
+            c.save();
+            roundRectPath(c, cx, cy, cellS, cellS, 12); c.clip();
+            c.drawImage(im, cx + (cellS - dw) / 2, cy + (cellS - dh) / 2, dw, dh);
+            c.restore();
+          } catch (e) {}
+        }
+      }
+    }
+    cx += cellS + cellGap;
+  }
+  // 第二行：左下大图（白色阴影：不模糊的实心白底偏移 + 柔和白影）
+  const bigW = 500, bigH = 400;
+  const gx = bx + 34, gy = cy + cellS + 60;
+  c.save();
+  c.shadowColor = 'rgba(255,255,255,.95)'; c.shadowBlur = 34; c.shadowOffsetX = -10; c.shadowOffsetY = 14;
+  roundRectPath(c, gx, gy, bigW, bigH, 6);
+  c.fillStyle = '#0b0b0e'; c.fill();
+  c.restore();
+  roundRectPath(c, gx, gy, bigW, bigH, 6);
+  c.fillStyle = '#0b0b0e'; c.fill();
+  if (p.big) {
+    const url = p.big.key ? cardBlobs[p.big.key] : (p.big.type === 'char' ? res(`assets/keys/${p.big.v}.png`) : '');
+    if (url) {
+      try {
+        const im = await loadImageAsync(url);
+        const r = Math.max(bigW / im.naturalWidth, bigH / im.naturalHeight);
+        const dw = im.naturalWidth * r, dh = im.naturalHeight * r;
+        c.save();
+        roundRectPath(c, gx, gy, bigW, bigH, 6); c.clip();
+        c.drawImage(im, gx + (bigW - dw) / 2, gy + (bigH - dh) / 2, dw, dh);
+        c.restore();
+      } catch (e) {}
+    }
+  } else {
+    c.fillStyle = '#f0f0f2'; c.font = `900 30px ${FF}`; c.textAlign = 'center';
+    c.fillText('点击输入卡面id', gx + bigW / 2, gy + bigH / 2);
+    c.textAlign = 'left';
+  }
+  // 右下信息列表
+  const top = topPlayedSong();
+  const cnt = fcApCounts();
+  const unit = UNIT_MAP[p.unit] ? UNIT_MAP[p.unit].label : '';
+  const rows = [
+    ['当前使用按键皮肤', skinDisplayName()],
+    ['演出最多的歌曲', top ? `${top.title}（${top.count} 次）` : '（自动统计）'],
+    ['FC 歌曲数', String(cnt.fc)],
+    ['AP 歌曲数', String(cnt.ap)],
+    ['本命组合', unit || '选择'],
+    ['本命CP', p.cp || '填写']
+  ];
+  const ix = gx + bigW + 50;
+  let iy = gy + 80;
+  c.font = `900 30px ${FF}`;
+  for (const [k, v] of rows) {
+    c.fillStyle = '#1b1c20';
+    c.fillText(k, ix, iy);
+    c.fillStyle = '#33343a'; c.font = `800 28px ${FF}`;
+    const vt = v.length > 12 ? v.slice(0, 11) + '…' : v;
+    c.fillText(vt, ix, iy + 44);
+    c.font = `900 30px ${FF}`;
+    iy += 96;
+  }
+  c.fillStyle = '#7a7a80'; c.font = `600 22px ${FF}`;
+  c.fillText('PROJECT SEKAI · FAN STAGE — 个人主页', bx + 34, by + bh - 30);
+  return cv;
+}
+
+/* ============================================================
    事件绑定
    ============================================================ */
 $('#btn-start').addEventListener('click', () => {
@@ -4126,103 +4959,175 @@ $('#pause-resume').addEventListener('click', togglePause);
 $('#pause-restart').addEventListener('click', restartGame);
 $('#pause-quit').addEventListener('click', quitGame);
 $('#res-home').addEventListener('click', () => { goTitle(); });
-$('#res-again').addEventListener('click', () => startFromClock());
+// 再次演出 = 回到选歌界面重新挑曲目
+$('#res-again').addEventListener('click', () => {
+  stopResultMusic(0);
+  show('songs');
+  applyBackground();
+  buildSongList();
+});
 $('#res-music').addEventListener('click', () => toggleResultMusic());
 
 /* 分享成绩：生成成绩图 → 移动端调系统分享，否则直接下载 */
-$('#res-share').addEventListener('click', () => {
-  try {
-    const canvas = renderResultImage();
-    canvas.toBlob(blob => {
-      if (!blob) return;
-      const file = new File([blob], 'pjsk-result.png', { type: 'image/png' });
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        navigator.share({ files: [file], title: 'PJSK FAN STAGE 演奏成绩' }).catch(() => {});
-      } else {
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = 'pjsk-result.png';
-        a.click();
-        setTimeout(() => URL.revokeObjectURL(a.href), 4000);
-        const hint = document.createElement('div');
-        hint.className = 'audio-hint';
-        hint.textContent = '成绩图已保存到下载';
-        document.body.appendChild(hint);
-        requestAnimationFrame(() => hint.classList.add('show'));
-        setTimeout(() => { hint.classList.remove('show'); setTimeout(() => hint.remove(), 400); }, 3200);
-      }
-    }, 'image/png');
-  } catch (e) { console.warn('[share]', e); }
+$('#res-share').addEventListener('click', async () => {
+  try { await shareCanvas(await renderResultImage(), 'pjsk-result.png', 'PJSK FAN STAGE 演奏成绩'); }
+  catch (e) { console.warn('[share]', e); showToast('生成成绩图失败', 2200); }
 });
 
-function renderResultImage() {
-  const W = 1200, H = 675;
+/* 成绩图：白底黑字（与结算页同风格） */
+async function renderResultImage() {
+  const W = 1200, H = 820;
   const cv = document.createElement('canvas');
   cv.width = W; cv.height = H;
   const c = cv.getContext('2d');
-  const g = c.createLinearGradient(0, 0, W, H);
-  g.addColorStop(0, '#0a1020'); g.addColorStop(.55, '#101a30'); g.addColorStop(1, '#1a1030');
-  c.fillStyle = g; c.fillRect(0, 0, W, H);
-  // 装饰光斑
-  [['#ff5ec4', 130, 120, 260], ['#5ea8ff', 1050, 180, 300], ['#6dff8a', 900, 560, 220]].forEach(([col, x, y, r]) => {
-    const rg = c.createRadialGradient(x, y, 0, x, y, r);
-    rg.addColorStop(0, col + '44'); rg.addColorStop(1, col + '00');
-    c.fillStyle = rg; c.fillRect(x - r, y - r, r * 2, r * 2);
-  });
-  // 边框
-  c.strokeStyle = 'rgba(170,150,255,.5)'; c.lineWidth = 3;
-  c.strokeRect(18, 18, W - 36, H - 36);
   const FF = '"Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif';
+  c.fillStyle = '#efeff2'; c.fillRect(0, 0, W, H);
+  // 顶部条：封面 + 歌名 + 难度
+  roundRectPath(c, 40, 30, W - 80, 128, 30);
+  c.fillStyle = '#d6d6da'; c.fill();
+  const coverUrl = G.song.cover || res('assets/covers/other1.jpg');
+  try {
+    const im = await loadImageAsync(coverUrl);
+    c.save();
+    roundRectPath(c, 66, 48, 92, 92, 8); c.clip();
+    const r = Math.max(92 / im.naturalWidth, 92 / im.naturalHeight);
+    c.drawImage(im, 66 + (92 - im.naturalWidth * r) / 2, 48 + (92 - im.naturalHeight * r) / 2, im.naturalWidth * r, im.naturalHeight * r);
+    c.restore();
+  } catch (e) {
+    c.fillStyle = '#0a0d14'; c.fillRect(66, 48, 92, 92);
+    c.fillStyle = '#ffffff'; c.font = `700 22px ${FF}`; c.textAlign = 'center';
+    c.fillText('封面', 112, 102); c.textAlign = 'left';
+  }
+  const dsp = songDisp(G.song);
+  c.fillStyle = '#101216'; c.font = `900 42px ${FF}`;
+  c.fillText(dsp.title.slice(0, 22) + (dsp.tag ? `【${dsp.tag}】` : ''), 186, 100);
+  c.fillStyle = '#3c4350'; c.font = `800 27px ${FF}`;
+  c.fillText('难度' + (G.diff === 'ultra' ? 'MASTER' : (G.diff === 'hard' ? 'HARD' : 'MEDIUM')), 186, 140);
+  // 人物大图（右半）
+  const charMeta = settings.resCards[clamp(settings.resPick || 0, 0, Math.max(0, settings.resCards.length - 1))];
+  const charUrl = charMeta ? cardBlobs[charMeta.key] : '';
+  const chX = 780, chY = 190, chW = 380, chH = 500;
+  if (charUrl) {
+    try {
+      const im = await loadImageAsync(charUrl);
+      const r = Math.max(chW / im.naturalWidth, chH / im.naturalHeight);
+      const dw = im.naturalWidth * r, dh = im.naturalHeight * r;
+      c.save();
+      roundRectPath(c, chX, chY, chW, chH, 8); c.clip();
+      c.drawImage(im, chX + (chW - dw) / 2, chY + (chH - dh) / 2, dw, dh);
+      c.restore();
+    } catch (e) {}
+  } else {
+    // 占位：圆 + 长条 + 「人物」字（与结算页占位一致）
+    c.fillStyle = '#a9a9ad';
+    c.beginPath(); c.arc(chX + chW / 2, chY + 130, 110, 0, Math.PI * 2); c.fill();
+    roundRectPath(c, chX + 60, chY + 260, chW - 120, chH - 260, 40); c.fill();
+    c.fillStyle = '#17181c'; c.font = `900 74px ${FF}`; c.textAlign = 'center';
+    c.fillText('人', chX + chW / 2, chY + 150);
+    c.fillText('物', chX + chW / 2, chY + 380);
+    c.textAlign = 'left';
+  }
+  // 新纪录
+  c.fillStyle = '#101216'; c.font = `900 30px ${FF}`; c.textAlign = 'center';
+  if (G._newRecord) c.fillText('◆新纪录!◆', 470, 250);
   c.textAlign = 'left';
-  c.fillStyle = '#7fdcff'; c.font = `600 22px ${FF}`; c.letterSpacing = '6px';
-  c.fillText('PROJECT SEKAI · FAN STAGE', 60, 78);
-  c.fillStyle = '#ffffff'; c.font = `700 44px ${FF}`;
-  c.fillText(G.song.title.slice(0, 24), 60, 138);
-  c.fillStyle = '#9db4d4'; c.font = `28px ${FF}`;
-  c.fillText(`${G.diff === 'ultra' ? '超高 MASTER' : G.diff === 'hard' ? '稍高 HARD' : '中等 MEDIUM'} · 流速 ${Number(G.speed).toFixed(1)} · 音符 ${G.counts.perfect + G.counts.great + G.counts.good + G.counts.bad + G.counts.miss}`, 60, 182);
   // 判定列表
   const cc = G.counts, pad = n => String(n).padStart(4, '0');
-  const rows = [['PERFECT', '#ffd76b'], ['GREAT', '#7fe3ff'], ['GOOD', '#8ef0a8'], ['BAD', '#ff9d7a'], ['MISS', '#ff6b8a']];
-  rows.forEach(([k, col], i) => {
-    const y = 260 + i * 66;
-    c.fillStyle = 'rgba(255,255,255,.05)';
-    c.fillRect(60, y - 38, 500, 56);
-    c.fillStyle = col; c.font = `700 30px ${FF}`;
-    c.fillText(k, 90, y);
-    c.textAlign = 'right';
-    c.fillStyle = '#ffffff'; c.font = `700 34px ${FF}`;
-    c.fillText(pad(cc[k.toLowerCase()]), 520, y);
-    c.textAlign = 'left';
+  const rows = ['PERFECT', 'GREAT', 'GOOD', 'BAD', 'MISS'];
+  c.font = `900 32px ${FF}`;
+  rows.forEach((k, i) => {
+    const y = 320 + i * 62;
+    c.fillStyle = '#101216';
+    c.fillText(k, 120, y);
+    c.fillText(pad(cc[k.toLowerCase()]), 400, y);
   });
-  // COMBO / FC·AP
-  c.textAlign = 'center';
+  // COMBO
+  c.fillStyle = '#101216'; c.font = `900 34px ${FF}`;
+  c.fillText('COMBO', 520, 320);
+  c.font = `900 44px ${FF}`;
+  c.fillText(pad(G.maxCombo), 520, 382);
+  // FC / AP 大字
   const isAP = cc.perfect === cc.perfect + cc.great + cc.good + cc.bad + cc.miss && cc.perfect > 0;
-  const isFC = G.damage === 0 && cc.perfect + cc.great + cc.good + cc.bad + cc.miss > 0;
-  if (isAP || isFC) {
-    const bg2 = c.createLinearGradient(760, 210, 1140, 260);
-    if (isAP) { bg2.addColorStop(0, '#ff5ec4'); bg2.addColorStop(.5, '#ffe94d'); bg2.addColorStop(1, '#5ea8ff'); }
-    else { bg2.addColorStop(0, '#ff7ab8'); bg2.addColorStop(1, '#b06dff'); }
-    c.fillStyle = bg2;
-    c.font = `800 34px ${FF}`;
-    const label = isAP ? '✦ ALL PERFECT ✦' : '✦ FULL COMBO ✦';
-    const tw = c.measureText(label).width + 60;
-    roundRect(c, (760 + 1140) / 2 - tw / 2, 226, tw, 58, 29);
-    c.fill();
-    c.fillStyle = '#14060f';
-    c.fillText(label, (760 + 1140) / 2, 266);
-  }
-  c.fillStyle = '#9db4d4'; c.font = `24px ${FF}`; c.fillText('COMBO', 950, 330);
-  const bgc = c.createLinearGradient(0, 350, 0, 500);
-  bgc.addColorStop(0, '#ffffff'); bgc.addColorStop(1, '#a8baff');
-  c.fillStyle = bgc; c.font = `800 120px ${FF}`;
-  c.fillText(pad(G.maxCombo), 950, 480);
-  c.fillStyle = '#5f7896'; c.font = `20px ${FF}`;
-  c.fillText('剩余 HP ' + Math.round(G.hp) + ' / 1000', 950, 540);
-  c.textAlign = 'left';
-  c.fillStyle = '#44597a'; c.font = `18px ${FF}`;
-  c.fillText(new Date().toLocaleString('zh-CN'), 60, H - 42);
+  const totalNotes = cc.perfect + cc.great + cc.good + cc.bad + cc.miss;
+  const isFC = G.damage === 0 && totalNotes > 0;
+  c.fillStyle = '#111216'; c.font = `900 64px ${FF}`;
+  if (isAP) c.fillText('ALL PERFECT', 120, 680);
+  else if (isFC) c.fillText('FULL COMBO', 120, 680);
+  c.fillStyle = '#565d68'; c.font = `800 24px ${FF}`;
+  c.fillText(`音符 ${totalNotes} · 剩余 HP ${Math.round(G.hp)}`, 120, 730);
+  c.fillStyle = '#7a7a80'; c.font = `600 20px ${FF}`;
+  c.fillText(new Date().toLocaleString('zh-CN') + ' · PROJECT SEKAI FAN STAGE', 40, H - 26);
   return cv;
 }
+/* ---------- 打歌结算设置栏 / 个人主页 / 各弹窗 事件 ---------- */
+$('#btn-profile').addEventListener('click', () => {
+  show('profile'); applyBackground();
+  initProfileAssets().then(renderProfile);
+});
+$('#profile-back').addEventListener('click', goTitle);
+$('#profile-nick').addEventListener('click', openNickModal);
+$('#profile-id-top').addEventListener('click', openNickModal);
+$('#profile-share').addEventListener('click', async () => {
+  try { await shareCanvas(await renderProfileImage(), 'pjsk-profile.png', 'PJSK FAN STAGE 个人主页'); }
+  catch (e) { console.warn('[profile share]', e); showToast('生成主页图片失败', 2200); }
+});
+$('#profile-big').addEventListener('click', () => openProfDialog({ kind: 'big' }));
+$$('#screen-profile .prof-cell').forEach(el => {
+  el.addEventListener('click', () => openProfDialog({ kind: 'cell', i: Number(el.dataset.i) }));
+});
+// 格子编辑弹窗
+$$('#pf-type .pill').forEach(p => p.addEventListener('click', () => {
+  pfState.type = p.dataset.v;
+  renderPfType();
+}));
+$('#btn-pf-card').addEventListener('click', () => {
+  const v = $('#pf-card-id').value.trim();
+  if (!/^\d{1,7}$/.test(v)) { dlUI('#pf-card-dl', true, 0, '请输入纯数字的卡面编号'); return; }
+  downloadProfileCard(Number(v));
+});
+$('#pf-card-id').addEventListener('input', e => { e.target.value = e.target.value.replace(/\D/g, '').slice(0, 7); });
+$('#pf-card-id').addEventListener('keydown', e => { if (e.key === 'Enter') $('#btn-pf-card').click(); });
+$('#btn-pf-img').addEventListener('click', () => $('#pf-img-file').click());
+$('#pf-img-file').addEventListener('change', e => {
+  const f = e.target.files && e.target.files[0];
+  if (f) importProfileImage(f);
+  e.target.value = '';
+});
+$('#pf-text').addEventListener('input', e => {
+  const chars = Array.from(e.target.value.trim());
+  const warn = $('#pf-text-warn');
+  if (chars.length > 1) { warn.style.display = ''; pfState.text = ''; }
+  else { warn.style.display = 'none'; pfState.text = chars[0] || ''; }
+});
+$('#pf-ok').addEventListener('click', saveProfDialog);
+$('#pf-cancel').addEventListener('click', () => $('#modal-prof').classList.remove('show'));
+$('#pf-clear').addEventListener('click', () => {
+  if (pfTarget && pfTarget.kind === 'big') settings.profile.big = null;
+  else if (pfTarget) settings.profile.cells[pfTarget.i] = null;
+  saveSettings(); renderProfile();
+  $('#modal-prof').classList.remove('show');
+});
+// 本命组合 / 本命CP / 修改id
+$('#unit-cancel').addEventListener('click', () => $('#modal-unit').classList.remove('show'));
+$('#cp-cancel').addEventListener('click', () => $('#modal-cp').classList.remove('show'));
+$('#cp-clear').addEventListener('click', () => { $('#cp-text').value = ''; cpSel = []; });
+$('#cp-ok').addEventListener('click', () => {
+  settings.profile.cp = $('#cp-text').value.trim();
+  saveSettings(); renderProfile();
+  $('#modal-cp').classList.remove('show');
+});
+$('#nick-cancel').addEventListener('click', () => $('#modal-nick').classList.remove('show'));
+$('#nick-ok').addEventListener('click', () => {
+  settings.profile.id = $('#nick-input').value.trim();
+  saveSettings(); renderProfile();
+  $('#modal-nick').classList.remove('show');
+});
+$('#nick-input').addEventListener('keydown', e => { if (e.key === 'Enter') $('#nick-ok').click(); });
+// 设置页「打歌结算」栏
+$('#btn-res-card').addEventListener('click', () => downloadResCard($('#res-card-id').value));
+$('#res-card-id').addEventListener('input', e => { e.target.value = e.target.value.replace(/\D/g, '').slice(0, 7); });
+$('#res-card-id').addEventListener('keydown', e => { if (e.key === 'Enter') $('#btn-res-card').click(); });
+
 /* ---------- 背景模式 / 卡面 ---------- */
 $$('#bg-mode-pills .pill').forEach(p => p.addEventListener('click', () => {
   settings.bgMode = p.dataset.bgmode;
@@ -4284,6 +5189,7 @@ $$('.tab').forEach(t => t.addEventListener('click', () => {
   $('#panel-' + t.dataset.tab).classList.add('on');
   if (t.dataset.tab === 'skin') requestAnimationFrame(renderKeySize);
   if (t.dataset.tab === 'team') renderTeams();
+  if (t.dataset.tab === 'result') renderResCards();
 }));
 
 /* 阻止双指缩放/长按菜单 */
@@ -4296,9 +5202,12 @@ renderKeySize();
 renderSounds();
 renderCovers();
 renderCards();
+renderResCards();
+renderProfile();
 syncBgUI();
 applyBackground();
 initMyCards();
+initProfileAssets().then(() => { renderResCards(); renderProfile(); });
 
 /* ---------- 按键图片导入 / 音效音量 ---------- */
 $('#skin-file').addEventListener('change', e => {

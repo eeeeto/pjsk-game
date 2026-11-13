@@ -1,9 +1,0 @@
-- generic [active] [ref=e1]:
-  - button "❚❚" [ref=e136] [cursor=pointer]
-  - generic [ref=e138]:
-    - generic [ref=e139]: MEDIUM
-    - generic [ref=e142]:
-      - generic [ref=e143]: 初次加载资源较慢，请耐心等待
-      - generic [ref=e144]: どんな結末がお望みだい？ (feat. 天馬司&鳳えむ&草薙寧々&神代類&初音ミク) 【full】
-      - generic [ref=e145]: ワンダーランズ×ショウタイム｜天馬司、鳳えむ、草薙寧々、神代類、初音ミク
-      - generic [ref=e146]: 正在分析节奏 · 生成谱面…
