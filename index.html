@@ -117,9 +117,8 @@
   }
   .song-item .fav:active{transform:scale(.85);}
   .song-item .fav.on{color:#ff5e8a;text-shadow:0 0 10px rgba(255,94,138,.75);}
-  .song-item .star{font-size:clamp(11px,1.8vh,15px);line-height:1;color:#3d4d66;cursor:pointer;
-    transition:color .15s,text-shadow .15s,transform .1s;padding:2px 1px;}
-  .song-item .star:active{transform:scale(1.25);}
+  .song-item .star{font-size:clamp(11px,1.8vh,15px);line-height:1;color:#3d4d66;cursor:default;
+    transition:color .15s,text-shadow .15s;padding:2px 1px;}
   .song-item .star.on{color:var(--gold);text-shadow:0 0 8px rgba(255,214,107,.75);}
   .btn.on{border-color:var(--cyan);color:var(--cyan);box-shadow:0 0 14px rgba(37,226,255,.3);}
 
@@ -1191,7 +1190,7 @@ function buildSongList() {
       el.dataset.unit = u.key;
       el.classList.toggle('hidden', collapsed);
       const marks = songMarks(s);
-      const starTips = ['完走时 HP > 200', 'FULL COMBO', 'ALL PERFECT'];
+      const starTips = ['通关时 HP ≥ 200', 'FULL COMBO 通关', 'ALL PERFECT 通关'];
       const dsp = songDisp(s);
       el.innerHTML = `
         <div class="fav${isFav(s) ? ' on' : ''}" title="收藏">♥</div>
@@ -1202,7 +1201,7 @@ function buildSongList() {
         </div>
         <div class="eq"><i></i><i></i><i></i></div>
         <div class="stars">${[0, 1, 2].map(i =>
-          `<span class="star${marks[i] ? ' on' : ''}" data-s="${i}" title="${starTips[i]}">★</span>`).join('')}</div>
+          `<span class="star${marks[i] ? ' on' : ''}" data-s="${i}" title="${starTips[i]}${marks[i] ? ' · 已达成' : ' · 未达成'}">★</span>`).join('')}</div>
         <div class="dur">${durationText(s.duration)}</div>`;
       el.addEventListener('click', () => selectSong(s._i, true, true));
       el.querySelector('.fav').addEventListener('click', e => {
@@ -1211,14 +1210,7 @@ function buildSongList() {
         e.currentTarget.classList.toggle('on', isFav(s));
         if (songFilterState().fav !== 'all') applySongFilter();   // 收藏夹筛选中实时生效
       });
-      el.querySelectorAll('.star').forEach(st => {
-        st.addEventListener('click', e => {
-          e.stopPropagation();                     // 别触发选歌
-          const i = Number(st.dataset.s);
-          setSongMark(s, i, !songMarks(s)[i]);
-          st.classList.toggle('on', songMarks(s)[i]);
-        });
-      });
+      // 星星只读：只能靠打歌达成，不能手动点亮（避免误点）
       wrap.appendChild(el);
       songItems.push(el);
     });
@@ -3085,9 +3077,9 @@ function finishGame() {
   const total = c.perfect + c.great + c.good + c.bad + c.miss;
   const isAP = c.perfect === total && total > 0;
   const isFC = G.maxCombo >= G.totalNotes && G.totalNotes > 0;   // 全连 = 全部判定都进了连击
-  // 星标自动点亮（只点亮不熄灭）：完走时 HP>200 / FC / AP
+  // 星标自动点亮（只点亮不熄灭）：通关时 HP≥200 / FC / AP
   if (G.song) {
-    [G.hp > 200, isFC, isAP].forEach((v, i) => { if (v) setSongMark(G.song, i, true); });
+    [G.hp >= 200, isFC, isAP].forEach((v, i) => { if (v) setSongMark(G.song, i, true); });
   }
 
   $('#res-song').innerHTML = `<b>${escapeHTML(G.song.title)}</b> · ${G.diff === 'ultra' ? '超高' : (G.diff === 'hard' ? '稍高' : '中等')} · 流速 ${Number(G.speed).toFixed(1)}`;
