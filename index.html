@@ -2351,7 +2351,7 @@ function initGame(song, buffer, notes, diff, speed) {
   G.lanes = 6; G.ultra = diff === 'ultra';
   G.pressed = new Array(G.lanes * 2).fill(0);
   G.laneFlash = new Array(G.lanes).fill(0);
-  G.combo = 0; G.maxCombo = 0; G.hp = 1000; G.maxHp = 1000; G.damage = 0;
+  G.combo = 0; G.maxCombo = 0; G.hp = 1000; G.maxHp = 1000; G.damage = 0; G.hpZero = false;
   G.effects = []; G.pressed.fill(0); G.pointerMap.clear(); G.holding.clear();
   G.laneFlash.fill(0); G.speed = speed; G.diff = diff;
   G.totalNotes = G.notes.length + G.notes.filter(n => n.type === 'hold').length;
@@ -2394,11 +2394,12 @@ function addEffect(lane, text, color, fs) {
 /* ---------- 队伍技能 ---------- */
 function skillJudge() { return G.skillType === 'judge' && G.now <= G.skillUntil; }
 function skillHeal()  { return G.skillType === 'heal'  && G.now <= G.skillUntil; }
-/* 奶卡激活时不扣血（combo / 判定结果照常） */
+/* 奶卡激活时不扣血（combo / 判定结果照常）；血量归零后进入「倒下」状态，奶卡无法再恢复 */
 function takeDamage(dmg) {
   if (skillHeal()) return;
   G.hp = Math.max(0, G.hp - dmg);
   G.damage += dmg;
+  if (G.hp <= 0) G.hpZero = true;
 }
 /* ---------- 队伍技能（自动发动） ----------
    每隔 20~30 秒随机触发一次：从配队的卡里随机抽一张，
@@ -2425,12 +2426,12 @@ function updateSkillAuto() {
     // 中央大字提示，让玩家明确知道技能已发动
     G.skillBanner = { text: `${card.icon} ${card.name} 发动！`, kind: card.type, t0: performance.now() };
   } else if (card.type === 'heal2') {
-    // 瞬间回血卡：发动即结算，没有持续时间、不占状态框
+    // 瞬间回血卡：发动即结算，没有持续时间、不占状态框；血量归零后无法恢复
     const before = G.hp;
-    G.hp = Math.min(G.maxHp, G.hp + 200);
+    if (!G.hpZero) G.hp = Math.min(G.maxHp, G.hp + 200);
     const gain = Math.round(G.hp - before);
     G.skillType = null; G.skillCard = card; G.skillUntil = -1;
-    G.skillBanner = { text: `${card.icon} ${card.name} 发动！${gain > 0 ? 'HP +' + gain : 'HP 已满'}`, kind: 'heal', t0: performance.now() };
+    G.skillBanner = { text: `${card.icon} ${card.name} 发动！${G.hpZero ? 'HP 已归零，无法恢复' : (gain > 0 ? 'HP +' + gain : 'HP 已满')}`, kind: 'heal', t0: performance.now() };
   } else {
     // 抽到无效果的卡：只给一条短暂提示，不发动
     G.skillFailText = card.name; G.skillFailUntil = now + 2.2;
@@ -2727,6 +2728,7 @@ function loop(ts) {
           G.counts.miss++;
           breakCombo();
           G.hp = Math.max(0, G.hp - 80); G.damage += 80;
+          if (G.hp <= 0) G.hpZero = true;
           addEffect(n.lane, JUDGE_LABEL.miss, JUDGE_COLOR.miss);
         }
         if (n.type === 'hold') { n.holdState = 4; G.holding.delete(n.lane); }
@@ -3406,6 +3408,7 @@ function finishGame() {
   if (rest) {
     G.counts.miss += rest; G.judged += rest;
     G.damage += rest * 80; G.hp = Math.max(0, G.hp - rest * 80);
+    if (G.hp <= 0) G.hpZero = true;
   }
   G.holding.clear();
   const c = G.counts;
