@@ -457,8 +457,8 @@
   .res2-fcap{font-size:clamp(20px,4.6vh,44px);font-weight:900;color:#7ceaff;letter-spacing:.08em;min-height:clamp(20px,4.6vh,44px);
     text-shadow:0 0 18px rgba(37,226,255,.45);}
   .res2-extra{font-size:clamp(10px,1.8vh,14px);color:#5f7290;letter-spacing:.06em;}
-  .res2-char{flex:0 0 clamp(120px,26vh,300px);position:relative;border-radius:4px;overflow:hidden;
-    display:flex;align-items:center;justify-content:center;min-height:clamp(150px,38vh,430px);
+  .res2-char{flex:0 0 auto;width:auto;height:clamp(160px,55vh,560px);aspect-ratio:2/3;position:relative;border-radius:4px;overflow:hidden;
+    display:flex;align-items:center;justify-content:center;
     background:rgba(12,20,36,.6);border:1px solid rgba(110,190,255,.25);}
   .res2-char img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top center;}
   .res2-char .ph{font-size:clamp(34px,9vh,90px);font-weight:900;color:#46617f;letter-spacing:.3em;
@@ -4486,23 +4486,27 @@ async function removeResCard(i) {
 
 /* 启动时把结算人物 / 主页资源从 IndexedDB 读成 objectURL */
 async function initProfileAssets() {
-  // 默认内容（仅首次）：卡 88 特训后裁 2:3 作默认结算人物、特训前作默认主页大图、默认名「世界」的居民
-  if (!settings._defSeeded) {
-    settings._defSeeded = 1;
+  const SEED_VER = 2;   // v2：默认结算卡图换为卡 81（初音未来）
+  if ((settings._defSeeded || 0) < SEED_VER) {
+    const first = !settings._defSeeded;
+    settings._defSeeded = SEED_VER;
     if (!settings.profile.id) settings.profile.id = '「世界」的居民';
-    if (!settings.resCards.some(m => m.key === 'def:88_chr')) {
-      cardBlobs['def:88_chr'] = res('assets/cards/88/chr_after.webp');
-      settings.resCards.push({ key: 'def:88_chr', cid: 88, label: '#88 · 特训后透明', chr: 1 });
+    // 默认结算卡图：卡 81 特训前裁 2:3 竖版 + 透明立绘
+    if (!settings.resCards.some(m => m.key === 'def:81_normal')) {
+      cardBlobs['def:81_normal'] = res('assets/cards/81/normal_2x3.webp');
+      settings.resCards.push({ key: 'def:81_normal', cid: 81, label: '#81 · 初音未来' });
     }
-    if (!settings.resCards.some(m => m.key === 'def:88_after')) {
-      cardBlobs['def:88_after'] = res('assets/cards/88/after_2x3.webp');
-      settings.resCards.push({ key: 'def:88_after', cid: 88, label: '#88 · 特训后' });
+    if (!settings.resCards.some(m => m.key === 'def:81_chr')) {
+      cardBlobs['def:81_chr'] = res('assets/cards/81/chr_normal.webp');
+      settings.resCards.push({ key: 'def:81_chr', cid: 81, label: '#81 · 初音未来透明', chr: 1 });
     }
-    if (!settings.resCards.length) settings.resPick = 0;
-    // 默认结算人物 = 透明角色图：当前选中的还是旧默认（裁剪卡图）或无效时才切换，尊重用户手动选择
-    const defChr = settings.resCards.findIndex(m => m.key === 'def:88_chr');
+    if (first && !settings.resCards.length) settings.resPick = 0;
+    // 当前选中的还是旧默认（def:88_*）时切到卡 81；用户自己选过的其他卡不动
     const cur = settings.resCards[settings.resPick];
-    if (defChr >= 0 && (!cur || cur.key === 'def:88_after')) settings.resPick = defChr;
+    if (cur && /^def:88/.test(cur.key)) {
+      const i = settings.resCards.findIndex(m => m.key === 'def:81_normal');
+      if (i >= 0) settings.resPick = i;
+    }
     if (!settings.profile.big) {
       cardBlobs['def:88_normal'] = res('assets/cards/88/normal.webp');
       settings.profile.big = { type: 'card', key: 'def:88_normal' };
