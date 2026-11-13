@@ -1072,6 +1072,19 @@ const UNITS = [
   { key: 'otherworld', label: '其他世界的歌曲', jp: 'OTHER WORLDS', color: '#ff9f7f', keys: ['zijiang', 'egirls'] }
 ];
 const UNIT_MAP = Object.fromEntries(UNITS.map(u => [u.key, u]));
+
+/* 本命组合可选的六个官方团（与选歌界面分类无关）：
+   バーチャル・シンガー 对应歌曲分类里的「ボカロ」，但在本命组合里显示官方团名 */
+const PROFILE_UNITS = [
+  { key: 'leoneed', label: 'Leo/need' },
+  { key: 'mmj',     label: 'MORE MORE JUMP！' },
+  { key: 'vbs',     label: 'Vivid BAD SQUAD' },
+  { key: 'wxs',     label: 'ワンダーランズ×ショウタイム' },
+  { key: 'n25',     label: '25時、ナイトコードで。' },
+  { key: 'vocaloid',label: 'バーチャル・シンガー' }
+];
+const PROFILE_UNIT_MAP = Object.fromEntries(PROFILE_UNITS.map(u => [u.key, u.label]));
+const profileUnitLabel = k => PROFILE_UNIT_MAP[k] || '';
 // 枝江 / E-girls 的歌曲在「当前曲目」等处也显示为合并后的分类名
 UNIT_MAP.zijiang = UNIT_MAP.otherworld;
 UNIT_MAP.egirls = UNIT_MAP.otherworld;
@@ -4602,7 +4615,7 @@ function renderProfile() {
   // 信息列表
   const top = topPlayedSong();
   const cnt = fcApCounts();
-  const unit = UNIT_MAP[p.unit] ? UNIT_MAP[p.unit].label : '';
+  const unit = profileUnitLabel(p.unit);
   const songV = top ? `${top.title}（${top.count} 次）` : '（自动统计）';
   const songLong = top && vWidth(songV) > 11;   // 太长 → 字号减半、分两行
   $('#prof-info').innerHTML = [
@@ -4781,7 +4794,7 @@ function saveProfDialog() {
 function openUnitModal() {
   const list = $('#unit-list');
   list.innerHTML = '';
-  UNITS.filter(u => !u.keys).forEach(u => {
+  PROFILE_UNITS.forEach(u => {
     const el = document.createElement('div');
     el.className = 'pill' + (settings.profile.unit === u.key ? ' on' : '');
     el.style.cssText = 'padding:10px 16px;font-size:14px;text-align:left;';
@@ -4953,7 +4966,7 @@ async function renderProfileImage(orient = 'portrait') {
   // 右栏：信息列表（一行 = 标签 … 值右对齐），文字色 #545574
   const top = topPlayedSong();
   const cnt = fcApCounts();
-  const unit = UNIT_MAP[p.unit] ? UNIT_MAP[p.unit].label : '';
+  const unit = profileUnitLabel(p.unit);
   const rows = [
     ['当前使用按键皮肤', skinDisplayName()],
     ['演出最多的歌曲', top ? `${top.title}（${top.count} 次）` : '（自动统计）'],
