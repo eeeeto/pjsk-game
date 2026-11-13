@@ -1393,7 +1393,11 @@ function openConfirm() {
   $('#dc-title').textContent = dsp.title + (dsp.tag ? ` 【${dsp.tag}】` : '');
   $('#dc-artist').textContent = s.artist || '';
   $$('#dc-diffs .pill').forEach(p => p.classList.toggle('on', p.dataset.diff === settings.diff));
-  pendingTeam = Number(settings.activeTeam) || -1;
+  // 默认带上次用的队伍；没选过就默认第一支，避免误点「不使用」后技能永不发动
+  pendingTeam = Number(settings.activeTeam);
+  if (!((settings.teams || [])[pendingTeam] && (settings.teams[pendingTeam].cards || []).length)) {
+    pendingTeam = (settings.teams || []).findIndex(t => (t.cards || []).length);
+  }
   renderConfirmTeams();
   $('#speed-range').value = settings.speed;
   $('#speed-val').textContent = Number(settings.speed).toFixed(1);
@@ -1980,6 +1984,7 @@ function setupSkillAuto() {
   G.skillType = null; G.skillCard = null; G.skillUntil = -1;
   G.skillNext = randSkillInterval();       // 相对谱面时间 G.now（倒计时结束后才开始计）
   G.skillFailText = null; G.skillFailUntil = -1;
+  G.skillBanner = null;
 }
 function updateSkillAuto() {
   if (!G.skillCards || !G.skillCards.length) return;
@@ -1991,6 +1996,8 @@ function updateSkillAuto() {
   const card = G.skillCards[Math.floor(Math.random() * G.skillCards.length)];
   if (card.type === 'judge' || card.type === 'heal') {
     G.skillType = card.type; G.skillCard = card; G.skillUntil = now + 5;
+    // 中央大字提示，让玩家明确知道技能已发动
+    G.skillBanner = { text: `${card.icon} ${card.name} 发动！`, kind: card.type, t0: performance.now() };
   } else {
     // 抽到无效果的卡：只给一条短暂提示，不发动
     G.skillFailText = card.name; G.skillFailUntil = now + 2.2;
@@ -2017,6 +2024,8 @@ function applyJudge(kind, note, lane) {
 function judgePress(cell) {
   const lane = cell >> 1;
   const w = hitWindows();
+  const judgeOn = skillJudge();                 // 判卡发动中：命中窗口也放宽
+  const wBad = judgeOn ? w.bad * 1.6 : w.bad;
   const now = G.now;
   let best = null, bd = 1e9;
   for (const n of G.notes) {
@@ -2025,14 +2034,14 @@ function judgePress(cell) {
     if (n.span === 1) { if (n.cell !== cell) continue; }
     else if (n.lane !== lane) continue;
     const d = n.t - now;
-    if (d > w.bad + 0.05) break;
-    if (d < -w.bad) continue;
+    if (d > wBad + 0.05) break;
+    if (d < -wBad) continue;
     const ad = Math.abs(d);
     if (ad < bd) { bd = ad; best = n; }
   }
   if (!best) return;
   let kind;
-  if (skillJudge()) kind = 'perfect';           // 判卡发动中：打中就 PERFECT
+  if (judgeOn) kind = 'perfect';                // 判卡发动中：打中就 PERFECT
   else if (bd <= w.perfect) kind = 'perfect';
   else if (bd <= w.great) kind = 'great';
   else if (bd <= w.good) kind = 'good';
@@ -2810,6 +2819,18 @@ function drawHUD(g) {
   c.fillText(`HP ${Math.round(G.hp)} / ${G.maxHp}`, hbX, hbY + Math.max(6, g.H * 0.014) + Math.max(11, g.H * 0.02));
   c.restore();
 
+  // 技能发动：屏幕中央大字提示（1.4 秒渐隐）
+  if (G.skillBanner) {
+    const age = (performance.now() - G.skillBanner.t0) / 1000;
+    if (age < 1.4) {
+      const ba = age < .12 ? age / .12 : age > .9 ? Math.max(0, (1.4 - age) / .5) : 1;
+      glowText(c, G.skillBanner.text, g.cx, g.H * 0.30, Math.max(20, g.H * 0.042), {
+        alpha: ba, color: G.skillBanner.kind === 'judge' ? '#ffd66b' : '#7ff0a8',
+        glow: G.skillBanner.kind === 'judge' ? 'rgba(255,214,107,.9)' : 'rgba(127,240,168,.9)', blur: 18
+      });
+    } else G.skillBanner = null;
+  }
+
   // 队伍技能状态（HP 条下方）：发动中显示卡名与剩余时间，抽到无效果卡则短暂提示
   if (G.skillType && G.skillCard) {
     const remain = Math.max(0, G.skillUntil - G.now);
@@ -3280,8 +3301,11 @@ function teamSkill(t) {
   return judge ? { type: 'judge', card: judge } : (heal ? { type: 'heal', card: heal } : null);
 }
 function curTeam() {
-  const t = (settings.teams || [])[Number(settings.activeTeam)];
-  return t && (t.cards || []).length ? t : null;
+  const teams = settings.teams || [];
+  const t = teams[Number(settings.activeTeam)];
+  if (t && (t.cards || []).length) return t;
+  // 没显式选队伍时回退到第一支有卡片的队伍，避免技能整个不发动
+  return teams.find(x => (x.cards || []).length) || null;
 }
 
 let editingTeam = -2;      // -2 = 新建，>=0 = 编辑对应索引
