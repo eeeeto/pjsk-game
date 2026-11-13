@@ -4431,6 +4431,21 @@ async function removeResCard(i) {
 
 /* 启动时把结算人物 / 主页资源从 IndexedDB 读成 objectURL */
 async function initProfileAssets() {
+  // 默认内容（仅首次）：卡 88 特训后裁 2:3 作默认结算人物、特训前作默认主页大图、默认名「世界」的居民
+  if (!settings._defSeeded) {
+    settings._defSeeded = 1;
+    if (!settings.profile.id) settings.profile.id = '「世界」的居民';
+    if (!settings.resCards.some(m => m.key === 'def:88_after')) {
+      cardBlobs['def:88_after'] = res('assets/cards/88/after_2x3.webp');
+      settings.resCards.push({ key: 'def:88_after', cid: 88, label: '#88 · 特训后' });
+    }
+    if (!settings.resCards.length) settings.resPick = 0;
+    if (!settings.profile.big) {
+      cardBlobs['def:88_normal'] = res('assets/cards/88/normal.webp');
+      settings.profile.big = { type: 'card', key: 'def:88_normal' };
+    }
+    saveSettings();
+  }
   const keys = [];
   settings.resCards.forEach(m => keys.push(m.key));
   (settings.profile.cells || []).forEach(c => { if (c && c.key) keys.push(c.key); });
