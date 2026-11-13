@@ -427,6 +427,13 @@
   .res-extra{font-size:clamp(10px,1.5vh,12px);color:#8ea4c4;letter-spacing:.1em;}
   .res-extra b{color:#d9ecff;font-weight:800;}
   .res-actions{display:flex;gap:12px;margin-top:clamp(4px,1.2vh,10px);}
+  /* 结算音乐开关（右上角） */
+  #screen-result .res-music{position:absolute;top:clamp(8px,2vh,20px);right:clamp(8px,2vw,20px);z-index:3;
+    width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-size:16px;font-weight:900;color:#8fe0ff;background:rgba(10,24,44,.55);
+    border:1px solid rgba(120,180,230,.35);cursor:pointer;user-select:none;
+    transition:opacity .2s,color .2s,border-color .2s;}
+  #screen-result .res-music.off{color:#6b7e99;border-color:rgba(110,140,175,.25);opacity:.55;}
 
   /* ---------- 旋转提示 ---------- */
   #rotate{position:fixed;inset:0;z-index:300;display:none;flex-direction:column;align-items:center;justify-content:center;
@@ -647,6 +654,7 @@
   <!-- ================= 结算 ================= -->
   <section id="screen-result" class="screen">
     <div class="bg"></div>
+    <div class="res-music" id="res-music" title="结算音乐 开 / 关">♪</div>
     <div class="res-song" id="res-song"></div>
     <div class="res-panel">
       <div class="res-list" id="res-stats"></div>
@@ -992,6 +1000,7 @@ function show(name) {
 }
 function goTitle() {
   stopPreview();
+  stopResultMusic(0);   // 离开结算页就掐掉结算音乐
   gameToken++;
   stopGameAudio();      // 回到主页绝不留音轨
   show('title');
@@ -1271,7 +1280,7 @@ function playPreview(song) {
   a.addEventListener('loadedmetadata', () => {
     if (!seekDone && isFinite(a.duration) && a.duration > 40) {
       seekDone = true;
-      try { a.currentTime = Math.min(a.duration * 0.34, a.duration - 32); } catch (e) {}
+      try { a.currentTime = chorusSeekTime(a.duration); } catch (e) {}
     }
   });
   a.addEventListener('playing', () => { if (previewAudioFallback === a) setPreviewLoading(false); });
@@ -1357,6 +1366,97 @@ function stopPreview() {
 function releasePreviewBuffer() {
   previewBuf = null;
   previewBufFile = '';
+}
+
+/* ---------- 副歌起点 & 结算音乐 ---------- */
+/* 副歌位置：与选歌试听共用同一个锚点（约 34% 处），并给结尾留 32 秒余量，短曲不越界 */
+function chorusSeekTime(dur) {
+  const d = Number(dur) || 0;
+  if (!(d > 0)) return 0;
+  return Math.max(0, Math.min(d * 0.34, d - 32));
+}
+
+/* 结算页播放刚打完的歌：从副歌开始，淡入淡出，放完自动回到副歌继续循环 */
+let resAudio = null, resFade = 0;
+function stopResultMusic(ms = 320) {
+  const a = resAudio;
+  resAudio = null;
+  if (resFade) { clearInterval(resFade); resFade = 0; }
+  syncMusicBtn();
+  if (!a) return;
+  const kill = () => {
+    try { a.pause(); } catch (e) {}
+    try { a.removeAttribute('src'); a.load(); } catch (e) {}   // 彻底释放流，避免后台继续出声
+  };
+  if (!ms) { kill(); return; }
+  const v0 = a.volume, t0 = performance.now();
+  const iv = setInterval(() => {
+    const k = Math.min(1, (performance.now() - t0) / ms);
+    try { a.volume = v0 * (1 - k); } catch (e) {}
+    if (k >= 1) { clearInterval(iv); kill(); }
+  }, 40);
+}
+
+function playResultMusic(song, at) {
+  stopResultMusic(0);
+  if (!song || !song.file) return;
+  let a;
+  try { a = new Audio(encodeURI(song.file)); } catch (e) { return; }
+  a.preload = 'auto';
+  a.volume = 0.0001;
+  a.dataset.file = song.file;
+  resAudio = a;
+  syncMusicBtn();
+  const target = Math.max(0, Number(at) || 0);
+  let seekTries = 0;
+  const seek = () => {
+    if (resAudio !== a || seekTries > 4) return;
+    if (!isFinite(a.duration) || a.duration <= 0) return;
+    const goal = Math.min(target, Math.max(0, a.duration - 3));
+    if (Math.abs(a.currentTime - goal) < 1.2) return;      // 已经在对的位置了
+    try { a.currentTime = goal; } catch (e) {}             // 元数据刚就绪/网络慢时多补几次
+    seekTries++;
+  };
+  a.addEventListener('loadedmetadata', seek);
+  a.addEventListener('loadeddata', seek);
+  a.addEventListener('canplay', seek);
+  setTimeout(seek, 700);
+  setTimeout(seek, 2200);
+  // 放完不要掉回前奏：直接回到副歌位置接着放
+  a.addEventListener('ended', () => {
+    if (resAudio !== a) return;
+    try { a.currentTime = Math.min(target, Math.max(0, a.duration - 3)); } catch (e) {}
+    const p = a.play(); if (p && p.catch) p.catch(() => {});
+  });
+  const p = a.play();
+  if (p && p.catch) p.catch(() => {
+    if (resAudio !== a) return;
+    // 少数移动端会拦自动播放：提示一次，点屏幕任意处再补一次播放
+    showToast('结算音乐被浏览器拦截 · 点一下屏幕继续播放', 3200);
+    const retry = () => {
+      window.removeEventListener('pointerdown', retry, true);
+      if (resAudio === a) { const q = a.play(); if (q && q.catch) q.catch(() => {}); }
+    };
+    window.addEventListener('pointerdown', retry, true);
+  });
+  const t0 = performance.now();
+  clearInterval(resFade);
+  resFade = setInterval(() => {
+    if (resAudio !== a) { clearInterval(resFade); resFade = 0; return; }
+    const k = Math.min(1, (performance.now() - t0) / 1100);
+    try { a.volume = 0.5 * k; } catch (e) {}
+    if (k >= 1) { clearInterval(resFade); resFade = 0; }
+  }, 50);
+}
+
+function syncMusicBtn() {
+  const b = $('#res-music');
+  if (b) b.classList.toggle('off', !resAudio);
+}
+
+function toggleResultMusic() {
+  if (resAudio) { stopResultMusic(260); return; }
+  if (G.song) playResultMusic(G.song, G.chorusAt || chorusSeekTime(G.duration));
 }
 
 /* 滚动时选中最靠近中央的曲目 */
@@ -1777,6 +1877,7 @@ async function startGame(song, diff, speed) {
   primeAudio();           // 必须在这里（仍在点击手势的同步栈里）唤醒音频，晚了 Safari 会拒绝
   stopSfxPreview();
   stopPreview();          // 清掉选歌试听：它是独立的 <audio>，不停会与游戏音轨同时响
+  stopResultMusic(0);     // 结算音乐同理，开局前必须停
   stopGameAudio();
   hideAllModals();
   const t0 = performance.now();
@@ -2937,6 +3038,9 @@ function finishGame() {
   const teamName = G.team ? escapeHTML(G.team.name || '未命名配队') : '';
   $('#res-extra').innerHTML = `音符 <b>${total}</b> · 剩余 HP <b>${Math.round(G.hp)}</b>${teamName ? ` · 配队 <b>${teamName}</b>` : ''}`;
   show('result');
+  // 结算页播放刚打完的歌，从副歌开始（淡入，放完自动回到副歌）
+  G.chorusAt = chorusSeekTime(G.duration);
+  playResultMusic(G.song, G.chorusAt);
   // 释放解码后的整首音频（移动端一首 3~5 分钟的歌要占几十 MB，留着容易把标签页挤崩）
   G.buffer = null;
 }
@@ -2973,6 +3077,7 @@ window.addEventListener('pagehide', () => {
   }
   stopGameAudio();
   stopPreview();
+  stopResultMusic(0);
 });
 window.addEventListener('pageshow', e => {
   if (!e.persisted) return;
@@ -3834,6 +3939,7 @@ $('#pause-restart').addEventListener('click', restartGame);
 $('#pause-quit').addEventListener('click', quitGame);
 $('#res-home').addEventListener('click', () => { goTitle(); });
 $('#res-again').addEventListener('click', () => startFromClock());
+$('#res-music').addEventListener('click', () => toggleResultMusic());
 
 /* 分享成绩：生成成绩图 → 移动端调系统分享，否则直接下载 */
 $('#res-share').addEventListener('click', () => {
