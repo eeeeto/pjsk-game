@@ -854,6 +854,12 @@ const mirrorUrls = u => {
   return CDN_MIRRORS.map(m => m + p).concat([p]);
 };
 /* 带超时与镜像回退的资源抓取（音频等大文件），返回 ArrayBuffer */
+function withTimeout(p, ms, msg) {
+  return new Promise((res, rej) => {
+    const t = setTimeout(() => rej(new Error(msg || '下载超时')), ms);
+    p.then(v => { clearTimeout(t); res(v); }, e => { clearTimeout(t); rej(e); });
+  });
+}
 async function fetchRes(url, timeoutMs = 12000) {
   const urls = mirrorUrls(url);
   let lastErr = new Error('fetch failed');
@@ -861,9 +867,11 @@ async function fetchRes(url, timeoutMs = 12000) {
     const ctl = new AbortController();
     const t = setTimeout(() => ctl.abort(), timeoutMs);
     try {
+      // 短超时只负责“多久内拿到响应头”；正文下载另给宽松窗口，
+      // 慢镜像上的大文件（3~5MB 音频）不至于下到一半被掐掉
       const r = await fetch(encodeURI(u), { signal: ctl.signal });
-      if (r.ok) return await r.arrayBuffer();
-      lastErr = new Error('HTTP ' + r.status);
+      if (!r.ok) { lastErr = new Error('HTTP ' + r.status); continue; }
+      return await withTimeout(r.arrayBuffer(), 45000, '正文下载超时');
     } catch (e) { lastErr = e; }
     finally { clearTimeout(t); }
   }
