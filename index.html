@@ -870,18 +870,23 @@ async function fetchRes(url, timeoutMs = 12000) {
   throw lastErr;
 }
 /* 图片按镜像顺序预加载，全部失败时回退主源 */
-function preloadImg(url) {
+function preloadImg(url, perTimeout = 6000) {
   return new Promise(resolve => {
     const urls = mirrorUrls(url);
-    let i = 0;
-    const im = new Image();
-    im.onload = () => resolve(urls[i]);
-    im.onerror = () => {
-      i++;
-      if (i < urls.length) im.src = encodeURI(urls[i]);
-      else resolve(url);
+    let i = 0, done = false, timer = 0;
+    const next = () => {
+      if (done) return;
+      clearTimeout(timer);
+      if (i >= urls.length) { done = true; resolve(urls[urls.length - 1]); return; }
+      const u = urls[i++];
+      const im = new Image();
+      // 每个镜像最多等 6 秒：被墙/劫持的镜像往往不报错只是干等，不能拖着整条链
+      timer = setTimeout(() => { im.onload = im.onerror = null; next(); }, perTimeout);
+      im.onload = () => { if (done) return; done = true; clearTimeout(timer); resolve(u); };
+      im.onerror = () => { if (done) return; clearTimeout(timer); next(); };
+      im.src = encodeURI(u);
     };
-    im.src = encodeURI(urls[0]);
+    next();
   });
 }
 /* 页面上的 <img> 加载失败时自动切换镜像，全部失败后回退站内同源路径 */
@@ -2024,16 +2029,13 @@ function loadSkinImage() {
   return new Promise(done => {
     if (settings.skin === 'rect' || settings.skin === 'pill' || settings.skin === 'lumirect') { G.skinImg = null; done(); return; }
     if (settings.skin === 'custom' && !settings.customSkin) { G.skinImg = null; done(); return; }
-    let settled = false;
-    const finish = () => { if (settled) return; settled = true; done(); };
+    G.skinImg = null;
     const img = new Image();
-    img.onload = () => { G.skinImg = img; finish(); };
-    img.onerror = () => { G.skinImg = null; finish(); };
+    img.onload = () => { G.skinImg = img; done(); };
+    img.onerror = () => { G.skinImg = null; done(); };
     const src = settings.skin === 'custom' ? settings.customSkin : res(`assets/keys/${settings.skin}.png`);
     if (settings.skin === 'custom') img.src = src;
     else preloadImg(src).then(u => { img.src = encodeURI(u); });   // 按键图案也要走镜像链+主源兜底
-    // 图片卡住（弱网）也不该让整局停在黑屏：4 秒后先开打，图案晚点生效
-    setTimeout(() => { if (!settled) { G.skinImg = null; finish(); } }, 4000);
   });
 }
 
@@ -2059,21 +2061,19 @@ function initGame(song, buffer, notes, diff, speed) {
   // 队伍技能：确认演出时选的配队
   G.team = curTeam();
   setupSkillAuto();
-  loadSkinImage().then(() => {
-    if (myToken !== gameToken) return;      // 期间已经开了新局，这条音轨作废
-    const ac = audioCtx();
-    stopGameAudio();
-    const src = ac.createBufferSource();
-    src.buffer = buffer;
-    src.connect(ac.destination);
-    // 预留倒计时：音频在 leadIn 后才开始，谱面时间以音频起点为基准
-    G.startAt = ac.currentTime + G.leadIn + 0.1;
-    G.source = src;
-    src.onended = () => { if (G.active && !G.finished) finishGame(); };
-    src.start(G.startAt);
-    G.lastFrame = performance.now();
-    requestAnimationFrame(loop);
-  });
+  loadSkinImage();      // 按键图案异步加载：加载好自动换上，绝不阻塞开局（镜像慢时不至于黑屏等图）
+  const ac = audioCtx();
+  stopGameAudio();
+  const src = ac.createBufferSource();
+  src.buffer = buffer;
+  src.connect(ac.destination);
+  // 预留倒计时：音频在 leadIn 后才开始，谱面时间以音频起点为基准
+  G.startAt = ac.currentTime + G.leadIn + 0.1;
+  G.source = src;
+  src.onended = () => { if (G.active && !G.finished) finishGame(); };
+  src.start(G.startAt);
+  G.lastFrame = performance.now();
+  requestAnimationFrame(loop);
 }
 
 function startFromClock() {
