@@ -4327,6 +4327,8 @@ const PF_CELL_KEYS = ['prof:cell0', 'prof:cell1', 'prof:cell2'];
 function loadImageAsync(url) {
   return new Promise((ok, no) => {
     const i = new Image();
+    // http(s) 远程图（CDN / 素材源）必须带 CORS，否则画进 canvas 会被污染，toBlob 直接抛 SecurityError
+    if (/^https?:/i.test(url)) i.crossOrigin = 'anonymous';
     i.onload = () => ok(i);
     i.onerror = () => no(new Error('图片读取失败'));
     i.src = url;
