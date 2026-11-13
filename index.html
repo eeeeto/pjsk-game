@@ -1076,12 +1076,12 @@ const UNIT_MAP = Object.fromEntries(UNITS.map(u => [u.key, u]));
 /* 本命组合可选的六个官方团（与选歌界面分类无关）：
    バーチャル・シンガー 对应歌曲分类里的「ボカロ」，但在本命组合里显示官方团名 */
 const PROFILE_UNITS = [
+  { key: 'vocaloid',label: 'バーチャル・シンガー' },
   { key: 'leoneed', label: 'Leo/need' },
   { key: 'mmj',     label: 'MORE MORE JUMP！' },
   { key: 'vbs',     label: 'Vivid BAD SQUAD' },
   { key: 'wxs',     label: 'ワンダーランズ×ショウタイム' },
-  { key: 'n25',     label: '25時、ナイトコードで。' },
-  { key: 'vocaloid',label: 'バーチャル・シンガー' }
+  { key: 'n25',     label: '25時、ナイトコードで。' }
 ];
 const PROFILE_UNIT_MAP = Object.fromEntries(PROFILE_UNITS.map(u => [u.key, u.label]));
 const profileUnitLabel = k => PROFILE_UNIT_MAP[k] || '';
