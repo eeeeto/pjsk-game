@@ -497,6 +497,8 @@
   .prow .v{color:#545574;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;margin-left:auto;padding-left:12px;}
   .prow.click{cursor:pointer;}
   .prow.click .v{border-bottom:2px dotted #9a9ab8;padding-bottom:1px;}
+  .prow .v.song2{font-size:50%;line-height:1.18;text-align:right;white-space:normal;display:-webkit-box;
+    -webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;align-self:flex-end;}
   .pf-char-grid{max-height:200px;overflow-y:auto;}
   .pf-char-grid .cov{aspect-ratio:1/1;}
   .pf-char-grid .cov span{font-size:9px;}
@@ -4488,6 +4490,24 @@ function topPlayedSong() {
   }
   return bk ? { title: bk.split('|')[0], count: max } : null;
 }
+/* 视觉宽度：全角算 1、半角算 0.5 */
+function vWidth(s) {
+  let w = 0;
+  for (const ch of String(s)) w += ch.charCodeAt(0) > 0x2e80 ? 1 : 0.5;
+  return w;
+}
+/* 按视觉宽度从中间拆成两行 */
+function splitVWidth(s) {
+  s = String(s);
+  const half = vWidth(s) / 2;
+  let w = 0, cut = -1, i = 0;
+  for (const ch of s) {
+    w += ch.charCodeAt(0) > 0x2e80 ? 1 : 0.5;
+    if (cut < 0 && w >= half) { cut = i + 1; }
+    i++;
+  }
+  return cut <= 0 || cut >= s.length ? [s, ''] : [s.slice(0, cut), s.slice(cut)];
+}
 function fcApCounts() {
   const ms = settings.marks || {};
   let fc = 0, ap = 0;
@@ -4549,16 +4569,20 @@ function renderProfile() {
   const top = topPlayedSong();
   const cnt = fcApCounts();
   const unit = UNIT_MAP[p.unit] ? UNIT_MAP[p.unit].label : '';
+  const songV = top ? `${top.title}（${top.count} 次）` : '（自动统计）';
+  const songLong = top && vWidth(songV) > 11;   // 太长 → 字号减半、分两行
   $('#prof-info').innerHTML = [
-    ['当前使用按键皮肤', skinDisplayName(), ''],
-    ['演出最多的歌曲', top ? `${top.title}（${top.count} 次）` : '（自动统计）', ''],
-    ['FC 歌曲数', String(cnt.fc), ''],
-    ['AP 歌曲数', String(cnt.ap), ''],
-    ['本命组合', unit || '选择', 'unit'],
-    ['本命CP', p.cp || '填写', 'cp']
-  ].map(([k, v, act]) =>
-    `<div class="prow${act ? ' click' : ''}"${act ? ` data-act="${act}"` : ''}><span class="k">${k}</span><b class="v">${escapeHTML(v)}</b></div>`
-  ).join('');
+    ['当前使用按键皮肤', skinDisplayName(), '', false],
+    ['演出最多的歌曲', songV, '', songLong],
+    ['FC 歌曲数', String(cnt.fc), '', false],
+    ['AP 歌曲数', String(cnt.ap), '', false],
+    ['本命组合', unit || '选择', 'unit', false],
+    ['本命CP', p.cp || '填写', 'cp', false]
+  ].map(([k, v, act, small]) => {
+    let vHtml = escapeHTML(v);
+    if (small) { const [l1, l2] = splitVWidth(v); vHtml = `${escapeHTML(l1)}<br>${escapeHTML(l2)}`; }
+    return `<div class="prow${act ? ' click' : ''}"${act ? ` data-act="${act}"` : ''}><span class="k">${k}</span><b class="v${small ? ' song2' : ''}">${vHtml}</b></div>`;
+  }).join('');
   $$('#prof-info .prow.click').forEach(row => {
     row.onclick = () => {
       if (row.dataset.act === 'unit') openUnitModal();
@@ -4902,8 +4926,22 @@ async function renderProfileImage(orient = 'portrait') {
     c.fillStyle = '#545574';
     c.fillText(k, ix, iy);
     c.textAlign = 'right';
-    const kw = c.measureText(k).width;
     let vt = v || '';
+    // 演出最多的歌曲：歌名太长 → 字号减半、分两行
+    if (k === '演出最多的歌曲' && vWidth(vt) > (orient === 'landscape' ? 13.5 : 11)) {
+      const halfF = Math.round(rowFont * 0.5);
+      let [l1, l2] = splitVWidth(vt);
+      c.font = `900 ${halfF}px ${FF}`;
+      while (c.measureText(l1).width > iwEnd - ix && l1.length > 1) l1 = l1.slice(0, l1.length - 2) + '…';
+      while (c.measureText(l2).width > iwEnd - ix && l2.length > 1) l2 = l2.slice(0, l2.length - 2) + '…';
+      c.fillText(l1, iwEnd, iy);
+      c.fillText(l2, iwEnd, iy + halfF * 1.3);
+      c.font = `900 ${rowFont}px ${FF}`;
+      c.textAlign = 'left';
+      iy += rowGap + halfF * 1.3;
+      continue;
+    }
+    const kw = c.measureText(k).width;
     while (kw + 24 + c.measureText(vt).width > iwEnd - ix && vt.length > 1) vt = vt.slice(0, vt.length - 2) + '…';
     c.fillText(vt, iwEnd, iy);
     c.textAlign = 'left';
