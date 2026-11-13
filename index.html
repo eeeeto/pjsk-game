@@ -428,37 +428,40 @@
   @keyframes rainbow{to{background-position:300% 0}}
   .res-extra{font-size:clamp(10px,1.5vh,12px);color:#8ea4c4;letter-spacing:.1em;}
   .res-extra b{color:#d9ecff;font-weight:800;}
-  .res-actions{display:flex;gap:12px;margin-top:clamp(4px,1.2vh,10px);justify-content:flex-end;padding:0 clamp(16px,3vw,40px) clamp(12px,2.4vh,26px);}
-  /* ---------- 新版结算（图一风格：白底黑字） ---------- */
-  #screen-result{background:#e9e9ec;}
+  .res-actions{display:flex;gap:12px;margin:clamp(4px,1.2vh,10px) auto 0;justify-content:flex-end;
+    width:100%;max-width:1060px;padding:0 clamp(16px,4vw,56px) clamp(12px,2.4vh,26px);}
+  /* ---------- 新版结算（深色：与整体 UI 一致） ---------- */
+  #screen-result{background:linear-gradient(180deg,#0c1526,#060a13);}
   #screen-result .bg{background:none;}
   .res2-wrap{flex:1;display:flex;flex-direction:column;gap:clamp(10px,2.4vh,26px);
     padding:clamp(12px,2.6vh,30px) clamp(16px,4vw,56px) 0;min-height:0;width:100%;max-width:1060px;margin:0 auto;}
   .res2-top{display:flex;align-items:center;gap:clamp(10px,1.8vw,20px);
-    background:#d6d6da;border-radius:clamp(12px,2.4vh,26px);padding:clamp(10px,1.8vh,20px) clamp(14px,2.2vw,26px);
-    box-shadow:0 6px 22px rgba(0,0,0,.10);}
+    background:rgba(18,27,48,.92);border:1px solid rgba(110,190,255,.22);border-radius:clamp(12px,2.4vh,26px);padding:clamp(10px,1.8vh,20px) clamp(14px,2.2vw,26px);
+    box-shadow:0 6px 22px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.06);}
   .res2-cover{width:clamp(44px,7.4vh,74px);height:clamp(44px,7.4vh,74px);border-radius:6px;flex:0 0 auto;
-    background-size:cover;background-position:center;background-color:#0a0d14;box-shadow:0 3px 10px rgba(0,0,0,.35);}
-  .res2-meta .t{font-size:clamp(15px,2.8vh,26px);font-weight:900;color:#101216;letter-spacing:.04em;
+    background-size:cover;background-position:center;background-color:#0a0d14;box-shadow:0 3px 10px rgba(0,0,0,.45);}
+  .res2-meta .t{font-size:clamp(15px,2.8vh,26px);font-weight:900;color:#eef5ff;letter-spacing:.04em;
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60vw;}
-  .res2-meta .d{font-size:clamp(11px,2vh,16px);font-weight:800;color:#3c4350;letter-spacing:.16em;margin-top:2px;}
+  .res2-meta .d{font-size:clamp(11px,2vh,16px);font-weight:800;color:#9fb6d8;letter-spacing:.16em;margin-top:2px;}
   .res2-main{flex:1;display:flex;gap:clamp(14px,3vw,44px);min-height:0;}
   .res2-left{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:clamp(6px,1.6vh,18px);}
-  .res2-record{text-align:center;font-size:clamp(13px,2.6vh,24px);font-weight:900;color:#17181c;
+  .res2-record{text-align:center;font-size:clamp(13px,2.6vh,24px);font-weight:900;color:#dff2ff;
     letter-spacing:.14em;height:clamp(16px,3vh,28px);}
   .res2-grid{display:flex;align-items:flex-start;gap:clamp(12px,3vw,46px);}
   .res2-stats{display:flex;flex-direction:column;gap:clamp(2px,.8vh,7px);}
   .res2-stats .row{display:flex;align-items:center;font-size:clamp(12px,2.4vh,22px);font-weight:900;letter-spacing:.06em;}
-  .res2-stats .row .l{width:clamp(78px,11vw,130px);color:#101216;}
-  .res2-stats .row .n{color:#101216;font-variant-numeric:tabular-nums;min-width:4.4em;}
-  .res2-combo .lbl{font-size:clamp(11px,2vh,17px);font-weight:900;letter-spacing:.2em;color:#2c313b;}
-  .res2-combo .num{font-size:clamp(24px,5.4vh,52px);font-weight:900;color:#101216;letter-spacing:.04em;font-variant-numeric:tabular-nums;}
-  .res2-fcap{font-size:clamp(20px,4.6vh,44px);font-weight:900;color:#111216;letter-spacing:.08em;min-height:clamp(20px,4.6vh,44px);}
-  .res2-extra{font-size:clamp(10px,1.8vh,14px);color:#565d68;letter-spacing:.06em;}
+  .res2-stats .row .l{width:clamp(78px,11vw,130px);color:#cfe0f5;}
+  .res2-stats .row .n{color:#8fd8ff;font-variant-numeric:tabular-nums;min-width:4.4em;}
+  .res2-combo .lbl{font-size:clamp(11px,2vh,17px);font-weight:900;letter-spacing:.2em;color:#8ea6c6;}
+  .res2-combo .num{font-size:clamp(24px,5.4vh,52px);font-weight:900;color:#eef5ff;letter-spacing:.04em;font-variant-numeric:tabular-nums;}
+  .res2-fcap{font-size:clamp(20px,4.6vh,44px);font-weight:900;color:#7ceaff;letter-spacing:.08em;min-height:clamp(20px,4.6vh,44px);
+    text-shadow:0 0 18px rgba(37,226,255,.45);}
+  .res2-extra{font-size:clamp(10px,1.8vh,14px);color:#5f7290;letter-spacing:.06em;}
   .res2-char{flex:0 0 clamp(120px,26vh,300px);position:relative;border-radius:4px;overflow:hidden;
-    display:flex;align-items:center;justify-content:center;min-height:clamp(150px,38vh,430px);}
+    display:flex;align-items:center;justify-content:center;min-height:clamp(150px,38vh,430px);
+    background:rgba(12,20,36,.6);border:1px solid rgba(110,190,255,.25);}
   .res2-char img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top center;}
-  .res2-char .ph{font-size:clamp(34px,9vh,90px);font-weight:900;color:#9a9aa2;letter-spacing:.3em;
+  .res2-char .ph{font-size:clamp(34px,9vh,90px);font-weight:900;color:#46617f;letter-spacing:.3em;
     text-align:center;line-height:1.2;}
   /* ---------- 个人主页 ---------- */
   .round-btn{width:40px;height:40px;border-radius:50%;border:none;background:#fff;color:#17181c;
@@ -794,7 +797,7 @@
     <div class="res-actions">
       <button class="btn ghost" id="res-share">分享</button>
       <button class="btn ghost" id="res-again">再次演出</button>
-      <button class="btn pink" id="res-home">完成演出</button>
+      <button class="btn" id="res-home">完成演出</button>
     </div>
   </section>
 
@@ -4564,11 +4567,17 @@ function fcApCounts() {
 function applyResChar() {
   const img = $('#res2-char-img'), ph = $('#res2-char-ph');
   if (!img || !ph) return;
-  const meta = settings.resCards[clamp(settings.resPick || 0, 0, Math.max(0, settings.resCards.length - 1))];
+  const list = settings.resCards;
+  let meta = list[clamp(settings.resPick || 0, 0, Math.max(0, list.length - 1))];
+  // 「人物」格固定放裁剪过的卡牌：选中的是透明角色图时，换成同编号的裁剪卡图；没有对应卡图则用第一张卡图
+  if (meta && meta.chr) {
+    const same = list.find(m => m.key === meta.key.replace(/_chr$/, '') && !m.chr);
+    meta = same || list.find(m => !m.chr) || meta;
+  }
   const url = meta ? cardBlobs[meta.key] : '';
   if (url) {
     img.src = url; img.style.display = ''; ph.style.display = 'none';
-    // 透明底角色图用 contain 完整显示，裁剪卡图用 cover 铺满
+    // 裁剪卡图用 cover 铺满；兜底透明角色图时用 contain 完整显示
     img.style.objectFit = meta.chr ? 'contain' : 'cover';
   } else {
     img.removeAttribute('src'); img.style.display = 'none'; ph.style.display = '';
