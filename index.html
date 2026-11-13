@@ -91,6 +91,8 @@
   .page-head h2 em{font-style:normal;color:var(--cyan);}
   .page-head .tip{font-size:clamp(10px,1.5vh,12px);color:#7186a5;letter-spacing:.08em;text-align:right;}
   .page-head .tip .tip-sub{display:block;margin-top:.45em;color:#5a6d8a;font-size:.94em;letter-spacing:.03em;}
+  .page-head .song-count{display:inline-block;margin-bottom:.4em;font-size:clamp(11px,1.75vh,14px);
+    font-weight:900;letter-spacing:.06em;color:#7ceaff;text-shadow:0 0 12px rgba(37,226,255,.35);}
   #song-scroll{flex:1;overflow-y:auto;overflow-x:hidden;padding:4vh 0 16vh;scrollbar-width:none;
     -webkit-overflow-scrolling:touch;
     mask-image:linear-gradient(180deg,transparent 0,#000 9%,#000 88%,transparent 100%);
@@ -494,7 +496,7 @@
   <section id="screen-songs" class="screen">
     <div class="page-head">
       <h2>选 <em>曲</em></h2>
-      <div class="tip">点击曲目试听 · 上下滑动浏览<br><span class="tip-sub">由于制作者个人喜好加入了一些其他世界的歌曲</span></div>
+      <div class="tip"><b class="song-count" id="song-count">共 0 曲</b><br>点击曲目试听 · 上下滑动浏览<br><span class="tip-sub">由于制作者个人喜好加入了一些其他世界的歌曲</span></div>
     </div>
     <div id="song-scroll"></div>
     <div class="bottom-bar">
@@ -596,7 +598,7 @@
         </div>
       </div>
       <div class="panel" id="panel-team">
-        <p class="hint">自定义你的演出配队：用 − / ＋ 调整每种卡的张数（共最多 5 张）并起名字。演出中每 20~30 秒会从队里的卡中随机抽一张发动——<b>判卡</b>：5 秒内打中的所有音符都算 PERFECT；<b>奶卡</b>：5 秒内不扣血。抽中概率按张数分配，例如判卡×4 + 奶卡×1 就有 80% 抽到判卡。在选歌后的确认界面选择本次使用的配队。</p>
+        <p class="hint">自定义你的演出配队：用 − / ＋ 调整每种卡的张数（共最多 5 张）并起名字。演出中每 20~30 秒会从队里的卡中随机抽一张发动——<b>判卡</b>：5 秒内打中的所有音符都算 PERFECT，且这段期间连击不会断；<b>奶卡</b>：5 秒内不扣血；<b>体力守护 2</b>：发动瞬间恢复 200 HP，没有持续时间。抽中概率按张数分配，例如判卡×4 + 奶卡×1 就有 80% 抽到判卡。在选歌后的确认界面选择本次使用的配队。</p>
         <div class="team-list" id="team-list"></div>
         <div class="pills" style="margin-top:12px">
           <div class="pill" id="team-new">＋ 新建配队</div>
@@ -1133,6 +1135,7 @@ function filterActive() {
 /* 应用筛选：不匹配的曲目隐藏；分类下全部被隐藏时标题一并隐藏。 */
 function applySongFilter() {
   $('#songs-filter').classList.toggle('on', filterActive());
+  let total = 0;
   $$('#song-scroll .unit-head').forEach(h => {
     const unit = h.dataset.unit;
     const collapsed = !!(settings.collapsedUnits && settings.collapsedUnits[unit]);
@@ -1145,7 +1148,10 @@ function applySongFilter() {
     });
     h.classList.toggle('hidden', filterActive() && !shown);
     h.querySelector('.cnt').textContent = shown + ' 曲';
+    total += shown;
   });
+  const cntEl = $('#song-count');
+  if (cntEl) cntEl.textContent = '共 ' + total + ' 曲';
 }
 
 function buildSongList() {
@@ -2137,10 +2143,24 @@ function updateSkillAuto() {
     G.skillType = card.type; G.skillCard = card; G.skillUntil = now + 5;
     // 中央大字提示，让玩家明确知道技能已发动
     G.skillBanner = { text: `${card.icon} ${card.name} 发动！`, kind: card.type, t0: performance.now() };
+  } else if (card.type === 'heal2') {
+    // 瞬间回血卡：发动即结算，没有持续时间、不占状态框
+    const before = G.hp;
+    G.hp = Math.min(G.maxHp, G.hp + 200);
+    const gain = Math.round(G.hp - before);
+    G.skillType = null; G.skillCard = card; G.skillUntil = -1;
+    G.skillBanner = { text: `${card.icon} ${card.name} 发动！${gain > 0 ? 'HP +' + gain : 'HP 已满'}`, kind: 'heal', t0: performance.now() };
   } else {
     // 抽到无效果的卡：只给一条短暂提示，不发动
     G.skillFailText = card.name; G.skillFailUntil = now + 2.2;
   }
+}
+
+/* 断连：判卡发动期间连击受保护，不会被打断（MISS/BAD/GOOD 都不断连） */
+function breakCombo() {
+  if (skillJudge()) return;
+  if (G.combo > 2) G.effects.push({ x: geometry().cx, y: geometry().judgeY - geometry().H * 0.2, text: 'COMBO BREAK', color: '#ff6b8a', life: .5, small: true, t0: performance.now() });
+  G.combo = 0;
 }
 
 function applyJudge(kind, note, lane) {
@@ -2152,8 +2172,7 @@ function applyJudge(kind, note, lane) {
     G.maxCombo = Math.max(G.maxCombo, G.combo);
     G.comboPop = 1;
   } else {
-    if (G.combo > 2) G.effects.push({ x: geometry().cx, y: geometry().judgeY - geometry().H * 0.2, text: 'COMBO BREAK', color: '#ff6b8a', life: .5, small: true, t0: performance.now() });
-    G.combo = 0;
+    breakCombo();
     takeDamage(kind === 'miss' ? 80 : kind === 'bad' ? 50 : 20);
   }
   addEffect(lane, JUDGE_LABEL[kind], JUDGE_COLOR[kind]);
@@ -2188,7 +2207,7 @@ function judgePress(cell) {
   else return;
   if (kind === 'bad') {
     best.judged = true; best.holdState = 3; G.judged++;
-    G.counts.bad++; G.combo = 0;
+    G.counts.bad++; breakCombo();
     takeDamage(50);
     addEffect(lane, 'BAD', JUDGE_COLOR.bad, best.t - now > 0 ? 'FAST' : 'SLOW');
     playHitSound();
@@ -2197,9 +2216,8 @@ function judgePress(cell) {
   best.judged = true; best.holdState = 1; G.judged++;
   G.counts[kind]++;
   if (kind === 'good') {
-    // GOOD 也断连（combo 只累计 GREAT / PERFECT）
-    if (G.combo > 2) G.effects.push({ x: geometry().cx, y: geometry().judgeY - geometry().H * 0.2, text: 'COMBO BREAK', color: '#ff6b8a', life: .5, small: true, t0: performance.now() });
-    G.combo = 0;
+    // GOOD 也断连（combo 只累计 GREAT / PERFECT）；判卡发动中除外
+    breakCombo();
     takeDamage(20);
   } else {
     G.combo++; G.maxCombo = Math.max(G.maxCombo, G.combo); G.comboPop = 1;
@@ -2222,8 +2240,7 @@ function applyTail(kind, n, fs) {
     G.combo++; G.maxCombo = Math.max(G.maxCombo, G.combo); G.comboPop = 1;
   } else {
     G.counts[kind]++;
-    if (G.combo > 2) G.effects.push({ x: geometry().cx, y: geometry().judgeY - geometry().H * 0.2, text: 'COMBO BREAK', color: '#ff6b8a', life: .5, small: true, t0: performance.now() });
-    G.combo = 0;
+    breakCombo();
     takeDamage(kind === 'miss' ? 80 : kind === 'bad' ? 50 : 20);
   }
   addEffect(n.lane, JUDGE_LABEL[kind], JUDGE_COLOR[kind], kind !== 'perfect' ? fs : null);
@@ -2401,7 +2418,7 @@ function loop(ts) {
       if (G.now - n.t > w.bad) {
         n.judged = true; G.judged++;
         G.counts.miss++;
-        G.combo = 0;
+        breakCombo();
         G.hp = Math.max(0, G.hp - 80); G.damage += 80;
         addEffect(n.lane, 'MISS', JUDGE_COLOR.miss);
         if (n.type === 'hold') { n.holdState = 4; G.holding.delete(n.lane); }
@@ -3425,8 +3442,9 @@ function renderSounds() {
 }
 /* ---------- 配队 ---------- */
 const TEAM_CARDS = [
-  { id:'judge', name:'判定辅助', type:'judge', icon:'✦', desc:'发动后 5 秒内打中的音符全部算 PERFECT' },
-  { id:'heal',  name:'体力守护', type:'heal',  icon:'✚', desc:'发动后 5 秒内不扣血' }
+  { id:'judge', name:'判定辅助', type:'judge', icon:'✦', desc:'发动后 5 秒内打中的音符全部算 PERFECT，连击不会断' },
+  { id:'heal',  name:'体力守护', type:'heal',  icon:'✚', desc:'发动后 5 秒内不扣血' },
+  { id:'heal2', name:'体力守护 2', type:'heal2', icon:'✚', desc:'发动瞬间恢复 200 HP，没有持续时间' }
 ];
 /* 卡池精简迁移：旧 id（彩虹/金两种判卡奶卡及各无效果卡）映射到 judge / heal，其余丢弃。
    注意必须保留已是新 id 的值——迁移可能被执行多次，不幂等会把队伍清空 */
@@ -3434,7 +3452,7 @@ const TEAM_CARDS = [
   if (!Array.isArray(t.cards)) return;
   t.cards = t.cards.map(id => id === 'judge_r' || id === 'judge_g' ? 'judge'
     : id === 'heal_r' || id === 'heal_g' ? 'heal'
-    : (id === 'judge' || id === 'heal') ? id : null).filter(Boolean);
+    : (id === 'judge' || id === 'heal' || id === 'heal2') ? id : null).filter(Boolean);
 });
 const CARD_MAP = Object.fromEntries(TEAM_CARDS.map(c => [c.id, c]));
 /* 队伍技能：取队伍里第一张有效果的卡（判卡优先于奶卡） */
@@ -3442,7 +3460,10 @@ function teamSkill(t) {
   const cards = ((t && t.cards) || []).map(id => CARD_MAP[id]).filter(Boolean);
   const judge = cards.find(x => x.type === 'judge');
   const heal = cards.find(x => x.type === 'heal');
-  return judge ? { type: 'judge', card: judge } : (heal ? { type: 'heal', card: heal } : null);
+  const heal2 = cards.find(x => x.type === 'heal2');
+  return judge ? { type: 'judge', card: judge }
+    : heal ? { type: 'heal', card: heal }
+    : heal2 ? { type: 'heal2', card: heal2 } : null;
 }
 function curTeam() {
   const teams = settings.teams || [];
@@ -3466,7 +3487,7 @@ function renderTeams() {
       return `<div class="tmini ${c ? c.type : ''}">${c ? c.icon : '·'}</div>`;
     }).join('');
     row.innerHTML = `<div class="tname">${escapeHTML(t.name || '未命名配队')}${sk
-      ? `<small>技能：${escapeHTML(sk.card.name)}（${sk.type === 'judge' ? '5秒全 PERFECT' : '5秒不扣血'}）</small>`
+      ? `<small>技能：${escapeHTML(sk.card.name)}（${sk.type === 'judge' ? '5秒全 PERFECT · 连击不断' : sk.type === 'heal' ? '5秒不扣血' : '瞬间回复 200 HP'}）</small>`
       : '<small>无技能卡 · 点击标题切换使用的配队</small>'}</div>
       <div class="tminis">${minis}</div>`;
     row.addEventListener('click', () => {
@@ -3512,7 +3533,7 @@ function renderCardGrid() {
     const n = editCounts[c.id] || 0;
     const cell = document.createElement('div');
     cell.className = 'card-cell' + (n > 0 ? ' on' : '');
-    cell.innerHTML = `${c.type === 'judge' ? '<div class="tj judge">判</div>' : c.type === 'heal' ? '<div class="tj heal">奶</div>' : ''}
+    cell.innerHTML = `${c.type === 'judge' ? '<div class="tj judge">判</div>' : (c.type === 'heal' || c.type === 'heal2') ? '<div class="tj heal">奶</div>' : ''}
       ${c.name}<small>${c.desc || ''}</small>
       <div class="stepper">
         <span class="st-btn minus${n <= 0 ? ' dis' : ''}" data-act="-">−</span>
@@ -3932,6 +3953,8 @@ $('#songs-filter').addEventListener('click', () => {
 $('#f-clear').addEventListener('click', () => {
   settings.songFilter = { dur: 'all', fc: 'all', ap: 'all', fav: 'all' };
   saveSettings();
+  ['#f-dur', '#f-fc', '#f-ap', '#f-fav'].forEach(sel =>
+    $$(sel + ' .pill').forEach(p => p.classList.toggle('on', p.dataset.v === 'all')));
   $('#modal-filter').classList.remove('show');
   applySongFilter();
 });
