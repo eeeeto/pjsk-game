@@ -1824,6 +1824,13 @@ function buildChart(rh, difficulty, seed) {
    ============================================================ */
 const cv = $('#cv');
 const ctx2d = cv.getContext('2d', { alpha: true, desynchronized: true });
+/* 画布上下文丢失（低端机内存吃紧时系统会杀掉 canvas backing store，
+   表现为轨道/音符/血条全部消失、只剩 DOM 的暂停键）：允许恢复并重建尺寸 */
+cv.addEventListener('contextlost', e => {
+  e.preventDefault();                     // 阻止永久丢失，允许浏览器自动恢复
+  reportFrameErr('ctx', new Error('画布上下文被系统暂时回收，正在恢复…若长时间黑屏请刷新'));
+});
+cv.addEventListener('contextrestored', () => { resizeCanvas(); });
 /* 低帧率自动降级：shadowBlur（发光）是移动端最贵的绘制项。
    在 ctx 上包一层，G.lowFx 一开阴影自动归零，所有绘制代码不用改。 */
 try {
@@ -1849,12 +1856,20 @@ const G = {
 let VW = 0, VH = 0, DPR = 1;
 
 function resizeCanvas() {
-  DPR = Math.min(window.devicePixelRatio || 1, 1.5);
+  DPR = targetDpr(cv.clientWidth || window.innerWidth, cv.clientHeight || window.innerHeight);
   VW = cv.clientWidth || window.innerWidth;
   VH = cv.clientHeight || window.innerHeight;
   cv.width = Math.round(VW * DPR);
   cv.height = Math.round(VH * DPR);
   ctx2d.setTransform(DPR, 0, 0, DPR, 0, 0);
+}
+/* 画布像素总量上限：像素太多时低端手机（尤其 iOS Safari）内存吃紧，
+   系统可能杀掉 2D 上下文 → 整屏只剩暂停键。超限就降 DPR 保平安 */
+function targetDpr(w, h) {
+  let dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+  const MAXPX = 3.2e6;
+  if (w * h * dpr * dpr > MAXPX) dpr = Math.max(1, Math.sqrt(MAXPX / (w * h)));
+  return dpr;
 }
 window.addEventListener('resize', () => { if (screen === 'game') resizeCanvas(); });
 
@@ -2433,11 +2448,36 @@ function loop(ts) {
       finishGame();
     }
   }
-  draw();
+  } catch (e) {
+    // 判定/技能等逻辑出错只记录，绝不让它拖垮绘制——
+    // 以前 draw 和逻辑共用一个 try，逻辑每帧抛异常时画面整帧空白（只剩暂停键）
+    reportFrameErr('logic', e);
+  }
+  try {
+    draw();
   } catch (e) {
     // 渲染出错只记录一次，避免每帧刷屏；下一帧仍会继续尝试
-    if (!G._drawErr) { G._drawErr = 1; console.error('draw error', e); }
+    reportFrameErr('draw', e);
   }
+}
+
+/* 帧内异常上报：控制台记录一次 + 屏幕角落显示错误文本（玩家可截图反馈） */
+function reportFrameErr(kind, e) {
+  const key = '_' + kind + 'ErrShown';
+  if (G[key]) return;
+  G[key] = 1;
+  console.error(kind + ' error', e);
+  try {
+    let el = document.getElementById('frame-err');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'frame-err';
+      el.style.cssText = 'position:fixed;left:8px;bottom:8px;max-width:82vw;z-index:9999;background:rgba(88,12,24,.88);color:#ffd7dd;font:12px/1.5 monospace;padding:8px 10px;border-radius:8px;pointer-events:none;white-space:pre-wrap;';
+      document.body.appendChild(el);
+    }
+    el.textContent = '⚠ 游戏异常（请截图反馈）：' + ((e && e.message) || e);
+    setTimeout(() => { el.remove(); }, 12000);
+  } catch (err) {}
 }
 
 function roundRect(c, x, y, w, h, r) {
@@ -2457,7 +2497,7 @@ let _bgCache = { key: '', grad: null };
 function ensureCanvasSize() {
   const w = cv.clientWidth, h = cv.clientHeight;
   if (!w || !h) return;                       // 布局还没就绪，下一帧再试
-  const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+  const dpr = targetDpr(w, h);
   if (w !== VW || h !== VH || dpr !== DPR) resizeCanvas();
 }
 
