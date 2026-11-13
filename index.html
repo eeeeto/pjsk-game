@@ -839,18 +839,19 @@ UNIT_MAP.egirls = UNIT_MAP.otherworld;
    本地双击打开时保持相对路径，离线可用。
    维护三个镜像（主源 + gcore + fastly）：大文件抓取失败/超时自动换下一个源 */
 const CDN_MIRRORS = location.hostname.endsWith('.github.io')
-  ? ['https://cdn.jsdelivr.net/gh/eeeeto/pjsk-game@main/',
-     'https://gcore.jsdelivr.net/gh/eeeeto/pjsk-game@main/',
+  ? ['https://gcore.jsdelivr.net/gh/eeeeto/pjsk-game@main/',
+     'https://cdn.jsdelivr.net/gh/eeeeto/pjsk-game@main/',
      'https://fastly.jsdelivr.net/gh/eeeeto/pjsk-game@main/']
   : [];
 const CDN_BASE = CDN_MIRRORS[0] || '';
 const res = p => CDN_BASE ? CDN_BASE + p : p;
-/* 把资源 URL 展开成所有镜像候选 */
+/* 把资源 URL 展开成所有镜像候选；最后追加站内同源路径兜底——
+   页面本身能打开说明 github.io 通，镜像挂了/被劫持时至少还能从主源加载 */
 const mirrorUrls = u => {
   if (!CDN_MIRRORS.length || typeof u !== 'string') return [u];
   if (!u.startsWith(CDN_BASE)) return [u];
   const p = u.slice(CDN_BASE.length);
-  return CDN_MIRRORS.map(m => m + p);
+  return CDN_MIRRORS.map(m => m + p).concat([p]);
 };
 /* 带超时与镜像回退的资源抓取（音频等大文件），返回 ArrayBuffer */
 async function fetchRes(url, timeoutMs = 12000) {
@@ -883,15 +884,19 @@ function preloadImg(url) {
     im.src = encodeURI(urls[0]);
   });
 }
-/* 页面上的 <img> 加载失败时自动切换镜像 */
+/* 页面上的 <img> 加载失败时自动切换镜像，全部失败后回退站内同源路径 */
 if (CDN_MIRRORS.length) {
   document.addEventListener('error', e => {
     const el = e.target;
-    if (el && el.tagName === 'IMG' && typeof el.src === 'string' && el.src.startsWith(CDN_BASE)) {
+    if (el && el.tagName === 'IMG' && typeof el.src === 'string' && el.src.startsWith(CDN_BASE) && !el.dataset.originTried) {
+      const path = el.src.slice(CDN_BASE.length);
       const idx = parseInt(el.dataset.mirrorIdx || '0') + 1;
       if (idx < CDN_MIRRORS.length) {
         el.dataset.mirrorIdx = idx;
-        el.src = CDN_MIRRORS[idx] + el.src.slice(CDN_BASE.length);
+        el.src = CDN_MIRRORS[idx] + path;
+      } else {
+        el.dataset.originTried = '1';    // 只兜底一次，避免死循环
+        el.src = encodeURI(path);
       }
     }
   }, true);
@@ -1286,14 +1291,24 @@ function playPreview(song) {
   a.addEventListener('playing', () => { if (previewAudioFallback === a) setPreviewLoading(false); });
   a.addEventListener('error', () => {
     if (previewAudioFallback !== a) return;
-    // 当前镜像加载失败 → 自动切换下一个镜像源
+    // 当前镜像加载失败 → 自动切换下一个镜像源，全部失败回站内主源
     const idx = parseInt(a.dataset.mirrorIdx || '0') + 1;
-    if (idx < CDN_MIRRORS.length && a.dataset.file && a.dataset.file.startsWith(CDN_BASE)) {
-      a.dataset.mirrorIdx = idx;
-      a.src = encodeURI(CDN_MIRRORS[idx] + a.dataset.file.slice(CDN_BASE.length));
-      const pr = a.play();
-      if (pr && pr.catch) pr.catch(() => {});
-      return;
+    if (a.dataset.file && a.dataset.file.startsWith(CDN_BASE)) {
+      const path = a.dataset.file.slice(CDN_BASE.length);
+      if (idx < CDN_MIRRORS.length) {
+        a.dataset.mirrorIdx = idx;
+        a.src = encodeURI(CDN_MIRRORS[idx] + path);
+        const pr = a.play();
+        if (pr && pr.catch) pr.catch(() => {});
+        return;
+      }
+      if (!a.dataset.originTried) {
+        a.dataset.originTried = '1';
+        a.src = encodeURI(path);
+        const pr = a.play();
+        if (pr && pr.catch) pr.catch(() => {});
+        return;
+      }
     }
     setPreviewLoading(false);
   });
@@ -1401,12 +1416,22 @@ function playResultMusic(song, at) {
   stopResultMusic(0);
   if (!song || !song.file) return;
   let a;
-  try { a = new Audio(encodeURI(song.file)); } catch (e) { return; }
+  try { a = new Audio(); } catch (e) { return; }
   a.preload = 'auto';
   a.volume = 0.0001;
   a.dataset.file = song.file;
   resAudio = a;
   syncMusicBtn();
+  // 镜像链兜底：CDN 挂了/被劫持时依次换源，最后回站内主源
+  const urls = mirrorUrls(song.file);
+  let ui = 0;
+  a.addEventListener('error', () => {
+    if (resAudio !== a || ui >= urls.length - 1) return;
+    ui++;
+    a.src = encodeURI(urls[ui]);
+    const q = a.play(); if (q && q.catch) q.catch(() => {});
+  });
+  a.src = encodeURI(urls[ui]);
   const target = Math.max(0, Number(at) || 0);
   let seekTries = 0;
   const seek = () => {
@@ -2004,7 +2029,9 @@ function loadSkinImage() {
     const img = new Image();
     img.onload = () => { G.skinImg = img; finish(); };
     img.onerror = () => { G.skinImg = null; finish(); };
-    img.src = settings.skin === 'custom' ? settings.customSkin : res(`assets/keys/${settings.skin}.png`);
+    const src = settings.skin === 'custom' ? settings.customSkin : res(`assets/keys/${settings.skin}.png`);
+    if (settings.skin === 'custom') img.src = src;
+    else preloadImg(src).then(u => { img.src = encodeURI(u); });   // 按键图案也要走镜像链+主源兜底
     // 图片卡住（弱网）也不该让整局停在黑屏：4 秒后先开打，图案晚点生效
     setTimeout(() => { if (!settled) { G.skinImg = null; finish(); } }, 4000);
   });
@@ -3181,7 +3208,8 @@ function previewSkinImg() {
   if (!im) {
     im = new Image();
     im.onload = () => renderKeySize();
-    im.src = src;
+    if (settings.skin === 'custom') im.src = src;
+    else preloadImg(src).then(u => { im.src = encodeURI(u); });
     _prevImgs[src] = im;
   }
   return im.complete && im.naturalWidth ? im : null;
