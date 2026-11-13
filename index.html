@@ -3385,12 +3385,15 @@ function importSkinImage(file) {
   img.onerror = () => { alert('图片读取失败'); URL.revokeObjectURL(url); };
   img.src = url;
 }
-/* 音效试听：选中后每 2 秒循环播放一次，离开面板即停止（<audio> 流式播放） */
+/* 音效试听：选中后每 2 秒循环播放一次，离开面板即停止。
+   走 WebAudio + fetchRes（镜像链+主源兜底）解码缓存——之前用裸 <audio>
+   直链，CDN 镜像抽风时加载失败且 play() 报错被吞，表现为「有时没声音」 */
 let sfxPrevTimer = null;
 let sfxPrevToken = 0;
 let sfxLiveGain = null;
 let sfxCurrentSrc = null;
 let sfxPrevAudio = null;   // 仅在解码失败时兜底
+const sfxBufCache = {};    // id -> AudioBuffer（存 Promise 去重，失败时清除）
 
 function sfxVolume() {
   const v = Number.isFinite(settings.sfxVolume) ? settings.sfxVolume : 0.5;
@@ -3407,18 +3410,46 @@ function stopSfxPreview() {
   }
 }
 
+async function sfxBuffer(id) {
+  if (!sfxBufCache[id]) {
+    const file = id === 'default' ? res('assets/sfx/default.mp3') : res(`assets/sfx/${id}.mp3`);
+    sfxBufCache[id] = fetchRes(file).then(b => audioCtx().decodeAudioData(b))
+      .catch(e => { delete sfxBufCache[id]; throw e; });
+  }
+  return sfxBufCache[id];
+}
+
 function startSfxPreview(id) {
   stopSfxPreview();
+  primeAudio();                 // 在点击手势的同步栈里唤醒音频，晚了 iOS 会拒绝出声
   const token = ++sfxPrevToken;
-  const file = id === 'default' ? res('assets/sfx/default.mp3') : res(`assets/sfx/${id}.mp3`);
-  if (!sfxPrevAudio) sfxPrevAudio = new Audio();
-  sfxPrevAudio.src = file;
-  sfxPrevAudio.volume = sfxVolume();
+  const playBuffer = buf => {
+    if (token !== sfxPrevToken) return;
+    if (sfxCurrentSrc) { try { sfxCurrentSrc.stop(); } catch (e) {} sfxCurrentSrc = null; }   // 上一个还没放完就先停，防止重叠
+    const ac = audioCtx();
+    if (ac.state !== 'running') resumeAudio(ac);
+    const src = ac.createBufferSource();
+    src.buffer = buf;
+    const gain = ac.createGain();
+    gain.gain.value = sfxVolume();
+    src.onended = () => { if (sfxCurrentSrc === src) sfxCurrentSrc = null; };
+    src.connect(gain).connect(ac.destination);
+    sfxCurrentSrc = src;
+    sfxLiveGain = gain;
+    src.start();
+  };
   const tick2 = () => {
     if (token !== sfxPrevToken) return;
-    try { sfxPrevAudio.currentTime = 0; } catch (err) {}
-    const p = sfxPrevAudio.play();
-    if (p && p.catch) p.catch(() => {});
+    sfxBuffer(id).then(playBuffer).catch(() => {
+      // 解码失败才退回 <audio> 流式播放
+      if (token !== sfxPrevToken) return;
+      if (!sfxPrevAudio) sfxPrevAudio = new Audio();
+      sfxPrevAudio.src = id === 'default' ? res('assets/sfx/default.mp3') : res(`assets/sfx/${id}.mp3`);
+      sfxPrevAudio.volume = sfxVolume();
+      try { sfxPrevAudio.currentTime = 0; } catch (err) {}
+      const p = sfxPrevAudio.play();
+      if (p && p.catch) p.catch(() => {});
+    });
   };
   tick2();
   sfxPrevTimer = setInterval(tick2, 2000);
