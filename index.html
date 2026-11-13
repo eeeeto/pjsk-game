@@ -359,7 +359,8 @@
   #prog-fill{height:100%;width:0%;
     background:linear-gradient(90deg,#ff5e5e,#ffb84d,#ffe94d,#6dff8a,#5ea8ff,#b06dff,#ff5ec4);
     box-shadow:0 0 8px rgba(255,120,180,.5);}
-  #cv{position:absolute;inset:0;width:100%;height:100%;display:block;}
+  #cv{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;
+    -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;}
   #pause-btn{position:absolute;top:max(10px,env(safe-area-inset-top));right:max(12px,env(safe-area-inset-right));
     width:40px;height:40px;border-radius:50%;border:1px solid rgba(150,210,255,.3);background:rgba(8,14,26,.55);
     color:#cfe4ff;font-size:14px;display:flex;align-items:center;justify-content:center;z-index:20;backdrop-filter:blur(6px);cursor:pointer;}
@@ -535,6 +536,11 @@
           <div class="lbl"><span>判定松紧度</span><b id="judge-len-val">100%</b></div>
           <input type="range" id="judge-len-range" min="50" max="150" step="5" value="100">
           <div class="sub">数值越大判定窗口越宽松，100% 为默认</div>
+        </div>
+        <div class="field">
+          <div class="lbl"><span>判定偏移</span><b id="judge-off-val">0 ms</b></div>
+          <input type="range" id="judge-off-range" min="-150" max="150" step="5" value="0">
+          <div class="sub">按得准却判 MISS 时往右调：正值表示「你的点击比听到的节拍晚」，判定会相应补偿（手机扬声器/蓝牙耳机延迟常见）</div>
         </div>
         <div class="field">
           <div class="lbl"><span>长条透明度</span><b id="hold-alpha-val">50%</b></div>
@@ -736,7 +742,7 @@
     </div>
     <div class="field">
       <div class="lbl"><span>流速（按键速度）</span><b id="speed-val">7.0</b></div>
-      <input type="range" id="speed-range" min="5" max="24" step="0.1" value="7">
+      <input type="range" id="speed-range" min="5" max="40" step="0.1" value="7">
     </div>
     <div class="field">
       <div class="lbl"><span>配队（队伍技能）</span></div>
@@ -958,7 +964,7 @@ const CARDS = [
 /* ---------- 设置存储 ---------- */
 const DEF_SET = { skin:'lumirect', bgMode:'album', bgCover:res('assets/covers/leoneed1.jpg'),
   bgCard:res('assets/cards/c11.jpg'), bgCardShade:0.45, customSkin:null, sfxVolume:0.5, speed:7.0, diff:'normal',
-  keyScale:1.0, judgeLeniency:1.0, holdAlpha:0.5, judgeLift:0, myCards:[], lastSong:0, sound:'tap',
+  keyScale:1.0, judgeLeniency:1.0, holdAlpha:0.5, judgeLift:0, judgeOffset:0, myCards:[], lastSong:0, sound:'tap',
   marks:{}, favs:{}, collapsedUnits:{}, teams:[], activeTeam:-1, songFilter:{ dur:'all', fc:'all', ap:'all', fav:'all' } };
 let settings = Object.assign({}, DEF_SET);
 try {
@@ -973,6 +979,7 @@ settings.keyScale = clamp(Number(settings.keyScale) || 1, 0.5, 1.5);
 settings.judgeLeniency = clamp(Number(settings.judgeLeniency) || 1, 0.5, 1.5);
 settings.holdAlpha = clamp(Number(settings.holdAlpha) || 0.5, 0.3, 0.9);
 settings.judgeLift = clamp(Number(settings.judgeLift) || 0, 0, 10);
+settings.judgeOffset = clamp(Number(settings.judgeOffset) || 0, -150, 150);
 if (!Array.isArray(settings.myCards)) settings.myCards = [];
 // 按键音效：新默认为 Tap 音效（2026-11 更新）。曾用「默认音效」的一次性迁过去，选过其他的保持不变
 if (!settings._sfxV2) {
@@ -2369,7 +2376,25 @@ function advanceClock(dt) {
     const at = G.now;
     try { restartAudioAt(at); } catch (e) {}
   }
-  return ct - G.startAt;
+  // 扣掉设备音频输出延迟：ac.currentTime 是「音频排程时间」，真正听到还要再晚
+  // outputLatency（手机扬声器 80~150ms、蓝牙耳机 150~300ms）。不补偿的话，玩家
+  // 跟着听到的节拍点会被判成按晚 → 莫名其妙 MISS/BAD
+  return ct - G.startAt - audioLatency() - judgeOffsetSec();
+}
+
+/* 设备音频输出延迟（秒），拿不到就给 0；上限 0.4s 防异常值 */
+function audioLatency() {
+  const ac = AC;
+  let l = 0;
+  if (ac) {
+    if (Number.isFinite(ac.outputLatency) && ac.outputLatency > 0) l = ac.outputLatency;
+    else if (Number.isFinite(ac.baseLatency) && ac.baseLatency > 0) l = ac.baseLatency;
+  }
+  return clamp(l, 0, 0.4);
+}
+/* 玩家手动判定偏移（设置里 ±150ms）：正值 = 承认自己点得比听到的节拍晚，判定提前 */
+function judgeOffsetSec() {
+  return clamp(Number(settings.judgeOffset) || 0, -150, 150) / 1000;
 }
 
 /* 从谱面时间 offset 处重新起播音轨（音频被系统打断后恢复用） */
@@ -3297,6 +3322,8 @@ function renderKeySize() {
   if (hr) { const v = Math.round(clamp(Number(settings.holdAlpha) || 0.5, 0.3, 0.9) * 100); hr.value = v; if (hv) hv.textContent = v + '%'; }
   const lr = $('#judge-lift-range'), lv = $('#judge-lift-val');
   if (lr) { const v = clamp(Number(settings.judgeLift) || 0, 0, 10); lr.value = v; if (lv) lv.textContent = v + '%'; }
+  const or2 = $('#judge-off-range'), ov = $('#judge-off-val');
+  if (or2) { const v = clamp(Number(settings.judgeOffset) || 0, -150, 150); or2.value = v; if (ov) ov.textContent = v + ' ms'; }
   startPlayPreview();
 }
 
@@ -4002,7 +4029,14 @@ $('#btn-start').addEventListener('click', () => {
   applyBackground();
   buildSongList();
 });
-$('#btn-settings').addEventListener('click', () => { show('settings'); applyBackground(); requestAnimationFrame(renderKeySize); });
+$('#btn-settings').addEventListener('click', () => {
+  // 流速/判定偏移滑杆的回填：之前只在「确认演奏」弹窗里同步，直接从主页进设置会显示默认值
+  $('#speed-range').value = settings.speed;
+  $('#speed-val').textContent = Number(settings.speed).toFixed(1);
+  const offR = $('#judge-off-range');
+  if (offR) { offR.value = clamp(Number(settings.judgeOffset) || 0, -150, 150); $('#judge-off-val').textContent = offR.value + ' ms'; }
+  show('settings'); applyBackground(); requestAnimationFrame(renderKeySize);
+});
 $('#btn-dev').addEventListener('click', () => { show('dev'); applyBackground(); });
 $('#dev-back').addEventListener('click', () => { goTitle(); });
 $('#songs-back').addEventListener('click', () => { stopPreview(); releasePreviewBuffer(); goTitle(); });
@@ -4216,6 +4250,11 @@ $('#hold-alpha-range').addEventListener('input', e => {
 $('#judge-lift-range').addEventListener('input', e => {
   settings.judgeLift = clamp(Number(e.target.value), 0, 10);
   $('#judge-lift-val').textContent = e.target.value + '%';
+  saveSettings();
+});
+$('#judge-off-range').addEventListener('input', e => {
+  settings.judgeOffset = clamp(Number(e.target.value), -150, 150);
+  $('#judge-off-val').textContent = settings.judgeOffset + ' ms';
   saveSettings();
 });
 $$('.tab').forEach(t => t.addEventListener('click', () => {
