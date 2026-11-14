@@ -641,6 +641,17 @@
   .prof-big .big-toggle:active{transform:scale(.94);}
   .prof-big.mk-blank{background:#ffffff;}
   .prof-big.mk-blank img{opacity:0;}
+  /* 主页大图：四张名片 2×2 拼贴 */
+  .prof-big.quad{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:6px;background:#ffffff;align-items:stretch;justify-content:stretch;}
+  .prof-big.quad .qcell{position:relative;overflow:hidden;background:#ffffff;min-width:0;min-height:0;}
+  .prof-big.quad .qcell img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top center;}
+  #pfc-settings{margin-left:auto;}
+  #pfset-grid .cov .ord{position:absolute;top:4px;left:4px;z-index:3;min-width:18px;height:18px;border-radius:9px;
+    display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;color:#08131f;
+    background:#25e2ff;box-shadow:0 2px 8px rgba(0,0,0,.45);display:none;}
+  #pfset-grid .cov.sel{outline:3px solid #25e2ff;outline-offset:-1px;}
+  #pfset-grid .cov.sel .ord{display:flex;}
+  #pfset-grid .cov.sel::after{background:linear-gradient(180deg,rgba(37,226,255,.10) 60%,rgba(0,0,0,.6));}
   @media (max-width:620px){
     .pfe-menu .pfe-mi{width:50px;font-size:10px;padding:7px 0;}
     .pfe-side{width:118px;}
@@ -970,11 +981,12 @@
     <div class="page-head prof-head">
       <button class="round-btn" id="pfc-back" title="返回">←</button>
       <div class="id-pill">名片库</div>
+      <button class="round-btn mk-entry" id="pfc-settings" title="个人主页设置">主页设置</button>
     </div>
     <div class="pfc-toolbar">
       <button class="btn ghost" id="pfc-manage">管理名片</button>
       <button class="btn" id="pfc-new">新建名片</button>
-      <span class="hint">带 ★ 的名片会显示在个人主页</span>
+      <span class="hint">右上角「主页设置」可选择主页显示 1 张 / 4 张名片</span>
     </div>
     <div class="pfc-grid" id="pfc-grid"></div>
     <div class="pfc-batchbar" id="pfc-batchbar" style="display:none">
@@ -1022,15 +1034,25 @@
   </section>
 </div>
 
-<!-- ================= 个人主页导出：选择竖版 / 横版 ================= -->
-<div class="modal" id="modal-pf-export">
-  <div class="dialog">
-    <div class="dlg-title">保存为图片<span>选择排版</span></div>
-    <div class="dlg-btns">
-      <button class="btn ghost" id="pf-exp-port">竖版</button>
-      <button class="btn" id="pf-exp-land">横版</button>
+<!-- ================= 个人主页设置：主页显示 1 张 / 4 张名片 ================= -->
+<div class="modal" id="modal-pfset">
+  <div class="dialog" style="width:min(94vw,640px)">
+    <div class="dlg-title">个人主页<span>显示设置</span></div>
+    <div class="mk-field">
+      <div class="sub-lbl">主页上显示几张</div>
+      <div class="pills" id="pfset-count">
+        <div class="pill on" data-v="1">一张（大图）</div>
+        <div class="pill" data-v="4">四张（2×2）</div>
+      </div>
     </div>
-    <button class="btn ghost" id="pf-exp-cancel" style="margin-top:10px">取消</button>
+    <div class="mk-field">
+      <div class="sub-lbl">选择名片 · <span id="pfset-selcount">已选 0/1</span></div>
+      <div class="mk-grid" id="pfset-grid"></div>
+    </div>
+    <div class="dlg-btns">
+      <button class="btn ghost" id="pfset-cancel" style="flex:1">关 闭</button>
+      <button class="btn" id="pfset-ok" style="flex:1">保 存</button>
+    </div>
   </div>
 </div>
 
@@ -5092,18 +5114,35 @@ function renderProfile() {
   // 左下大图（卡面 / 名片两种显示模式，右下角按钮切换）
   const big = $('#profile-big');
   const bigMode = p.bigMode === 'mk' ? 'mk' : 'card';
+  const picN = p.picCount === 4 ? 4 : 1;
   big.classList.remove('mk-blank');
+  big.classList.toggle('quad', bigMode === 'mk' && picN === 4);
   if (bigMode === 'mk') {
-    const mcard = profilePfCard();
-    if (mcard) {
-      big.innerHTML = '<img alt="" style="display:none">';
-      renderPfCardUrl(mcard).then(url => {
-        const im = big.querySelector('img');
-        if (im && bigMode === (p.bigMode === 'mk' ? 'mk' : 'card')) { im.src = url; im.style.display = ''; }
-      }).catch(() => {});
-    } else {
+    const mcards = profilePicCards();
+    if (!mcards.length) {
       big.innerHTML = '';                       // 还没有名片：显示一片白色
       big.classList.add('mk-blank');
+    } else if (picN === 4) {
+      big.innerHTML = '';
+      for (let i = 0; i < 4; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'qcell';
+        cell.innerHTML = '<img alt="" style="display:none">';
+        big.appendChild(cell);
+      }
+      mcards.forEach((card, i) => {
+        const im = big.children[i] && big.children[i].querySelector('img');
+        if (!im) return;
+        renderPfCardUrl(card).then(url => {
+          if (im.isConnected && p.bigMode === 'mk' && settings.profile.picCount === 4) { im.src = url; im.style.display = ''; }
+        }).catch(() => {});
+      });
+    } else {
+      big.innerHTML = '<img alt="" style="display:none">';
+      const im = big.querySelector('img');
+      renderPfCardUrl(mcards[0]).then(url => {
+        if (im && im.isConnected && p.bigMode === 'mk' && settings.profile.picCount !== 4) { im.src = url; im.style.display = ''; }
+      }).catch(() => {});
     }
   } else if (p.big) {
     const url = p.big.key ? (cardBlobs[p.big.key] || '') : (p.big.type === 'char' ? res(`assets/keys/${p.big.v}.png`) : '');
@@ -5509,10 +5548,9 @@ function drawFitLines(c, linesIn, xRight, y, avail, weight, size, minSize) {
   return (out.length - 1) * lh;
 }
 
-async function renderProfileImage(orient = 'portrait') {
-  // 竖版 1080×1440 / 横版 1600×1080，构图均为：左栏 修改id+大图，右栏 三格+信息列表
-  const W = orient === 'landscape' ? 1600 : 1080;
-  const H = orient === 'landscape' ? 1080 : 1440;
+async function renderProfileImage() {
+  // 横版 1600×1080：左栏 修改id + 名片图（1 张或 2×2 四张），右栏 三格 + 信息列表
+  const W = 1600, H = 1080;
   const cv = document.createElement('canvas');
   cv.width = W; cv.height = H;
   const c = cv.getContext('2d');
@@ -5537,14 +5575,14 @@ async function renderProfileImage(orient = 'portrait') {
   c.fillStyle = '#cfe4ff'; c.fillText(idText, W / 2, 68);
   c.textAlign = 'left'; c.textBaseline = 'alphabetic';
   // 大卡片（深蓝面板 + 青描边，不拉满高度，垂直居中偏上）
-  const cardH = orient === 'landscape' ? H - 320 : H - 380;
+  const cardH = H - 320;
   const bx = 24, by = Math.round((H - cardH) / 2) + 34, bw = W - 48, bh = cardH;
   roundRectPath(c, bx, by, bw, bh, 22);
   c.fillStyle = 'rgba(12,18,34,.92)'; c.fill();
   c.strokeStyle = 'rgba(120,200,255,.18)'; c.lineWidth = 2; c.stroke();
   // 两栏
   const pad = 34;
-  const colW = Math.round((bw - pad * 3) * (orient === 'landscape' ? 0.52 : 0.5));
+  const colW = Math.round((bw - pad * 3) * 0.52);
   const lx = bx + pad, rx = lx + colW + pad;
   const colInner = colW;
   // 左栏：修改id pill
@@ -5567,19 +5605,38 @@ async function renderProfileImage(orient = 'portrait') {
   roundRectPath(c, lx, bigY, bigW, bigH, 6);
   c.fillStyle = '#0b0b0e'; c.fill();
   if (p.bigMode === 'mk') {
-    const mcard = profilePfCard();
+    const mcards = profilePicCards();
+    const n = p.picCount === 4 ? 4 : 1;
     c.save();
     roundRectPath(c, lx, bigY, bigW, bigH, 6); c.clip();
-    if (mcard) {
+    if (!mcards.length) {
+      c.fillStyle = '#ffffff'; c.fillRect(lx, bigY, bigW, bigH);   // 没有名片：一片白色
+    } else if (n === 1) {
       try {
-        const url = await renderPfCardUrl(mcard);
+        const url = await renderPfCardUrl(mcards[0]);
         const im = await loadImageAsync(url);
         const r = Math.max(bigW / im.naturalWidth, bigH / im.naturalHeight);
         const dw = im.naturalWidth * r, dh = im.naturalHeight * r;
         c.drawImage(im, lx + (bigW - dw) / 2, bigY + (bigH - dh) / 2, dw, dh);
       } catch (e) {}
     } else {
-      c.fillStyle = '#ffffff'; c.fillRect(lx, bigY, bigW, bigH);   // 没有名片：一片白色
+      // 四张：2×2 拼贴，空位保持白色
+      c.fillStyle = '#ffffff'; c.fillRect(lx, bigY, bigW, bigH);
+      const gap = 6;
+      const cw = (bigW - gap) / 2, chh = (bigH - gap) / 2;
+      for (let i = 0; i < Math.min(4, mcards.length); i++) {
+        const x = lx + (i % 2) * (cw + gap), y = bigY + Math.floor(i / 2) * (chh + gap);
+        try {
+          const url = await renderPfCardUrl(mcards[i]);
+          const im = await loadImageAsync(url);
+          const r = Math.max(cw / im.naturalWidth, chh / im.naturalHeight);
+          const dw = im.naturalWidth * r, dh = im.naturalHeight * r;
+          c.save();
+          c.beginPath(); c.rect(x, y, cw, chh); c.clip();
+          c.drawImage(im, x + (cw - dw) / 2, y + (chh - dh) / 2, dw, dh);
+          c.restore();
+        } catch (e) {}
+      }
     }
     c.restore();
   } else if (p.big) {
@@ -5601,7 +5658,7 @@ async function renderProfileImage(orient = 'portrait') {
     c.textAlign = 'left';
   }
   // 右栏：三个格子
-  const cellS = orient === 'landscape' ? 140 : 132;
+  const cellS = 140;
   const cellGap = 16;
   let cx = rx, cy = by + 30;
   for (let i = 0; i < 3; i++) {
@@ -5644,9 +5701,9 @@ async function renderProfileImage(orient = 'portrait') {
     ...(Array.isArray(p.cps) ? p.cps.filter(c => c && c.v).map(c => ['本命' + (c.label || '二人组'), c.v]) : [])
   ];
   const ix = rx, iwEnd = bx + bw - pad;
-  const rowFont = orient === 'landscape' ? 32 : 34;
+  const rowFont = 32;
   let iy = cy + cellS + 74;
-  const rowGap = orient === 'landscape' ? 72 : 78;
+  const rowGap = 72;
   c.font = `900 ${rowFont}px ${FF}`;
   for (const [k, v] of rows) {
     c.font = `900 ${rowFont}px ${FF}`;
@@ -5656,7 +5713,7 @@ async function renderProfileImage(orient = 'portrait') {
     c.fillStyle = '#8fd8ff';
     let vt = v || '';
     // 演出最多的歌曲：歌名太长 → 字号减半、分两行；仍放不下继续缩小字号、自动折行（不用省略号）
-    if (k === '演出最多的歌曲' && vWidth(vt) > (orient === 'landscape' ? 13.5 : 11)) {
+    if (k === '演出最多的歌曲' && vWidth(vt) > 13.5) {
       let [l1, l2] = splitVWidth(vt);
       let halfF = Math.round(rowFont * 0.5);
       const extra = drawFitLines(c, [l1, l2], iwEnd, iy, iwEnd - ix, 800, halfF, 12);
@@ -5881,23 +5938,21 @@ $('#btn-profile').addEventListener('click', () => {
 });
 $('#profile-back').addEventListener('click', goTitle);
 $('#profile-nick').addEventListener('click', openNickModal);   // 只有主页卡片上的「点击修改id」胶囊能改昵称
-$('#profile-share').addEventListener('click', () => { $('#modal-pf-export').classList.add('show'); });
-$$('#modal-pf-export .btn').forEach(b => b.addEventListener('click', async () => {
-  $('#modal-pf-export').classList.remove('show');
-  if (b.id === 'pf-exp-cancel') return;
-  if (b.dataset.busy) return;
-  b.dataset.busy = '1';
-  const orient = b.id === 'pf-exp-land' ? 'landscape' : 'portrait';
+/* 保存主页图片：只保留横版（竖版导出已移除） */
+$('#profile-share').addEventListener('click', async () => {
+  const btn = $('#profile-share');
+  if (btn.dataset.busy) return;
+  btn.dataset.busy = '1';
   showToast('正在生成主页图片…', 1200);
   try {
-    await shareCanvas(await renderProfileImage(orient), `pjsk-profile-${orient === 'landscape' ? 'land' : 'port'}.png`, 'PJSK FAN STAGE 个人主页');
+    await shareCanvas(await renderProfileImage(), 'pjsk-profile.png', 'PJSK FAN STAGE 个人主页');
   } catch (e) {
     console.warn('[profile share]', e);
     showToast('生成主页图片失败，请再试一次', 2600);
   } finally {
-    delete b.dataset.busy;
+    delete btn.dataset.busy;
   }
-}));
+});
 $('#profile-big').addEventListener('click', () => openProfDialog({ kind: 'big' }));
 $$('#screen-profile .prof-cell').forEach(el => {
   el.addEventListener('click', () => openProfDialog({ kind: 'cell', i: Number(el.dataset.i) }));
@@ -6029,6 +6084,8 @@ if (!Array.isArray(settings.profileCards)) settings.profileCards = [];
 if (!Array.isArray(settings.mkAssets)) settings.mkAssets = [];
 if (!Array.isArray(settings.mkStamps)) settings.mkStamps = [];
 if (typeof settings.profile.bigMode !== 'string') settings.profile.bigMode = 'card';
+if (settings.profile.picCount !== 4) settings.profile.picCount = 1;
+if (!Array.isArray(settings.profile.picIds)) settings.profile.picIds = [];
 
 let MK = null;                  // 编辑器当前状态 {id,name,layers,ink,sel,tool,dirty,ts}
 let mkSeq = 1;
@@ -6040,6 +6097,14 @@ function mkNewId() { return 'mk' + Date.now().toString(36) + Math.random().toStr
 function profilePfCard() {
   const id = settings.profile.pfcardId;
   return settings.profileCards.find(c => c.id === id) || settings.profileCards[0] || null;
+}
+/* 主页显示的名片：1 张或 4 张（按选择顺序；没选过时用 ★ 名片 / 收到的名片补位） */
+function profilePicCards() {
+  const p = settings.profile;
+  const n = p.picCount === 4 ? 4 : 1;
+  const picked = (p.picIds || []).map(id => settings.profileCards.find(c => c.id === id)).filter(Boolean).slice(0, n);
+  if (picked.length) return picked;              // 明确选过：选几张显示几张，其余留白
+  return [profilePfCard()].filter(Boolean).slice(0, n);
 }
 async function mkEnsureBlobs(keys) {
   for (const k of keys) {
@@ -6161,7 +6226,7 @@ function renderPfcards() {
     el.innerHTML = `<img alt="" style="display:none">` +
       `<div class="nm">${escapeHTML(card.name || '未命名名片')}</div>` +
       (pfcBatch ? `<div class="ck">✓</div>` :
-        `<div class="use${settings.profile.pfcardId === card.id ? ' on' : ''}" title="设为个人主页名片">★</div>`);
+        `<div class="use${settings.profile.pfcardId === card.id ? ' on' : ''}" title="设为默认名片（主页没单独选择时使用）">★</div>`);
     const im = el.querySelector('img');
     renderPfCardUrl(card).then(u => { if (el.isConnected) { im.src = u; im.style.display = ''; } }).catch(() => {});
     el.onclick = () => {
@@ -6192,6 +6257,8 @@ function mkDeleteCards(ids) {
   delKeys.forEach(async k => { try { await idbDel(k); } catch (e) {} if (cardBlobs[k]) { URL.revokeObjectURL(cardBlobs[k]); delete cardBlobs[k]; } });
   settings.profileCards = keep;
   if (ids.includes(settings.profile.pfcardId)) settings.profile.pfcardId = keep.length ? keep[0].id : '';
+  // 主页显示选择里同步去掉已删除的名片
+  settings.profile.picIds = (settings.profile.picIds || []).filter(id => keep.some(c => c.id === id));
   pfcSel.clear();
   saveSettings(); renderPfcards();
   if (screen === 'profile') renderProfile();
@@ -6923,6 +6990,62 @@ $('#pfc-del-sel').addEventListener('click', () => {
   mkConfirm('批量删除', `确定删除选中的 ${pfcSel.size} 张名片？删除后不可恢复。`, () => { mkDeleteCards([...pfcSel]); pfcSetBatch(false); });
 });
 $('#profile-mk').addEventListener('click', () => { pfcSetBatch(false); show('pfcards'); renderPfcards(); });
+
+/* ---------- 个人主页设置：主页显示 1 张 / 4 张名片 ---------- */
+let pfsetCount = 1, pfsetIds = [];
+function renderPfsetGrid() {
+  const grid = $('#pfset-grid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  $('#pfset-selcount').textContent = `已选 ${pfsetIds.length}/${pfsetCount}`;
+  if (!settings.profileCards.length) {
+    grid.innerHTML = '<div class="pfc-empty">还没有名片 · 先去「新建名片」做一张</div>';
+    return;
+  }
+  settings.profileCards.forEach(card => {
+    const idx = pfsetIds.indexOf(card.id);
+    const el = document.createElement('div');
+    el.className = 'cov' + (idx >= 0 ? ' sel' : '');
+    el.innerHTML = `<div class="ord">${idx >= 0 ? idx + 1 : ''}</div><span>${escapeHTML(card.name || '未命名名片')}</span>`;
+    renderPfCardUrl(card).then(u => { if (el.isConnected) el.style.backgroundImage = `url(${u})`; }).catch(() => {});
+    el.onclick = () => {
+      const i = pfsetIds.indexOf(card.id);
+      if (i >= 0) pfsetIds.splice(i, 1);
+      else if (pfsetIds.length >= pfsetCount) {
+        if (pfsetCount === 1) pfsetIds = [card.id];
+        else { showToast(`最多选 ${pfsetCount} 张，先取消一张`, 1500); return; }
+      } else pfsetIds.push(card.id);
+      renderPfsetGrid();
+    };
+    grid.appendChild(el);
+  });
+}
+function openPfset() {
+  pfsetCount = settings.profile.picCount === 4 ? 4 : 1;
+  pfsetIds = (settings.profile.picIds || [])
+    .filter(id => settings.profileCards.some(c => c.id === id)).slice(0, pfsetCount);
+  $$('#pfset-count .pill').forEach(p => p.classList.toggle('on', +p.dataset.v === pfsetCount));
+  renderPfsetGrid();
+  $('#modal-pfset').classList.add('show');
+}
+$$('#pfset-count .pill').forEach(p => p.addEventListener('click', () => {
+  pfsetCount = +p.dataset.v === 4 ? 4 : 1;
+  if (pfsetIds.length > pfsetCount) pfsetIds = pfsetIds.slice(0, pfsetCount);
+  $$('#pfset-count .pill').forEach(x => x.classList.toggle('on', x === p));
+  renderPfsetGrid();
+}));
+$('#pfset-cancel').addEventListener('click', () => $('#modal-pfset').classList.remove('show'));
+$('#pfset-ok').addEventListener('click', () => {
+  const p = settings.profile;
+  p.picCount = pfsetCount;
+  p.picIds = pfsetIds.slice(0, pfsetCount);
+  p.bigMode = 'mk';                              // 设置完直接切到名片显示
+  saveSettings();
+  $('#modal-pfset').classList.remove('show');
+  renderPfcards();
+  showToast(pfsetIds.length ? '个人主页显示已保存' : '已保存 · 没选名片时主页留白', 1900);
+});
+$('#pfc-settings').addEventListener('click', openPfset);
 
 /* 阻止双指缩放/长按菜单 */
 document.addEventListener('gesturestart', e => e.preventDefault());
