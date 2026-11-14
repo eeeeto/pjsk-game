@@ -638,7 +638,7 @@ window.SONGS = [
   "cover": "assets/covers/zijiang1.jpg"
  },
  {
-  "title": "SuperSensitive (Short·消音版)",
+  "title": "SuperSensitive (Short·滚木版)",
   "artist": "A-SOUL",
   "credit": "",
   "unit": "zijiang",
