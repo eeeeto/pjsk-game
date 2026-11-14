@@ -1172,6 +1172,28 @@ async function fetchRes(url, timeoutMs = 12000) {
   }
   throw lastErr;
 }
+/* 音效文件（都是随页面发布的几十 KB 小文件）：同源优先、镜像只做兜底。
+   以前镜像优先，jsDelivr 抽风或新文件还没同步时，要等完 3 个镜像各自超时才会轮到同源，
+   表现为「点了没声 / 有些音效加载不出来」 */
+function sfxRelPath(id) {
+  return id === 'default' ? 'assets/sfx/default.mp3' : `assets/sfx/${id}.mp3`;
+}
+async function fetchSfx(id) {
+  const p = sfxRelPath(id);
+  const tries = [p].concat(CDN_MIRRORS.map(m => m + p));
+  let lastErr = new Error('音效加载失败');
+  for (const u of tries) {
+    const ctl = new AbortController();
+    const t = setTimeout(() => ctl.abort(), 5000);
+    try {
+      const r = await fetch(encodeURI(u), { signal: ctl.signal, cache: 'force-cache' });
+      if (!r.ok) { lastErr = new Error('HTTP ' + r.status); continue; }
+      return await r.arrayBuffer();
+    } catch (e) { lastErr = e; }
+    finally { clearTimeout(t); }
+  }
+  throw lastErr;
+}
 /* 图片按镜像顺序预加载，全部失败时回退主源 */
 function preloadImg(url, perTimeout = 6000) {
   return new Promise(resolve => {
@@ -1353,6 +1375,10 @@ function resumeAudio(ac) {
 /* 在用户手势的同步栈里调用：iOS/Safari 只认手势里发起的 resume / 播放，
    过了 await 再恢复就会被拒，表现为「每次演出都提示音频被系统挂起，点屏幕也没用」。 */
 function primeAudio() {
+  // 顺手预载按键音效：等真正开局时已经解码好，第一个音符不会因为还在下载而没声
+  try {
+    if ((!G.hitSound || G.hitSoundSynthetic)) ensureHitSoundSoon();
+  } catch (e) {}
   const ac = audioCtx();
   if (ac.state === 'running') return ac;
   resumeAudio(ac);
@@ -2294,7 +2320,8 @@ async function startGame(song, diff, speed) {
       notes = buildChart(rh, diff, 12345);
     }
     if (!notes.length) notes = [{ t: 3, lane: 2, type: 'tap', dur: 0 }, { t: 4, lane: 3, type: 'tap', dur: 0 }];
-    await loadHitSound();
+    // 按键音效：最多等 6 秒，等不到就先进游戏（后台继续加载，好了自动接上），避免加载页被音效拖住
+    await Promise.race([loadHitSound(), new Promise(r => setTimeout(r, 6000))]);
     // 让加载画面至少停留一会儿，读得清歌名与歌手
     const wait = 1400 - (performance.now() - t0);
     if (wait > 0) await new Promise(r => setTimeout(r, wait));
@@ -2342,16 +2369,90 @@ function hashString(s) {
   return h >>> 0;
 }
 
-async function loadHitSound() {
+/* 按键音效：按音效 id 缓存解码结果（换歌 / 重开复用，避免每次开局重新下载解码导致前几个音符没声），
+   失败时重试一次 → 退回默认音效 → 仍失败就合成一个极短“嗒”声，保证任何时候按下去都有反馈 */
+const hitSoundCache = {};
+const hitSoundPending = {};
+function synthHitSound(ac) {
   try {
-    const ac = audioCtx();
-    const file = settings.sound === 'default' ? res('assets/sfx/default.mp3') : res(`assets/sfx/${settings.sound}.mp3`);
-    const b = await fetchRes(file);
-    G.hitSound = await ac.decodeAudioData(b);
-  } catch (e) { G.hitSound = null; }
+    const len = Math.max(64, Math.floor(ac.sampleRate * 0.03));
+    const buf = ac.createBuffer(1, len, ac.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) {
+      const k = i / len;
+      d[i] = Math.sin(2 * Math.PI * 1400 * i / ac.sampleRate) * Math.pow(1 - k, 5) * 0.55;
+    }
+    return buf;
+  } catch (e) { return null; }
 }
+function hitSoundId() {
+  return settings.sound === 'default' ? 'default' : settings.sound;
+}
+/* 后台补载（不阻塞）：正在加载 / 刚失败过（8 秒冷却）就不重复请求，避免每个音符都去抓一次 */
+function ensureHitSoundSoon() {
+  const id = hitSoundId();
+  if (hitSoundCache[id]) { G.hitSound = hitSoundCache[id]; G.hitSoundSynthetic = false; return; }
+  if (hitSoundPending[id]) return;
+  const now = performance.now();
+  if (G._hitSoundRetryAt && now < G._hitSoundRetryAt) return;
+  G._hitSoundRetryAt = now + 8000;
+  loadHitSound();
+}
+async function loadHitSound() {
+  const id = hitSoundId();
+  if (hitSoundCache[id]) { G.hitSound = hitSoundCache[id]; return G.hitSound; }
+  if (hitSoundPending[id]) {
+    try { G.hitSound = await hitSoundPending[id]; } catch (e) {}
+    return G.hitSound;
+  }
+  const ac = audioCtx();
+  const p = (async () => {
+    try { return await sfxBuffer(id); }            // 与试听共用同一份下载/解码缓存
+    catch (e) {
+      if (id !== 'default') {                      // 选中的音效取不到：退回默认音效
+        try { return await sfxBuffer('default'); } catch (e2) {}
+      }
+      throw e;
+    }
+  })();
+  hitSoundPending[id] = p;
+  try {
+    const buf = await p;
+    hitSoundCache[id] = buf;
+    G.hitSound = buf;
+    G.hitSoundSynthetic = false;
+  } catch (e) {
+    G.hitSound = synthHitSound(ac);               // 最后兜底：合成短促按键声，绝不会有“按了没声”
+    G.hitSoundSynthetic = true;                   // 标记为合成音：下次点击/开局再试一次真音效
+  } finally {
+    delete hitSoundPending[id];
+  }
+  return G.hitSound;
+}
+/* 上下文被系统挂起时（来电 / 切后台 / Siri / 音频焦点被抢），只补放最近一次按下的那一声 */
+let resumePlayPending = false;
 function playHitSound() {
-  if (!G.hitSound || !AC) return;
+  if (!AC) return;
+  const vol = Number.isFinite(settings.sfxVolume) ? settings.sfxVolume : 0.5;
+  if (vol <= 0) return;
+  if (AC.state !== 'running') {
+    if (resumePlayPending) return;
+    resumePlayPending = true;
+    const replay = () => { resumePlayPending = false; if (AC.state === 'running') playHitSoundOnce(); };
+    let pr = null;
+    try { pr = AC.resume(); } catch (e) {}
+    if (pr && pr.then) pr.then(replay).catch(() => { resumePlayPending = false; });
+    else replay();
+    // 某些浏览器 resume() 永不 settle：1.5 秒后允许下一次按键重试恢复
+    setTimeout(() => { resumePlayPending = false; }, 1500);
+    return;
+  }
+  playHitSoundOnce();
+}
+function playHitSoundOnce() {
+  if (!AC || AC.state !== 'running') return;
+  if (!G.hitSound || G.hitSoundSynthetic) ensureHitSoundSoon();   // 没加载好/只有兜底合成音时后台补载
+  if (!G.hitSound) return;
   try {
     const src = AC.createBufferSource();
     src.buffer = G.hitSound;
@@ -2359,7 +2460,8 @@ function playHitSound() {
     const vol = Number.isFinite(settings.sfxVolume) ? settings.sfxVolume : 0.5;
     gain.gain.value = Math.max(0, Math.min(1, vol));
     src.connect(gain).connect(AC.destination);
-    src.start();
+    // 留 1ms 余量：直接 start() 在部分浏览器会落在“过去时间”，极端情况下被丢掉
+    src.start(AC.currentTime + 0.001);
   } catch (e) {}
 }
 
@@ -3822,9 +3924,8 @@ function stopSfxPreview() {
 
 async function sfxBuffer(id) {
   if (!sfxBufCache[id]) {
-    const file = id === 'default' ? res('assets/sfx/default.mp3') : res(`assets/sfx/${id}.mp3`);
-    sfxBufCache[id] = fetchRes(file).then(b => audioCtx().decodeAudioData(b))
-      .catch(e => { delete sfxBufCache[id]; throw e; });
+    sfxBufCache[id] = fetchSfx(id).then(b => audioCtx().decodeAudioData(b))
+      .catch(e => { delete sfxBufCache[id]; throw e; });   // 失败不缓存，下次点还能重试
   }
   return sfxBufCache[id];
 }
@@ -3851,14 +3952,20 @@ function startSfxPreview(id) {
   const tick2 = () => {
     if (token !== sfxPrevToken) return;
     sfxBuffer(id).then(playBuffer).catch(() => {
-      // 解码失败才退回 <audio> 流式播放
+      // 解码失败才退回 <audio> 流式播放；连它都放不出来就用合成短音，保证点了一定有反馈
       if (token !== sfxPrevToken) return;
       if (!sfxPrevAudio) sfxPrevAudio = new Audio();
-      sfxPrevAudio.src = id === 'default' ? res('assets/sfx/default.mp3') : res(`assets/sfx/${id}.mp3`);
+      sfxPrevAudio.src = sfxRelPath(id);
       sfxPrevAudio.volume = sfxVolume();
       try { sfxPrevAudio.currentTime = 0; } catch (err) {}
       const p = sfxPrevAudio.play();
-      if (p && p.catch) p.catch(() => {});
+      const fallbackSynth = () => {
+        if (token !== sfxPrevToken) return;
+        const ac = audioCtx();
+        if (ac.state !== 'running') resumeAudio(ac);
+        playBuffer(synthHitSound(ac));
+      };
+      if (p && p.catch) p.catch(fallbackSynth);
     });
   };
   tick2();
