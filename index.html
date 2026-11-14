@@ -209,17 +209,17 @@
     background:rgba(3,6,13,.72);backdrop-filter:blur(10px);padding:18px;}
   .modal.show{display:flex;}
   .dialog{width:min(560px,92vw);max-height:92vh;overflow:auto;background:linear-gradient(160deg,rgba(18,27,48,.96),rgba(9,14,26,.98));
-    border:1px solid rgba(110,190,255,.22);border-radius:18px;padding:clamp(16px,2.8vh,26px) clamp(16px,3vw,28px);
+    border:1px solid rgba(110,190,255,.22);border-radius:18px;padding:clamp(12px,2.4vh,26px) clamp(16px,3vw,28px);
     box-shadow:0 30px 90px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.06);animation:pop .22s ease-out;}
   @keyframes pop{from{transform:translateY(10px) scale(.98);opacity:0}to{transform:none;opacity:1}}
-  .dlg-title{font-size:clamp(16px,2.6vh,22px);font-weight:900;letter-spacing:.14em;}
+  .dlg-title{font-size:clamp(15px,2.4vh,22px);font-weight:900;letter-spacing:.14em;}
   .dlg-title span{color:var(--cyan);}
-  .dlg-song{margin-top:8px;padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.04);
+  .dlg-song{margin-top:8px;padding:8px 10px;border-radius:12px;background:rgba(255,255,255,.04);
     display:flex;align-items:center;gap:10px;}
-  .dlg-song .cover{width:44px;height:44px;border-radius:8px;background-size:cover;box-shadow:0 4px 14px rgba(0,0,0,.45);}
+  .dlg-song .cover{width:40px;height:40px;border-radius:8px;background-size:cover;box-shadow:0 4px 14px rgba(0,0,0,.45);}
   .dlg-song .t{font-weight:800;font-size:clamp(12px,1.9vh,15px);}
   .dlg-song .a{font-size:11px;color:#8ea6c6;margin-top:2px;}
-  .field{margin-top:clamp(12px,2.2vh,18px);}
+  .field{margin-top:clamp(10px,1.9vh,18px);}
   .field>.lbl{display:flex;justify-content:space-between;align-items:baseline;font-size:clamp(11px,1.7vh,13px);
     color:#93a9c8;letter-spacing:.12em;margin-bottom:8px;}
   .field>.lbl b{font-size:clamp(16px,2.6vh,22px);color:#fff;font-variant-numeric:tabular-nums;letter-spacing:0;}
@@ -234,8 +234,29 @@
     background:linear-gradient(90deg,var(--cyan),var(--pink));box-shadow:0 0 14px rgba(37,226,255,.35);}
   input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;margin-top:-8px;
     background:#fff;box-shadow:0 0 0 3px rgba(37,226,255,.35),0 3px 10px rgba(0,0,0,.5);}
-  .dlg-actions{display:flex;gap:10px;margin-top:clamp(16px,2.8vh,24px);}
-  .dlg-actions .btn{flex:1;height:clamp(42px,7.6vh,52px);font-size:clamp(13px,2vh,16px);}
+  .dlg-actions{display:flex;gap:10px;margin-top:clamp(12px,2.2vh,24px);
+    /* 贴在滚动区底部：内容再长，确认/开始按钮也不会被挤到看不见的地方 */
+    position:sticky;bottom:calc(-1 * clamp(12px,2.4vh,26px));padding-top:10px;
+    background:linear-gradient(180deg,rgba(12,18,34,0),rgba(12,18,34,.97) 36%);}
+  .dlg-actions .btn{flex:1;height:clamp(40px,7.2vh,52px);font-size:clamp(13px,2vh,16px);}
+  /* 横屏手机（高度很矮）：整块收紧，保证「确认/开始演出」不用滚动就看得见 */
+  @media (max-height: 500px) and (orientation: landscape){
+    .modal{padding:6px 8px;}
+    .dialog{max-height:calc(100vh - 12px);max-height:calc(100dvh - 12px);padding:9px 14px;border-radius:14px;width:min(620px,96vw);}
+    .dlg-title{font-size:14px;letter-spacing:.08em;}
+    .dlg-song{margin-top:5px;padding:5px 8px;gap:8px;border-radius:9px;}
+    .dlg-song .cover{width:30px;height:30px;border-radius:6px;}
+    .dlg-song .t{font-size:12px;}
+    .dlg-song .a{display:none;}
+    .field{margin-top:7px;}
+    .field>.lbl{margin-bottom:4px;font-size:11px;letter-spacing:.06em;}
+    .field>.lbl b{font-size:15px;}
+    .pill{padding:5px 6px;font-size:12px;border-radius:8px;}
+    input[type=range]{height:20px;}
+    input[type=range]::-webkit-slider-thumb{width:18px;height:18px;margin-top:-6px;}
+    .dlg-actions{margin-top:8px;padding-top:8px;bottom:-9px;gap:8px;}
+    .dlg-actions .btn{height:38px;font-size:13px;border-radius:9px;}
+  }
 
   /* ---------- 设置 ---------- */
   #screen-settings .page-head{position:relative;z-index:2;}
@@ -355,7 +376,10 @@
   /* ---------- 游戏 ---------- */
   #screen-game{background:transparent;}
   /* 底部彩虹进度条 */
-  #prog{position:absolute;left:0;bottom:0;width:100%;height:5px;background:rgba(10,14,26,.55);z-index:25;pointer-events:none;}
+  #prog{position:absolute;left:0;bottom:0;bottom:env(safe-area-inset-bottom,0px);width:100%;height:5px;background:rgba(10,14,26,.55);z-index:25;pointer-events:none;}
+  /* 安全区探针：只用来读 env(safe-area-inset-*) 的数值（给画布 HUD 避让刘海） */
+  #safe-probe{position:fixed;left:0;top:0;width:0;height:0;pointer-events:none;visibility:hidden;
+    padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);}
   #prog-fill{height:100%;width:0%;
     background:linear-gradient(90deg,#ff5e5e,#ffb84d,#ffe94d,#6dff8a,#5ea8ff,#b06dff,#ff5ec4);
     box-shadow:0 0 8px rgba(255,120,180,.5);}
@@ -703,6 +727,7 @@
 <body data-view="title" data-bg="cover">
 
 <div id="app">
+  <div id="safe-probe"></div>
   <div id="bg-layer">
     <div id="bg-cover"></div>
     <div id="bg-img"></div>
@@ -1631,6 +1656,7 @@ function show(name) {
   const el = $('#screen-' + name);
   if (el) el.classList.add('active');
   document.body.dataset.view = name === 'songs' ? 'songs' : (name === 'settings' ? 'settings' : (name === 'game' ? 'game' : 'title'));
+  try { scheduleFitApp(); } catch (e) {}          // 进/出游戏页时重新贴合可见区域
 }
 function goTitle() {
   stopPreview();
@@ -2494,7 +2520,66 @@ function targetDpr(w, h) {
   if (w * h * dpr * dpr > MAXPX) dpr = Math.max(1, Math.sqrt(MAXPX / (w * h)));
   return dpr;
 }
-window.addEventListener('resize', () => { if (screen === 'game') resizeCanvas(); });
+window.addEventListener('resize', () => { if (screen === 'game') resizeCanvas(); scheduleFitApp(); });
+
+/* ---------- 可见区域贴合 ----------
+   手机浏览器（尤其 iOS Safari / 带手势条的安卓）里，布局视口比"真正看得见"的区域高：
+   地址栏、工具栏收起或弹出时，position:fixed 的 #app 会有一部分跑到工具栏底下，
+   于是贴着屏幕底部的彩虹进度条、贴着顶部左侧的 HP 条会整块看不见（还被误以为是 BUG）。
+   把 #app 直接对齐到 visualViewport，HUD 就永远落在可见范围内。 */
+let _fitRaf = 0;
+let _insets = null;                                 // 安全区缓存（视口变化时清空重算）
+function resetAppBox(app) {
+  app.style.top = app.style.left = app.style.right = app.style.bottom = '';
+  app.style.width = app.style.height = '';
+}
+function fitAppViewport() {
+  const app = document.getElementById('app');
+  if (!app) return;
+  const vv = window.visualViewport;
+  if (!vv) return;                                  // 不支持就保持 CSS 的 inset:0
+  // 只有游戏页需要严丝合缝贴合可见区域（其它页面用 vh 排版，改动反而会挤坏）
+  if (screen !== 'game') { resetAppBox(app); return; }
+  const w = Math.round(vv.width), h = Math.round(vv.height);
+  if (w < 80 || h < 80) return;                     // 键盘弹出等过渡中间态，先不动
+  if (vv.scale && Math.abs(vv.scale - 1) > 0.02) return;   // 用户放大页面：别跟着缩
+  app.style.top = Math.round(vv.offsetTop) + 'px';
+  app.style.left = Math.round(vv.offsetLeft) + 'px';
+  app.style.right = 'auto';
+  app.style.bottom = 'auto';
+  app.style.width = w + 'px';
+  app.style.height = h + 'px';
+  _insets = null;                                   // 视口变了，安全区重算
+}
+function scheduleFitApp() {
+  if (_fitRaf) return;
+  _fitRaf = requestAnimationFrame(() => { _fitRaf = 0; try { fitAppViewport(); } catch (e) {} });
+}
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', scheduleFitApp);
+  window.visualViewport.addEventListener('scroll', scheduleFitApp);
+}
+window.addEventListener('orientationchange', () => { scheduleFitApp(); setTimeout(scheduleFitApp, 260); });
+scheduleFitApp();
+
+/* 安全区（刘海 / 手势条）尺寸：给画布上的 HUD 留出避让，避免血条被刘海吃掉。
+   结果缓存，只在视口变化时重算（每帧读 getComputedStyle 会拖慢帧率） */
+function safeInsets() {
+  if (_insets) return _insets;
+  let v = { t: 0, r: 0, b: 0, l: 0 };
+  try {
+    const el = document.getElementById('safe-probe');
+    if (el) {
+      const cs = getComputedStyle(el);
+      v = {
+        t: parseFloat(cs.paddingTop) || 0, r: parseFloat(cs.paddingRight) || 0,
+        b: parseFloat(cs.paddingBottom) || 0, l: parseFloat(cs.paddingLeft) || 0
+      };
+    }
+  } catch (e) {}
+  _insets = v;
+  return v;
+}
 
 function geometry() {
   const W = VW, H = VH;
@@ -3257,13 +3342,22 @@ function draw() {
     } else if (n.judged || p > 1.02 || p < -0.25) continue;
     vis.push({ n, p });
   }
-  // 同时出现的相邻按键之间连横线
-  drawNoteLinks(c, g, vis, travel);
-  for (const v of vis) drawNote(c, g, v.n, v.p, travel);
+  // 每一段单独兜底：任何一段抛异常都不许把后面的 HUD（血条/COMBO/顶部进度线）一起带走
+  safeDraw(() => drawNoteLinks(c, g, vis, travel), 'links');
+  for (const v of vis) safeDraw(() => drawNote(c, g, v.n, v.p, travel), 'note');
 
-  drawJudgmentLine(g);
-  drawEffects(g);
-  drawHUD(g);
+  safeDraw(() => drawJudgmentLine(g), 'line');
+  safeDraw(() => drawEffects(g), 'fx');
+  safeDraw(() => drawHUD(g), 'hud');
+}
+
+/* 单段绘制兜底：出错只记一次，并把泄漏的 canvas 状态（clip/transform/阴影）退栈，
+   否则一帧里某次异常会让后面所有绘制（包括血条）全被裁掉或错位 */
+function safeDraw(fn, tag) {
+  try { fn(); } catch (e) { reportFrameErr(tag, e); unwindCanvasState(); }
+}
+function unwindCanvasState() {
+  for (let i = 0; i < 6; i++) { try { ctx2d.restore(); } catch (e) { break; } }
 }
 
 let _laneCache = { key: '', grads: [] };
@@ -3613,18 +3707,22 @@ function canvasFilterOK() {
 
 function glowSprite(text, fontPx, o) {
   const stopsKey = o.stops ? o.stops.map(s => s[1]).join(',') : '';
-  const key = text + '|' + fontPx.toFixed(1) + '|' + (o.weight || 900) + (o.style || '') + '|' +
+  // 字号量化到整像素：COMBO 数字的字号每帧都在变，不量化会每帧新建 2 张离屏画布，
+  // 手机内存一紧张就取不到 2D 上下文 → 抛错 → 整块 HUD 消失
+  const fx = Math.max(8, Math.round(fontPx));
+  const key = text + '|' + fx + '|' + (o.weight || 900) + (o.style || '') + '|' +
     (o.color || '') + '|' + stopsKey + '|' + (o.glow || '') + '|' + (o.blur || 0);
   const hit = _glowCache.get(key);
   if (hit) return hit;
 
   const fontAt = px => `${o.style || ''} ${o.weight || 900} ${px}px ${FF}`.replace(/\s+/g, ' ').trim();
   const mc = document.createElement('canvas').getContext('2d');
-  mc.font = fontAt(fontPx);
+  if (!mc) return null;                       // 拿不到上下文：调用方退化成普通文字
+  mc.font = fontAt(fx);
   const m = mc.measureText(text);
   const tw = Math.max(1, m.width);
-  const asc = Math.max(1, m.actualBoundingBoxAscent || fontPx * 0.8);
-  const desc = Math.max(1, m.actualBoundingBoxDescent || fontPx * 0.24);
+  const asc = Math.max(1, m.actualBoundingBoxAscent || fx * 0.8);
+  const desc = Math.max(1, m.actualBoundingBoxDescent || fx * 0.24);
   const blur = Math.max(0, Number(o.blur) || 0);
   const pad = Math.ceil(blur * 1.3 + 4);
   const w = Math.ceil(tw + pad * 2), h = Math.ceil(asc + desc + pad * 2);
@@ -3637,8 +3735,9 @@ function glowSprite(text, fontPx, o) {
      2) 光晕和字分到两张独立画布，避免「模糊层」与「渐变层」在同一画布上互相影响。 */
   const mk = () => { const t = document.createElement('canvas'); t.width = cw; t.height = ch; return t.getContext('2d'); };
   const gc = mk(), tc = mk();
+  if (!gc || !tc) return null;                // 同上：内存紧张时宁可退化成普通文字
   [gc, tc].forEach(c => {
-    c.font = fontAt(fontPx * ss);
+    c.font = fontAt(fx * ss);
     c.textAlign = 'left';
     c.textBaseline = 'alphabetic';
   });
@@ -3672,6 +3771,16 @@ function glowText(c, text, x, y, fontPx, o = {}) {
   const sp = glowSprite(text, fontPx, o);
   c.save();
   if (o.alpha != null) c.globalAlpha *= o.alpha;
+  if (!sp) {
+    // 离屏画布拿不到时退化成普通填充字——绝不让整帧 HUD 因为发光字失败而消失
+    c.font = `${o.style || ''} ${o.weight || 900} ${Math.max(8, Math.round(fontPx))}px ${FF}`.replace(/\s+/g, ' ').trim();
+    c.textAlign = o.align === 'right' ? 'right' : (o.align === 'left' ? 'left' : 'center');
+    c.textBaseline = 'middle';
+    c.fillStyle = o.stops ? o.stops[o.stops.length - 1][1] : (o.color || '#fff');
+    c.fillText(text, x, y);
+    c.restore();
+    return;
+  }
   const dx = cx => cx - sp.tw / 2 - sp.ax;
   const cx = o.align === 'right' ? x - sp.tw / 2 : (o.align === 'left' ? x + sp.tw / 2 : x);
   const dy = y - sp.ay;
@@ -3711,33 +3820,40 @@ function drawEffects(g) {
 
 function drawHUD(g) {
   const c = ctx2d;
+  const ins = safeInsets();
+  const hudX = Math.max(g.W * 0.035, ins.l + 10);   // 横屏刘海机型：别把 HUD 压在刘海下面
+  const hudY = Math.max(g.H * 0.075, ins.t + g.H * 0.045);
   // 曲目信息（左上，无分数）
   c.save();
   c.textAlign = 'left';
   c.fillStyle = 'rgba(215,235,255,.85)';
   c.font = `800 ${Math.max(11, g.H * 0.022)}px ${FF}`;
-  c.fillText(G.song ? G.song.title : '', g.W * 0.035, g.H * 0.075);
+  c.fillText(G.song ? G.song.title : '', hudX, hudY);
   c.fillStyle = 'rgba(150,175,205,.75)';
   c.font = `600 ${Math.max(9, g.H * 0.0155)}px ${FF}`;
   const diffTxt = G.diff === 'hard' ? '稍高' : (G.diff === 'ultra' ? '超高' : '中等');
-  c.fillText(`${diffTxt} · 流速 ${Number(G.speed).toFixed(1)}`, g.W * 0.035, g.H * 0.105);
+  c.fillText(`${diffTxt} · 流速 ${Number(G.speed).toFixed(1)}`, hudX, hudY + g.H * 0.03);
   // HP
   const hbW = Math.min(g.W * 0.2, g.H * 0.42);
-  const hbX = g.W * 0.035, hbY = g.H * 0.13;
-  const ratio = G.hp / G.maxHp;
-  roundRect(c, hbX, hbY, hbW, Math.max(6, g.H * 0.014), 99);
-  c.fillStyle = 'rgba(255,255,255,.1)'; c.fill();
+  const hbX = hudX, hbY = hudY + g.H * 0.055;
+  // 数值异常（NaN / Infinity）也不能让血条画不出来
+  const rawRatio = (Number(G.hp) || 0) / Math.max(1, Number(G.maxHp) || 1000);
+  const ratio = Math.max(0, Math.min(1, isFinite(rawRatio) ? rawRatio : 0));
+  const hbH = Math.max(6, g.H * 0.014);
+  roundRect(c, hbX, hbY, hbW, hbH, 99);
+  c.fillStyle = 'rgba(255,255,255,.16)'; c.fill();
+  c.strokeStyle = 'rgba(150,205,255,.3)'; c.lineWidth = 1; c.stroke();
   const hg = c.createLinearGradient(hbX, 0, hbX + hbW, 0);
   if (ratio > .5) { hg.addColorStop(0, '#3ff0c0'); hg.addColorStop(1, '#7ff0d8'); }
   else if (ratio > .25) { hg.addColorStop(0, '#ffd66b'); hg.addColorStop(1, '#ffb86b'); }
   else { hg.addColorStop(0, '#ff5e7a'); hg.addColorStop(1, '#ff9ab0'); }
   c.save();
-  roundRect(c, hbX, hbY, Math.max(4, hbW * ratio), Math.max(6, g.H * 0.014), 99);
+  roundRect(c, hbX, hbY, Math.max(4, hbW * ratio), hbH, 99);
   c.fillStyle = hg; c.shadowColor = ratio > .25 ? 'rgba(80,240,200,.5)' : 'rgba(255,90,120,.6)'; c.shadowBlur = 12;
   c.fill(); c.restore();
   c.fillStyle = 'rgba(200,225,250,.85)';
   c.font = `700 ${Math.max(9, g.H * 0.0145)}px ${FF}`;
-  c.fillText(`HP ${Math.round(G.hp)} / ${G.maxHp}`, hbX, hbY + Math.max(6, g.H * 0.014) + Math.max(11, g.H * 0.02));
+  c.fillText(`HP ${Math.round(Number(G.hp) || 0)} / ${Math.round(Number(G.maxHp) || 1000)}`, hbX, hbY + hbH + Math.max(11, g.H * 0.02));
   c.restore();
 
   // 技能发动：屏幕中央大字提示（1.4 秒渐隐）
