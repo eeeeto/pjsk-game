@@ -4367,14 +4367,30 @@ function importCard(file) {
 const RES_RATIO = 2 / 3;          // 结算人物图统一裁成 2:3 竖版
 const PF_CELL_KEYS = ['prof:cell0', 'prof:cell1', 'prof:cell2'];
 
-function loadImageAsync(url) {
+function loadImageAsync(url, timeout = 7000) {
   return new Promise((ok, no) => {
     const i = new Image();
     // http(s) 远程图（CDN / 素材源）必须带 CORS，否则画进 canvas 会被污染，toBlob 直接抛 SecurityError
     if (/^https?:/i.test(url)) i.crossOrigin = 'anonymous';
-    i.onload = () => ok(i);
-    i.onerror = () => no(new Error('图片读取失败'));
+    let done = false;
+    // 网络卡住时不能无限等：超时按“取图失败”处理，让上层画占位而不是整张图卡死
+    const t = setTimeout(() => { if (done) return; done = true; i.onload = i.onerror = null; no(new Error('图片加载超时')); }, timeout);
+    i.onload = () => { if (done) return; done = true; clearTimeout(t); ok(i); };
+    i.onerror = () => { if (done) return; done = true; clearTimeout(t); no(new Error('图片读取失败')); };
     i.src = url;
+  });
+}
+/* toBlob 兜底：某些浏览器（canvas 被污染 / 内存紧张）既不回调也不抛错，这里加超时与异常捕获 */
+function canvasToBlobAsync(canvas, type, quality, timeout = 12000) {
+  return new Promise((ok, no) => {
+    let done = false;
+    const t = setTimeout(() => { if (!done) { done = true; no(new Error('图片导出超时')); } }, timeout);
+    try {
+      canvas.toBlob(b => {
+        if (done) return; done = true; clearTimeout(t);
+        b ? ok(b) : no(new Error('图片导出失败'));
+      }, type, quality);
+    } catch (e) { done = true; clearTimeout(t); no(e); }
   });
 }
 function canvasToBlob(cnv) {
@@ -5039,20 +5055,36 @@ function openNickModal() {
 }
 
 /* ---------- 个人主页：保存为图片 ---------- */
+/* 下载兜底：部分浏览器对 blob 链接的 a.click() 有额外要求，挂到文档上再点、并保留对象 URL 一段时间 */
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.rel = 'noopener';
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 8000);
+  showToast('图片已保存到下载', 2600);
+}
 async function shareCanvas(canvas, filename, title) {
-  const blob = await new Promise(ok => canvas.toBlob(ok, 'image/png'));
-  if (!blob) return;
+  const blob = await canvasToBlobAsync(canvas, 'image/png');
   const file = new File([blob], filename, { type: 'image/png' });
-  if (navigator.canShare && navigator.canShare({ files: [file] })) {
-    navigator.share({ files: [file], title }).catch(() => {});
-  } else {
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = filename;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
-    showToast('图片已保存到下载', 2600);
+  let canShare = false;
+  try { canShare = !!(navigator.canShare && navigator.share && navigator.canShare({ files: [file] })); } catch (e) { canShare = false; }
+  if (canShare) {
+    try {
+      await navigator.share({ files: [file], title });
+      return;
+    } catch (e) {
+      // 用户自己取消：什么都不做；其它情况（用户手势已过期 / 分享面板被拦）一律退回到下载
+      if (e && e.name === 'AbortError') return;
+      console.warn('[share fallback]', e);
+    }
   }
+  downloadBlob(blob, filename);
 }
 function roundRectPath(c, x, y, w, h, r) {
   c.beginPath();
@@ -5331,8 +5363,18 @@ $('#res-music').addEventListener('click', () => toggleResultMusic());
 
 /* 分享成绩：生成成绩图 → 移动端调系统分享，否则直接下载 */
 $('#res-share').addEventListener('click', async () => {
-  try { await shareCanvas(await renderResultImage(), 'pjsk-result.png', 'PJSK FAN STAGE 演奏成绩'); }
-  catch (e) { console.warn('[share]', e); showToast('生成成绩图失败', 2200); }
+  const btn = $('#res-share');
+  if (btn && btn.dataset.busy) return;      // 防连点：重复点击会并发渲染 + 下载被浏览器拦掉
+  if (btn) btn.dataset.busy = '1';
+  showToast('正在生成成绩图…', 1200);
+  try {
+    await shareCanvas(await renderResultImage(), 'pjsk-result.png', 'PJSK FAN STAGE 演奏成绩');
+  } catch (e) {
+    console.warn('[share]', e);
+    showToast('生成成绩图失败，请再点一次', 2600);
+  } finally {
+    if (btn) delete btn.dataset.busy;
+  }
 });
 
 /* 成绩图：深色科技风（与整体 UI 同配色） */
@@ -5433,9 +5475,18 @@ $('#profile-share').addEventListener('click', () => { $('#modal-pf-export').clas
 $$('#modal-pf-export .btn').forEach(b => b.addEventListener('click', async () => {
   $('#modal-pf-export').classList.remove('show');
   if (b.id === 'pf-exp-cancel') return;
+  if (b.dataset.busy) return;
+  b.dataset.busy = '1';
   const orient = b.id === 'pf-exp-land' ? 'landscape' : 'portrait';
-  try { await shareCanvas(await renderProfileImage(orient), `pjsk-profile-${orient === 'landscape' ? 'land' : 'port'}.png`, 'PJSK FAN STAGE 个人主页'); }
-  catch (e) { console.warn('[profile share]', e); showToast('生成主页图片失败', 2200); }
+  showToast('正在生成主页图片…', 1200);
+  try {
+    await shareCanvas(await renderProfileImage(orient), `pjsk-profile-${orient === 'landscape' ? 'land' : 'port'}.png`, 'PJSK FAN STAGE 个人主页');
+  } catch (e) {
+    console.warn('[profile share]', e);
+    showToast('生成主页图片失败，请再试一次', 2600);
+  } finally {
+    delete b.dataset.busy;
+  }
 }));
 $('#profile-big').addEventListener('click', () => openProfDialog({ kind: 'big' }));
 $$('#screen-profile .prof-cell').forEach(el => {
