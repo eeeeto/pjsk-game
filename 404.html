@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>PJSK FAN STAGE</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<script>
+/* 404 兜底：无论路径打错还是浏览器缓存了旧 404，都自动回到游戏首页 */
+(function () {
+  var seg = location.pathname.split('/').filter(Boolean);
+  if (seg[0] === 'pjsk-game') {
+    location.replace('/pjsk-game/?r=' + Date.now());
+  } else {
+    location.replace('https://eeeeto.github.io/pjsk-game/?r=' + Date.now());
+  }
+})();
+</script>
+<meta http-equiv="refresh" content="2;url=/pjsk-game/">
+<style>
+  html,body{height:100%;margin:0}
+  body{background:linear-gradient(180deg,#0c1526,#060a13);color:#cfe4ff;font-family:system-ui,-apple-system,sans-serif;
+    display:flex;align-items:center;justify-content:center;text-align:center}
+  .t{font-size:18px;font-weight:800;letter-spacing:.1em}
+  a{display:inline-block;margin-top:14px;color:#25e2ff;text-decoration:none;font-weight:700;
+    border:1px solid rgba(37,226,255,.4);border-radius:999px;padding:10px 28px}
+</style>
+</head>
+<body>
+<div>
+  <div class="t">页面走丢了，正在回到游戏…</div>
+  <a href="/pjsk-game/">点此立即进入</a>
+</div>
+</body>
+</html>
