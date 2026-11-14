@@ -4595,25 +4595,37 @@ function fcApCounts() {
 /* 手机横屏（横向且高度较小）：右侧放完整的原始横版卡面；其余情况放 2:3 裁剪竖版 */
 const LAND_RESULT_MQ = window.matchMedia('(orientation: landscape) and (max-height: 560px)');
 if (LAND_RESULT_MQ.addEventListener) LAND_RESULT_MQ.addEventListener('change', () => applyResChar());
+/* 结算人物显示解析：优先同卡的透明角色图，没有再用卡面；横屏优先完整横版卡面 */
+function resDisplayMeta() {
+  const list = settings.resCards;
+  const sel = list[clamp(settings.resPick || 0, 0, Math.max(0, list.length - 1))];
+  if (!sel) return null;
+  let meta = sel;
+  if (!sel.chr) {
+    // 当前选中的是卡面：找同编号同阶段的透明角色图（res:{cid}_{part}_chr / def:{cid}_chr）
+    const defChrKey = sel.key.replace(/_(normal|after_training)$/, '') + '_chr';
+    const chr = list.find(x => x.chr && x.cid === sel.cid &&
+      (x.key === sel.key + '_chr' || x.key.replace(/_chr$/, '') === sel.key || x.key === defChrKey));
+    if (chr) meta = chr;
+  }
+  let url = cardBlobs[meta.key] || '';
+  let fit = meta.chr ? 'contain' : 'cover';
+  let land = false;
+  if (LAND_RESULT_MQ.matches) {
+    const rawUrl = (meta.raw ? cardBlobs[meta.raw] : '') || (sel.raw ? cardBlobs[sel.raw] : '');
+    if (rawUrl) { url = rawUrl; fit = 'contain'; land = true; }   // 完整横版卡面
+  }
+  return { meta, url, fit, land };
+}
+
 function applyResChar() {
   const img = $('#res2-char-img'), ph = $('#res2-char-ph');
   if (!img || !ph) return;
   const box = $('#res2-char');
-  const list = settings.resCards;
-  let meta = list[clamp(settings.resPick || 0, 0, Math.max(0, list.length - 1))];
-  // 「人物」格固定放裁剪过的卡牌：选中的是透明角色图时，换成同编号的裁剪卡图；没有对应卡图则用第一张卡图
-  if (meta && meta.chr) {
-    const same = list.find(m => m.key === meta.key.replace(/_chr$/, '') && !m.chr);
-    meta = same || list.find(m => !m.chr) || meta;
-  }
-  let url = meta ? cardBlobs[meta.key] : '';
-  let fit = 'cover';
-  let land = false;
-  if (LAND_RESULT_MQ.matches && meta) {
-    const rawUrl = meta.raw ? cardBlobs[meta.raw] : '';
-    if (rawUrl) { url = rawUrl; fit = 'contain'; land = true; }   // 完整横版卡面
-  }
-  if (box) box.classList.toggle('land', land);
+  const disp = resDisplayMeta();
+  const url = disp ? disp.url : '';
+  const fit = disp ? disp.fit : 'cover';
+  if (box) box.classList.toggle('land', !!(disp && disp.land));
   if (url) {
     img.src = url; img.style.display = ''; ph.style.display = 'none';
     img.style.objectFit = fit;
@@ -5230,9 +5242,10 @@ async function renderResultImage() {
   c.fillText(dsp.title.slice(0, 22) + (dsp.tag ? `【${dsp.tag}】` : ''), 186, 100);
   c.fillStyle = '#8fb8dd'; c.font = `800 27px ${FF}`;
   c.fillText('难度' + (G.diff === 'ultra' ? 'MASTER' : (G.diff === 'hard' ? 'HARD' : 'MEDIUM')), 186, 140);
-  // 人物大图（右半）：深蓝面板 + 青描边，卡图铺满
-  const charMeta = settings.resCards[clamp(settings.resPick || 0, 0, Math.max(0, settings.resCards.length - 1))];
-  const charUrl = charMeta ? cardBlobs[charMeta.key] : '';
+  // 人物大图（右半）：深蓝面板 + 青描边；优先透明角色图（contain 完整显示），否则卡面铺满
+  const disp = resDisplayMeta();
+  const charMeta = disp ? disp.meta : null;
+  const charUrl = disp && !disp.land ? disp.url : (charMeta ? cardBlobs[charMeta.key] : '');
   const chX = 780, chY = 190, chW = 380, chH = 500;
   panel(chX, chY, chW, chH, 12);
   c.save();
@@ -5241,7 +5254,9 @@ async function renderResultImage() {
   if (charUrl) {
     try {
       const im = await loadImageAsync(charUrl);
-      const r = Math.max(chW / im.naturalWidth, chH / im.naturalHeight);
+      const r = charMeta && charMeta.chr
+        ? Math.min(chW / im.naturalWidth, chH / im.naturalHeight)
+        : Math.max(chW / im.naturalWidth, chH / im.naturalHeight);
       const dw = im.naturalWidth * r, dh = im.naturalHeight * r;
       c.drawImage(im, chX + (chW - dw) / 2, chY + (chH - dh) / 2, dw, dh);
       charDrawn = true;
