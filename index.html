@@ -457,9 +457,9 @@
   .res2-fcap{font-size:clamp(20px,4.6vh,44px);font-weight:900;color:#7ceaff;letter-spacing:.08em;min-height:clamp(20px,4.6vh,44px);
     text-shadow:0 0 18px rgba(37,226,255,.45);}
   .res2-extra{font-size:clamp(10px,1.8vh,14px);color:#5f7290;letter-spacing:.06em;}
-  .res2-char{flex:0 0 auto;height:clamp(160px,55vh,560px);width:calc(clamp(160px,55vh,560px)*0.6667);position:relative;border-radius:4px;overflow:hidden;
-    display:flex;align-items:center;justify-content:center;
-    background:rgba(12,20,36,.6);border:1px solid rgba(110,190,255,.25);}
+  /* 人物区：无边框无底色，只有图片本身；图片加载失败时该区域就是一片空白（无边框无文字） */
+  .res2-char{flex:0 0 auto;height:clamp(160px,55vh,560px);width:calc(clamp(160px,55vh,560px)*0.6667);position:relative;
+    display:flex;align-items:center;justify-content:center;}
   /* 手机竖屏窄屏：卡图移到判定列表下方居中，避免挤压排版 */
   @media (max-width:560px){
     .res2-main{flex-direction:column;align-items:center;gap:clamp(8px,2vh,16px);}
@@ -471,8 +471,6 @@
     .res2-char{height:clamp(96px,32vh,280px);width:calc(clamp(96px,32vh,280px)*1.75);}
   }
   .res2-char img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top center;}
-  .res2-char .ph{font-size:clamp(34px,9vh,90px);font-weight:900;color:#46617f;letter-spacing:.3em;
-    text-align:center;line-height:1.2;}
   /* ---------- 个人主页 ---------- */
   .round-btn{width:40px;height:40px;border-radius:50%;border:none;background:#fff;color:#17181c;
     font-size:19px;font-weight:900;display:flex;align-items:center;justify-content:center;cursor:pointer;
@@ -831,7 +829,6 @@
         </div>
         <div class="res2-char" id="res2-char">
           <img id="res2-char-img" alt="" style="display:none">
-          <div class="ph" id="res2-char-ph">人<br>物</div>
         </div>
       </div>
     </div>
@@ -4659,18 +4656,21 @@ function resDisplayMeta() {
 }
 
 function applyResChar() {
-  const img = $('#res2-char-img'), ph = $('#res2-char-ph');
-  if (!img || !ph) return;
+  const img = $('#res2-char-img');
+  if (!img) return;
   const box = $('#res2-char');
   const disp = resDisplayMeta();
   const url = disp ? disp.url : '';
   const fit = disp ? disp.fit : 'cover';
   if (box) box.classList.toggle('land', !!(disp && disp.land));
+  // 图片加载失败时保持隐藏：人物区没有任何边框与文字，只是一片空白
+  img.onerror = () => { img.style.display = 'none'; img.removeAttribute('src'); };
   if (url) {
-    img.src = url; img.style.display = ''; ph.style.display = 'none';
+    if (img.getAttribute('src') !== url) img.src = url;
+    img.style.display = '';
     img.style.objectFit = fit;
   } else {
-    img.removeAttribute('src'); img.style.display = 'none'; ph.style.display = '';
+    img.removeAttribute('src'); img.style.display = 'none';
   }
 }
 
@@ -5366,15 +5366,11 @@ async function renderResultImage() {
   c.fillText(dsp.title.slice(0, 22) + (dsp.tag ? `【${dsp.tag}】` : ''), 186, 100);
   c.fillStyle = '#8fb8dd'; c.font = `800 27px ${FF}`;
   c.fillText('难度' + (G.diff === 'ultra' ? 'MASTER' : (G.diff === 'hard' ? 'HARD' : 'MEDIUM')), 186, 140);
-  // 人物大图（右半）：深蓝面板 + 青描边；优先透明角色图（contain 完整显示），否则卡面铺满
+  // 人物大图（右半）：不加边框底色，只画图片本身；加载失败就不画（该区域留空，无框无字）
   const disp = resDisplayMeta();
   const charMeta = disp ? disp.meta : null;
   const charUrl = disp && !disp.land ? disp.url : (charMeta ? cardBlobs[charMeta.key] : '');
   const chX = 780, chY = 190, chW = 380, chH = 500;
-  panel(chX, chY, chW, chH, 12);
-  c.save();
-  roundRectPath(c, chX + 2, chY + 2, chW - 4, chH - 4, 10); c.clip();
-  let charDrawn = false;
   if (charUrl) {
     try {
       const im = await loadImageAsync(charUrl);
@@ -5383,17 +5379,8 @@ async function renderResultImage() {
         : Math.max(chW / im.naturalWidth, chH / im.naturalHeight);
       const dw = im.naturalWidth * r, dh = im.naturalHeight * r;
       c.drawImage(im, chX + (chW - dw) / 2, chY + (chH - dh) / 2, dw, dh);
-      charDrawn = true;
     } catch (e) {}
   }
-  if (!charDrawn) {
-    c.fillStyle = 'rgba(37,226,255,.14)'; c.textAlign = 'center';
-    c.font = `900 74px ${FF}`; c.fillStyle = '#4d9fd0';
-    c.fillText('人', chX + chW / 2, chY + 150);
-    c.fillText('物', chX + chW / 2, chY + 380);
-    c.textAlign = 'left';
-  }
-  c.restore();
   // 新纪录（青色发光）
   c.textAlign = 'center';
   if (G._newRecord) {
