@@ -715,6 +715,91 @@
   #boot-text{font-size:15px;letter-spacing:.25em;color:#cfe4ff;margin:0 0 10px;}
   .boot-hint{font-size:11px;color:#5f7896;margin:0;letter-spacing:.1em;}
 
+  /* ---------- 世界的招募 ---------- */
+  .gacha-wrap{flex:1;display:flex;gap:14px;width:100%;min-height:0;padding:10px 26px 6px;}
+  .gacha-pools{width:230px;flex:none;overflow-y:auto;background:rgba(8,14,30,.55);border:1px solid rgba(140,190,255,.14);
+    border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:8px;backdrop-filter:blur(6px);}
+  .gp-item{position:relative;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.06);color:#cfe4ff;cursor:pointer;
+    font-size:12.5px;font-weight:700;line-height:1.35;border:1px solid transparent;transition:background .15s,border-color .15s;}
+  .gp-item:hover{background:rgba(120,200,255,.14);}
+  .gp-item.on{background:rgba(111,215,255,.18);border-color:rgba(111,215,255,.55);box-shadow:0 0 12px rgba(111,215,255,.25) inset;}
+  .gp-item .gp-del{position:absolute;top:6px;right:8px;width:18px;height:18px;line-height:16px;text-align:center;border-radius:50%;
+    background:rgba(255,80,80,.18);color:#ff9c9c;font-size:12px;display:none;cursor:pointer;}
+  .gacha-pools:hover .gp-del{display:block;}
+  .gp-item .gp-del:hover{background:rgba(255,80,80,.4);color:#fff;}
+  .gp-add{padding:12px;border:1.5px dashed rgba(140,190,255,.4);border-radius:10px;color:#8fd2ff;text-align:center;cursor:pointer;
+    font-size:20px;font-weight:700;user-select:none;}
+  .gp-add:hover{background:rgba(120,200,255,.1);}
+  .gacha-preview{flex:1;position:relative;border-radius:14px;background:rgba(8,14,30,.35);border:1px solid rgba(140,190,255,.1);
+    overflow:hidden;min-height:0;}
+  .gacha-empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:#5f7896;}
+  .ge-orb{width:46px;height:46px;border-radius:50%;background:radial-gradient(circle at 38% 32%,#b0f6ff,#2ec8ff 55%,#0b7fb8);
+    box-shadow:0 0 24px rgba(46,200,255,.6);animation:orbFloat 3s ease-in-out infinite;}
+  .gacha-info{position:absolute;top:0;left:0;right:0;padding:14px 18px 8px;z-index:2;pointer-events:none;
+    background:linear-gradient(180deg,rgba(4,8,18,.85),rgba(4,8,18,0));}
+  .gi-name{font-size:17px;font-weight:800;color:#eaf4ff;text-shadow:0 2px 10px rgba(0,0,0,.6);}
+  .gi-meta{font-size:11px;color:#9db4d4;margin-top:3px;}
+  .gacha-cards{position:absolute;inset:0;padding:64px 14px 10px;overflow-y:auto;display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px;align-content:start;}
+  .gc-thumb{position:relative;aspect-ratio:3/4;border-radius:8px;overflow:hidden;background:#0a1120;cursor:default;}
+  .gc-thumb img{width:100%;height:100%;object-fit:cover;object-position:50% 12%;display:block;}
+  .gc-thumb .gc-r{position:absolute;bottom:3px;left:5px;font-size:11px;color:#ffe27a;text-shadow:0 1px 3px rgba(0,0,0,.9);letter-spacing:-1px;}
+  .gacha-actions{width:100%;display:flex;align-items:center;gap:10px;padding:8px 26px 14px;}
+  .gacha-actions .center{flex:1;text-align:center;font-size:11.5px;color:#5f7896;letter-spacing:.1em;}
+
+  /* 抽卡演出浮层 */
+  #gacha-draw{position:fixed;inset:0;z-index:260;display:none;background:#060a16;overflow:hidden;}
+  #gacha-draw.on{display:block;}
+  .gd-orbs{position:absolute;inset:0;}
+  .gd-orb{position:absolute;width:64px;height:64px;border-radius:50%;animation:orbFloat 2.8s ease-in-out infinite;}
+  .gd-orb.c2{background:radial-gradient(circle at 38% 32%,#d6faff,#2ec8ff 55%,#0b7fb8);box-shadow:0 0 34px 6px rgba(46,200,255,.55);}
+  .gd-orb.c3{background:radial-gradient(circle at 38% 32%,#fff6cf,#ffd84d 55%,#c98a00);box-shadow:0 0 34px 6px rgba(255,216,77,.55);}
+  .gd-orb.c4{background:radial-gradient(circle at 38% 32%,#ffd7f4,#e070ff 48%,#7a3cff);box-shadow:0 0 40px 8px rgba(214,102,255,.6);}
+  @keyframes orbFloat{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-26px) scale(1.08)}}
+  .gd-tap-hint{position:absolute;bottom:7vh;left:0;right:0;text-align:center;color:#9db4d4;font-size:14px;letter-spacing:.3em;
+    animation:hintPulse 1.6s ease-in-out infinite;}
+  @keyframes hintPulse{0%,100%{opacity:.4}50%{opacity:1}}
+  .gd-flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;transition:opacity .12s;}
+  .gd-flash.on{opacity:1;}
+  .gd-card-stage{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;}
+  .gd-card-stage img.gd-portrait{height:82%;max-width:72%;object-fit:cover;object-position:50% 8%;border-radius:12px;
+    box-shadow:0 18px 70px rgba(0,0,0,.75);animation:cardIn .4s ease-out;}
+  .gd-card-stage img.gd-full{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 10%;animation:cardIn .5s ease-out;}
+  @keyframes cardIn{from{opacity:0;transform:scale(.86)}to{opacity:1;transform:scale(1)}}
+  .gd-cap{position:absolute;bottom:5vh;right:4vw;text-align:right;z-index:3;animation:cardIn .45s ease-out;}
+  .gd-cap .gd-stars{font-size:26px;font-weight:800;letter-spacing:2px;color:#fff;text-shadow:0 2px 8px #0d2a52,0 0 18px rgba(255,222,120,.55);}
+  .gd-cap .gd-names{font-size:15px;font-weight:800;color:#fff;text-shadow:0 2px 8px #0d2a52,0 2px 6px #0d2a52;margin-top:4px;}
+  .gd-cap .gd-names small{display:block;font-size:12px;font-weight:700;opacity:.92;}
+  .gd-skip-tip{position:absolute;top:12px;right:16px;font-size:11px;color:#7f97b8;letter-spacing:.15em;z-index:4;}
+  .gd-summary{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;
+    background:rgba(6,10,22,.92);z-index:5;}
+  .gs-grid{display:grid;grid-template-columns:repeat(5,110px);gap:10px;}
+  .gs-cell{position:relative;aspect-ratio:3/4;border-radius:10px;overflow:hidden;background:#0a1120;
+    box-shadow:0 4px 18px rgba(0,0,0,.5);animation:cardIn .35s ease-out both;}
+  .gs-cell img{width:100%;height:100%;object-fit:cover;object-position:50% 10%;display:block;}
+  .gs-cell .gs-r{position:absolute;bottom:3px;left:6px;font-size:13px;font-weight:800;color:#fff;letter-spacing:-0.5px;
+    text-shadow:0 1px 4px #0d2a52;}
+  .gs-actions{position:absolute;right:26px;bottom:20px;display:flex;gap:12px;}
+
+  /* ---------- 成员 ---------- */
+  .member-grid{flex:1;display:grid;grid-template-columns:repeat(8,1fr);gap:10px;width:100%;padding:10px 26px 16px;
+    overflow-y:auto;align-content:start;}
+  .member-grid .mb{position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;background:#0a1120;cursor:pointer;
+    box-shadow:0 0 0 2px rgba(255,255,255,.85),0 0 14px rgba(255,255,255,.4);transition:transform .15s;}
+  .member-grid .mb:hover{transform:translateY(-3px);}
+  .member-grid .mb img{width:100%;height:100%;object-fit:cover;object-position:50% 14%;display:block;}
+  .member-grid .mb .mb-r{position:absolute;top:3px;left:5px;font-size:12px;color:#ffe27a;letter-spacing:-1px;text-shadow:0 1px 3px rgba(0,0,0,.9);}
+  #member-big{position:fixed;inset:0;z-index:270;background:#04060d;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+  #member-big img{max-width:96%;max-height:96%;object-fit:contain;box-shadow:0 12px 60px rgba(0,0,0,.8);border-radius:8px;}
+
+  @media (max-height:430px){
+    .gacha-wrap{padding:6px 16px 4px;gap:10px;}
+    .gacha-pools{width:190px;}
+    .gacha-actions{padding:4px 16px 10px;}
+    .gs-grid{grid-template-columns:repeat(5,84px);}
+    .member-grid{padding:6px 16px 10px;gap:7px;grid-template-columns:repeat(8,1fr);}
+  }
+
   @media (max-height:430px){
     .logo{font-size:clamp(30px,7.4vh,52px);}
     .song-item .artist{font-size:8.5px;margin-top:2px;}
@@ -746,6 +831,8 @@
       <div class="title-actions">
         <button class="btn" id="btn-start">开 始 演 出</button>
         <button class="btn ghost" id="btn-profile">个 人 主 页</button>
+        <button class="btn ghost" id="btn-gacha">世 界 的 招 募</button>
+        <button class="btn ghost" id="btn-members">成 员</button>
         <button class="btn ghost" id="btn-settings">设 置</button>
         <button class="btn ghost" id="btn-dev">开发者相关</button>
       </div>
@@ -781,6 +868,7 @@
       <div class="tab" data-tab="bg">背景</div>
       <div class="tab" data-tab="team">配队选择</div>
       <div class="tab" data-tab="result">打歌结算</div>
+      <div class="tab" data-tab="gachaset">抽卡设置</div>
     </div>
     <div class="settings-body">
       <div class="panel on" id="panel-skin">
@@ -901,6 +989,14 @@
           <div class="sub">达成 FC / AP 时会自动显示对应称号；有更高分时自动显示「♦新纪录!♦」（分数 = 判定加权 + 连击加成，按曲目与难度分开记录）</div>
         </div>
       </div>
+      <div class="panel" id="panel-gachaset">
+        <p class="hint">「世界的招募」的出卡概率设置。四星概率可在 <b>3% ~ 7%</b> 之间调整（默认 3%）；三星与二星会按官方比例（8.5% : 88.5%）分摊剩下的概率。十连最后一抽保底三星及以上。</p>
+        <div class="field">
+          <div class="lbl"><span>四星概率</span><b id="gacha-rate4-val">3%</b></div>
+          <input type="range" id="gacha-rate4-range" min="3" max="7" step="0.5" value="3">
+          <div class="sub" id="gacha-rate4-sub">当前概率：四星 3% · 三星 8.5% · 二星 88.5%</div>
+        </div>
+      </div>
     </div>
     <div class="bottom-bar">
       <button class="btn ghost" id="settings-back">返 回</button>
@@ -908,6 +1004,66 @@
       <div></div>
     </div>
   </section>
+
+  <!-- ================= 世界的招募 ================= -->
+  <section id="screen-gacha" class="screen">
+    <div class="page-head">
+      <h2>世界的<em>招募</em></h2>
+      <div class="tip">左侧选择卡池 · 右侧预览当期卡牌<br>点加号输入编号添加卡池</div>
+    </div>
+    <div class="gacha-wrap">
+      <div class="gacha-pools" id="gacha-pools"></div>
+      <div class="gacha-preview" id="gacha-preview">
+        <div class="gacha-empty" id="gacha-empty">
+          <div class="ge-orb"></div>
+          <p>在左侧选择一个卡池</p>
+        </div>
+        <div class="gacha-info" id="gacha-info" style="display:none">
+          <div class="gi-name" id="gi-name"></div>
+          <div class="gi-meta" id="gi-meta"></div>
+        </div>
+        <div class="gacha-cards" id="gacha-cards"></div>
+      </div>
+    </div>
+    <div class="gacha-actions">
+      <button class="btn ghost" id="gacha-back">返 回</button>
+      <div class="center" id="gacha-now"></div>
+      <button class="btn pink" id="gacha-pull1">招募一次</button>
+      <button class="btn" id="gacha-pull10">招募十次</button>
+    </div>
+  </section>
+
+  <!-- ================= 抽卡演出浮层 ================= -->
+  <div id="gacha-draw">
+    <div class="gd-orbs" id="gd-orbs"></div>
+    <div class="gd-tap-hint" id="gd-tap-hint">点击屏幕开始招募</div>
+    <div class="gd-flash" id="gd-flash"></div>
+    <div class="gd-card-stage" id="gd-stage"></div>
+    <div class="gd-summary" id="gd-summary" style="display:none">
+      <div class="gs-grid" id="gs-grid"></div>
+      <div class="gs-actions">
+        <button class="btn ghost" id="gs-back">返回卡池列表</button>
+        <button class="btn pink" id="gs-again">再招募</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= 成员 ================= -->
+  <section id="screen-members" class="screen">
+    <div class="page-head">
+      <h2>成 <em>员</em></h2>
+      <div class="tip"><b class="song-count" id="member-count">共 0 人</b><br>招募到的成员都在这里<br>点击卡片可查看大图</div>
+    </div>
+    <div class="member-grid" id="member-grid"></div>
+    <div class="bottom-bar">
+      <button class="btn ghost" id="members-back">返 回</button>
+      <div class="center"></div>
+      <div></div>
+    </div>
+  </section>
+
+  <!-- 成员大图浮层 -->
+  <div id="member-big" style="display:none"><img id="member-big-img" alt=""></div>
 
   <!-- ================= 开发者相关 ================= -->
   <section id="screen-dev" class="screen">
@@ -1585,7 +1741,8 @@ const CARDS = [
 const DEF_SET = { skin:'lumirect', bgMode:'card', bgCover:res('assets/covers/leoneed1.jpg'),
   bgCard:res('assets/cards/88/card_normal.webp'), bgCardShade:0.45, customSkin:null, sfxVolume:0.5, speed:7.0, diff:'normal',
   keyScale:1.0, judgeLeniency:1.0, holdAlpha:0.5, judgeLift:0, judgeOffset:0, myCards:[], lastSong:0, sound:'tap',
-  marks:{}, favs:{}, collapsedUnits:{}, teams:[], activeTeam:-1, songFilter:{ dur:'all', fc:'all', ap:'all', fav:'all' } };
+  marks:{}, favs:{}, collapsedUnits:{}, teams:[], activeTeam:-1, songFilter:{ dur:'all', fc:'all', ap:'all', fav:'all' },
+  gachaRate4:3, gachaPools:[], members:[] };
 let settings = Object.assign({}, DEF_SET);
 try {
   const raw = localStorage.getItem('sekai-fan-settings');
@@ -1601,6 +1758,10 @@ settings.holdAlpha = clamp(Number(settings.holdAlpha) || 0.5, 0.3, 0.9);
 settings.judgeLift = clamp(Number(settings.judgeLift) || 0, 0, 10);
 settings.judgeOffset = clamp(Number(settings.judgeOffset) || 0, -150, 150);
 if (!Array.isArray(settings.myCards)) settings.myCards = [];
+// 抽卡设置：四星概率（3~7，默认 3）/ 已添加的卡池 / 招募到的成员
+settings.gachaRate4 = clamp(Number(settings.gachaRate4) || 3, 3, 7);
+if (!Array.isArray(settings.gachaPools)) settings.gachaPools = [];
+if (!Array.isArray(settings.members)) settings.members = [];
 // 结算人物列表 / 个人主页（图片本体存 IndexedDB，settings 只存元数据）
 if (!Array.isArray(settings.resCards)) settings.resCards = [];
 settings.resPick = clamp(Number(settings.resPick) || 0, 0, Math.max(0, settings.resCards.length - 1));
@@ -6600,6 +6761,508 @@ $('#mk-ink-clear').addEventListener('click', () => {
   if (!MK || !MK.ink.length) return;
   mkConfirm('清空涂鸦', '确定清空这张名片的全部涂鸦笔画？', () => { MK.ink = []; MK.dirty = true; mkRedrawInk(); mkSyncInkUI(); mkRenderList(); });
 });
+
+/* ================================================================
+   世界的招募 / 成员图鉴
+   数据源：内置 assets/gacha-index.json（sekai-master-db 日服数据精简）
+   新卡池兜底：sekai-master-db-diff 的 gachas.json / cards.json
+   ================================================================ */
+const GACHA_SFX = res('assets/sfx/gacha.mp3');
+const GACHA_DB_REMOTE = [
+  'https://ghfast.top/https://raw.githubusercontent.com/Sekai-World/sekai-master-db-diff/main/',
+  'https://raw.githubusercontent.com/Sekai-World/sekai-master-db-diff/main/'
+];
+let _gachaIdx = null, _gachaIdxLoading = null;
+let _poolRosterCache = {};      // poolId -> [cardId]
+let _selPool = -1;              // 当前选中的卡池 id
+let _gachaDrawing = false;      // 抽卡演出进行中
+
+async function loadGachaIdx() {
+  if (_gachaIdx) return _gachaIdx;
+  if (_gachaIdxLoading) return _gachaIdxLoading;
+  _gachaIdxLoading = (async () => {
+    try {
+      const txt = await fetchTextProg(res('assets/gacha-index.json'));
+      _gachaIdx = JSON.parse(txt);
+    } catch (e) {
+      _gachaIdx = { v: 0, chars: {}, gachas: [], cards: {}, perm: [], rosters: {} };
+    }
+    return _gachaIdx;
+  })();
+  return _gachaIdxLoading;
+}
+
+/* 新卡池（内置索引没有）→ 抓远端 gachas.json 查元数据（本地缓存 7 天） */
+async function gachaLookupRemote(gid) {
+  let arr = null;
+  try {
+    const raw = localStorage.getItem('pjsk-gachas-remote');
+    if (raw) {
+      const o = JSON.parse(raw);
+      if (o && o.t && Date.now() - o.t < 7 * 864e5 && Array.isArray(o.m)) arr = o.m;
+    }
+  } catch (e) {}
+  if (!arr) {
+    let lastErr = null;
+    for (const base of GACHA_DB_REMOTE) {
+      try {
+        arr = JSON.parse(await fetchTextProg(base + 'gachas.json'));
+        try { localStorage.setItem('pjsk-gachas-remote', JSON.stringify({ t: Date.now(), m: arr })); } catch (e) {}
+        break;
+      } catch (e) { lastErr = e; arr = null; }
+    }
+    if (!arr) throw lastErr || new Error('gachas db failed');
+  }
+  return arr.find(g => g.id === gid) || null;
+}
+
+/* 远端 cards.json → 补充卡牌数据（30 天缓存，只存需要的字段） */
+async function gachaCardsRemote() {
+  let m = null;
+  try {
+    const raw = localStorage.getItem('pjsk-cards-gacha-v1');
+    if (raw) {
+      const o = JSON.parse(raw);
+      if (o && o.m && Date.now() - o.t < 30 * 864e5) { m = o.m; }
+    }
+  } catch (e) {}
+  if (m) { Object.assign(_gachaIdx.cards, m); return; }
+  let lastErr = null;
+  for (const base of GACHA_DB_REMOTE) {
+    try {
+      const arr = JSON.parse(await fetchTextProg(base + 'cards.json'));
+      m = {};
+      for (const c of arr) m[c.id] = [c.assetbundleName, c.cardRarityType || '', c.characterId, c.releaseAt, (c.prefix || '').trim()];
+      Object.assign(_gachaIdx.cards, m);
+      try { localStorage.setItem('pjsk-cards-gacha-v1', JSON.stringify({ t: Date.now(), m })); } catch (e) {}
+      return;
+    } catch (e) { lastErr = e; }
+  }
+  throw lastErr || new Error('cards db failed');
+}
+
+/* 卡池花名册：内置 rosters → 复刻池回退 → 窗口法 → 常驻池兜底 */
+function tierOf(r) { return r === 'rarity_4' || r === 'rarity_birthday' ? 4 : (r === 'rarity_3' ? 3 : 2); }
+function gachaPoolRoster(pool) {
+  const key = String(pool.id);
+  if (_poolRosterCache[key]) return _poolRosterCache[key];
+  const idx = _gachaIdx;
+  let lst = (idx.rosters && idx.rosters[key]) ? idx.rosters[key].slice() : [];
+  if (!lst.length) {
+    // 窗口法：卡牌发布时间落在卡池开放区间内
+    lst = Object.keys(idx.cards).map(Number).filter(cid => {
+      const c = idx.cards[cid];
+      return c[3] >= pool.s && c[3] <= pool.e;
+    });
+    if (!lst.length) {
+      // 常驻池兜底：截至卡池结束时的全部常驻卡
+      lst = (idx.perm || []).filter(cid => idx.cards[cid] && idx.cards[cid][3] <= pool.e);
+    }
+  }
+  _poolRosterCache[key] = lst;
+  return lst;
+}
+
+/* 拉取一张卡图到本地缓存（idb），返回 objectURL */
+async function gachaCardImg(cid, part) {
+  const key = `gimg${cid}_${part}`;
+  if (cardBlobs[key]) return cardBlobs[key];
+  try { const b = await idbGet(key); if (b) { cardBlobs[key] = URL.createObjectURL(b); return cardBlobs[key]; } } catch (e) {}
+  const ent = _gachaIdx.cards[cid];
+  if (!ent) throw new Error('no card ' + cid);
+  const rel = `${ent[0]}/${part === 'after' ? 'card_after_training' : 'card_normal'}.webp`;
+  const direct = CARD_ASSET_BASE + rel;
+  const blob = await fetchBlobProg([direct, `https://wsrv.nl/?url=${encodeURIComponent(direct)}&output=webp`]);
+  await idbPut(key, blob);
+  cardBlobs[key] = URL.createObjectURL(blob);
+  return cardBlobs[key];
+}
+
+/* ---------- 抽卡设置（设置页） ---------- */
+function gachaRateParts() {
+  const r4 = clamp(Number(settings.gachaRate4) || 3, 3, 7);
+  const rest = 100 - r4;
+  const r3 = Math.round(rest * (8.5 / 97) * 10) / 10;
+  const r2 = Math.round((rest - r3) * 10) / 10;
+  return { r2, r3, r4 };
+}
+function syncGachaRateUI() {
+  const p = gachaRateParts();
+  const r = $('#gacha-rate4-range'), v = $('#gacha-rate4-val'), s = $('#gacha-rate4-sub');
+  if (r) r.value = p.r4;
+  if (v) v.textContent = p.r4 + '%';
+  if (s) s.textContent = `当前概率：四星 ${p.r4}% · 三星 ${p.r3}% · 二星 ${p.r2}%`;
+}
+$('#gacha-rate4-range').addEventListener('input', e => {
+  settings.gachaRate4 = Number(e.target.value);
+  saveSettings(); syncGachaRateUI();
+});
+
+/* ---------- 卡池列表 ---------- */
+function renderGachaPools() {
+  const box = $('#gacha-pools');
+  box.innerHTML = '';
+  for (const p of settings.gachaPools) {
+    const el = document.createElement('div');
+    el.className = 'gp-item' + (p.id === _selPool ? ' on' : '');
+    el.innerHTML = `<span>${escapeHTML(p.name)}</span><span class="gp-del" title="删除">✕</span>`;
+    el.addEventListener('click', e => {
+      if (e.target.classList.contains('gp-del')) {
+        settings.gachaPools = settings.gachaPools.filter(x => x.id !== p.id);
+        if (_selPool === p.id) { _selPool = -1; renderGachaPreview(); }
+        saveSettings(); renderGachaPools();
+        return;
+      }
+      _selPool = p.id; renderGachaPools(); renderGachaPreview();
+    });
+    box.appendChild(el);
+  }
+  const add = document.createElement('div');
+  add.className = 'gp-add';
+  add.textContent = '＋';
+  add.title = '添加卡池（输入编号）';
+  add.addEventListener('click', openGachaAddDialog);
+  box.appendChild(add);
+}
+
+function gachaFmtDate(t) {
+  try {
+    const d = new Date(t);
+    return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`;
+  } catch (e) { return ''; }
+}
+
+function renderGachaPreview() {
+  const empty = $('#gacha-empty'), info = $('#gacha-info'), cards = $('#gacha-cards'), now = $('#gacha-now');
+  const pool = settings.gachaPools.find(p => p.id === _selPool);
+  cards.innerHTML = '';
+  if (!pool) { empty.style.display = ''; info.style.display = 'none'; now.textContent = ''; return; }
+  empty.style.display = 'none'; info.style.display = '';
+  $('#gi-name').textContent = pool.name;
+  const typeTxt = { ceil: '限定', normal: '常驻', gift: '赠送', beginner: '新手' }[pool.type] || pool.type;
+  $('#gi-meta').textContent = `${typeTxt} · ${gachaFmtDate(pool.s)} ~ ${gachaFmtDate(pool.e)} · 四星概率 ${gachaRateParts().r4}%`;
+  now.textContent = pool.name;
+  const roster = gachaPoolRoster(pool);
+  // 当期卡牌：新卡优先展示
+  const ordered = roster.slice().sort((a, b) => b - a).slice(0, 240);
+  for (const cid of ordered) {
+    const ent = _gachaIdx.cards[cid];
+    if (!ent) continue;
+    const cell = document.createElement('div');
+    cell.className = 'gc-thumb';
+    const t = tierOf(ent[1]);
+    const star = ent[1] === 'rarity_birthday' ? '𐙚' : '★'.repeat(t);
+    cell.innerHTML = `<img alt=""><span class="gc-r">${star}</span>`;
+    gachaCardImg(cid, 'normal').then(url => { cell.querySelector('img').src = url; }).catch(() => {});
+    cards.appendChild(cell);
+  }
+}
+
+/* ---------- 添加卡池弹窗 ---------- */
+function openGachaAddDialog() {
+  const mk = document.createElement('div');
+  mk.style.cssText = 'position:fixed;inset:0;z-index:290;background:rgba(4,8,18,.7);display:flex;align-items:center;justify-content:center;';
+  mk.innerHTML = `<div style="width:min(420px,86vw);background:#0c1424;border:1px solid rgba(140,190,255,.25);border-radius:16px;padding:22px;box-shadow:0 18px 60px rgba(0,0,0,.7)">
+    <div style="font-size:16px;font-weight:800;color:#eaf4ff;margin-bottom:6px">添加卡池</div>
+    <div style="font-size:12px;color:#8ca3c6;margin-bottom:14px">输入卡池编号（纯数字）。编号可在 sekai.best/gacha 的地址栏查看。</div>
+    <input id="gacha-add-input" inputmode="numeric" maxlength="7" placeholder="例如 4060"
+      style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.14);border-radius:10px;color:#cfe6ff;padding:11px 13px;font-size:14px;font-weight:700;outline:none;box-sizing:border-box">
+    <div style="display:flex;gap:10px;margin-top:16px;justify-content:flex-end">
+      <button class="btn ghost" id="gacha-add-cancel">取消</button>
+      <button class="btn pink" id="gacha-add-ok">添加</button>
+    </div>
+    <div id="gacha-add-status" style="font-size:12px;color:#7ceaff;margin-top:10px;min-height:16px"></div>
+  </div>`;
+  document.body.appendChild(mk);
+  const input = mk.querySelector('#gacha-add-input');
+  const status = mk.querySelector('#gacha-add-status');
+  const close = () => mk.remove();
+  mk.querySelector('#gacha-add-cancel').addEventListener('click', close);
+  mk.addEventListener('click', e => { if (e.target === mk) close(); });
+  const doAdd = async () => {
+    const v = input.value.trim();
+    if (!/^\d{1,7}$/.test(v)) { status.textContent = '请输入纯数字编号'; return; }
+    const gid = Number(v);
+    if (settings.gachaPools.some(p => p.id === gid)) { status.textContent = '这个卡池已经添加过了'; return; }
+    status.textContent = '正在读取卡池数据…';
+    await loadGachaIdx();
+    let g = (_gachaIdx.gachas || []).find(x => x.id === gid);
+    if (!g) {
+      status.textContent = '内置索引没有该编号，正在读取在线卡池库…';
+      try {
+        const rg = await gachaLookupRemote(gid);
+        if (!rg) { status.textContent = `没有找到编号 ${gid} 的卡池`; return; }
+        g = { id: rg.id, name: rg.name, abn: rg.assetbundleName || '', type: rg.gachaType, s: rg.startAt, e: rg.endAt, rates: (rg.gachaCardRarityRates || []).filter(r => r.lotteryType === 'normal').map(r => ({ r: r.cardRarityType, rate: r.rate })) };
+        _gachaIdx.gachas.push(g);
+        // 远端卡池多半是刚出的新卡，内置卡牌表里没有 → 拉远端卡牌库补充
+        try { await gachaCardsRemote(); } catch (e) {}
+        _poolRosterCache = {};
+      } catch (e) {
+        status.textContent = '读取在线卡池库失败，请检查网络后重试';
+        return;
+      }
+    }
+    settings.gachaPools.push({ id: g.id, name: g.name, abn: g.abn || '', type: g.type, s: g.s, e: g.e, rates: g.rates || [] });
+    _selPool = g.id;
+    saveSettings(); renderGachaPools(); renderGachaPreview();
+    close();
+    // 当期卡牌中的二星/三星自动加入成员列表
+    let added = 0;
+    for (const cid of gachaPoolRoster(g)) {
+      const ent = _gachaIdx.cards[cid];
+      if (!ent || tierOf(ent[1]) >= 4) continue;
+      if (!settings.members.some(m => m.cid === cid)) {
+        settings.members.push({ cid, r: ent[1] });
+        added++;
+      }
+    }
+    if (added) saveSettings();
+    showToast(`已添加卡池：${g.name}${added ? ` · ${added} 位成员加入` : ''}`, 2600);
+  };
+  mk.querySelector('#gacha-add-ok').addEventListener('click', doAdd);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') doAdd(); });
+  setTimeout(() => input.focus(), 60);
+}
+
+/* ---------- 抽卡 ---------- */
+function gachaRatesFor(pool) {
+  const p = gachaRateParts();
+  // 有官方概率时，三星/二星按官方比例分摊剩余概率
+  let b3 = 8.5, b2 = 88.5;
+  if (pool && Array.isArray(pool.rates)) {
+    const f2 = pool.rates.find(x => x.r === 'rarity_2'), f3 = pool.rates.find(x => x.r === 'rarity_3');
+    if (f2 && f3 && f2.rate > 0) { b2 = f2.rate; b3 = f3.rate; }
+  }
+  const r3 = Math.round((100 - p.r4) * (b3 / (b2 + b3)) * 10) / 10;
+  return { 2: Math.round((100 - p.r4 - r3) * 10) / 10, 3: r3, 4: p.r4 };
+}
+function gachaPickTier(pool) {
+  const rates = gachaRatesFor(pool);
+  const roll = Math.random() * 100;
+  if (roll < rates[4]) return 4;
+  if (roll < rates[4] + rates[3]) return 3;
+  return 2;
+}
+function gachaPull(pool, n) {
+  const roster = gachaPoolRoster(pool);
+  const byTier = { 2: [], 3: [], 4: [] };
+  for (const cid of roster) {
+    const ent = _gachaIdx.cards[cid];
+    if (ent) byTier[tierOf(ent[1])].push(cid);
+  }
+  const pick = tier => {
+    const arr = byTier[tier].length ? byTier[tier] : byTier[3].length ? byTier[3] : byTier[4].length ? byTier[4] : byTier[2];
+    if (!arr.length) return null;
+    return arr[Math.floor(Math.random() * arr.length)];
+  };
+  const out = [];
+  for (let i = 0; i < n; i++) out.push({ cid: pick(gachaPickTier(pool)), tier: 0 });
+  // 十连保底：一抽都没有三星以上 → 最后一抽强制三星
+  if (n >= 10 && !out.some(x => x.cid && _gachaIdx.cards[x.cid] && tierOf(_gachaIdx.cards[x.cid][1]) >= 3)) {
+    const c = pick(3);
+    if (c) out[out.length - 1] = { cid: c, tier: 0 };
+  }
+  out.forEach(x => { x.tier = x.cid && _gachaIdx.cards[x.cid] ? tierOf(_gachaIdx.cards[x.cid][1]) : 2; });
+  return out.filter(x => x.cid);
+}
+
+function gachaAddMembers(results) {
+  let added = 0;
+  for (const r of results) {
+    if (!settings.members.some(m => m.cid === r.cid)) {
+      settings.members.push({ cid: r.cid, r: _gachaIdx.cards[r.cid] ? _gachaIdx.cards[r.cid][1] : 'rarity_2' });
+      added++;
+    }
+  }
+  if (added) saveSettings();
+  return added;
+}
+
+/* 抽卡演出 */
+let _gdQueue = [], _gdIdx = 0, _gdPool = null, _gdN = 1;
+function gdStars(ent) { return ent[1] === 'rarity_birthday' ? '𐙚' : '★'.repeat(tierOf(ent[1])); }
+function gdRandomChar() {
+  const cs = Object.values(_gachaIdx.chars || {});
+  return cs.length ? cs[Math.floor(Math.random() * cs.length)] : '';
+}
+async function startGachaDraw(pool, n) {
+  if (_gachaDrawing) return;
+  const results = gachaPull(pool, n);
+  if (!results.length) { showToast('这个卡池暂时没有可招募的卡牌', 2600); return; }
+  _gachaDrawing = true; _gdPool = pool; _gdN = n;
+  gachaAddMembers(results);
+  _gdQueue = results; _gdIdx = -1;
+
+  const draw = $('#gacha-draw');
+  draw.classList.add('on');
+  $('#gd-stage').innerHTML = '';
+  $('#gd-summary').style.display = 'none';
+  $('#gd-flash').classList.remove('on');
+  // 最高星数对应的发光球，飘动
+  const maxTier = Math.max(...results.map(r => r.tier));
+  const orbs = $('#gd-orbs');
+  orbs.innerHTML = '';
+  for (let i = 0; i < n; i++) {
+    const o = document.createElement('div');
+    o.className = `gd-orb c${maxTier}`;
+    o.style.left = (12 + Math.random() * 74) + '%';
+    o.style.top = (14 + Math.random() * 62) + '%';
+    o.style.animationDelay = (Math.random() * 2) + 's,' + (Math.random() * 2) + 's';
+    o.style.animationDuration = (2.4 + Math.random() * 1.4) + 's';
+    orbs.appendChild(o);
+  }
+  $('#gd-tap-hint').style.display = '';
+  draw.dataset.phase = 'orbs';
+}
+async function gachaPlaySfx() {
+  try {
+    const a = new Audio(GACHA_SFX);
+    a.volume = clamp((Number(settings.sfxVolume) || 0.5) * 1.8, 0, 1);
+    await a.play();
+    setTimeout(() => { try { a.pause(); } catch (e) {} }, 4200);
+  } catch (e) {}
+}
+function gdShowCard(i) {
+  const r = _gdQueue[i];
+  const ent = _gachaIdx.cards[r.cid];
+  const stage = $('#gd-stage');
+  stage.innerHTML = '';
+  const isBirthday = ent[1] === 'rarity_birthday';
+  const part = (r.tier >= 4 && !isBirthday) ? 'after' : 'normal';
+  const img = document.createElement('img');
+  img.className = r.tier >= 4 ? 'gd-full' : 'gd-portrait';
+  stage.appendChild(img);
+  gachaCardImg(r.cid, part).then(u => { img.src = u; }).catch(() => {});
+  const cap = document.createElement('div');
+  cap.className = 'gd-cap';
+  if (r.tier >= 4) {
+    cap.innerHTML = `<div class="gd-stars" style="color:#ffd0f8">${gdStars(ent)}</div>
+      <div class="gd-names">${escapeHTML(ent[4] || '')}<small>${escapeHTML((_gachaIdx.chars || {})[ent[2]] || '')}</small></div>`;
+  } else {
+    cap.innerHTML = `<div class="gd-stars">${gdStars(ent)}</div>
+      <div class="gd-names"><small>${escapeHTML(gdRandomChar())}</small></div>`;
+  }
+  stage.appendChild(cap);
+}
+function gdAdvance() {
+  const draw = $('#gacha-draw');
+  if (draw.dataset.phase === 'orbs') {
+    draw.dataset.phase = 'cards';
+    $('#gd-tap-hint').style.display = 'none';
+    $('#gd-orbs').innerHTML = '';
+    gachaPlaySfx();
+    _gdIdx = 0;
+    const fl = $('#gd-flash');
+    fl.classList.add('on');
+    setTimeout(() => fl.classList.remove('on'), 130);
+    gdShowCard(0);
+    return;
+  }
+  if (draw.dataset.phase === 'cards') {
+    _gdIdx++;
+    if (_gdIdx >= _gdQueue.length) {
+      gdShowSummary();
+      return;
+    }
+    const fl = $('#gd-flash');
+    fl.classList.add('on');
+    setTimeout(() => fl.classList.remove('on'), 110);
+    gdShowCard(_gdIdx);
+  }
+}
+function gdShowSummary() {
+  const draw = $('#gacha-draw');
+  draw.dataset.phase = 'summary';
+  $('#gd-stage').innerHTML = '';
+  const grid = $('#gs-grid');
+  grid.innerHTML = '';
+  _gdQueue.forEach((r, i) => {
+    const ent = _gachaIdx.cards[r.cid];
+    const cell = document.createElement('div');
+    cell.className = 'gs-cell';
+    cell.style.animationDelay = (i * 0.05) + 's';
+    const star = ent[1] === 'rarity_birthday' ? '𐙚' : '★'.repeat(r.tier);
+    cell.innerHTML = `<img alt=""><span class="gs-r" style="${r.tier >= 4 ? 'color:#ffd0f8' : ''}">${star}</span>`;
+    gachaCardImg(r.cid, 'normal').then(u => { cell.querySelector('img').src = u; }).catch(() => {});
+    grid.appendChild(cell);
+  });
+  const sum = $('#gd-summary');
+  sum.style.display = 'flex';
+  $('#gs-again').textContent = `再招募${_gdN === 1 ? '一次' : '十次'}`;
+}
+$('#gacha-draw').addEventListener('pointerdown', e => {
+  if (e.target.closest('.gs-actions')) return;
+  if ($('#gacha-draw').dataset.phase !== 'summary') gdAdvance();
+});
+$('#gs-again').addEventListener('click', () => {
+  $('#gd-summary').style.display = 'none';
+  startGachaDraw(_gdPool, _gdN);
+});
+$('#gs-back').addEventListener('click', () => {
+  $('#gacha-draw').classList.remove('on');
+  $('#gd-summary').style.display = 'none';
+  $('#gd-stage').innerHTML = '';
+  _gachaDrawing = false;
+  renderGachaPreview();
+});
+
+/* ---------- 成员 ---------- */
+function memberImgKey(cid, r) { return `gimg${cid}_${(r === 'rarity_4' || r === 'rarity_birthday') ? 'after' : 'normal'}`; }
+function renderMembers() {
+  const grid = $('#member-grid');
+  grid.innerHTML = '';
+  $('#member-count').textContent = `共 ${settings.members.length} 人`;
+  const list = settings.members.slice().reverse();    // 新招的排前面
+  for (const m of list) {
+    const ent = _gachaIdx ? _gachaIdx.cards[m.cid] : null;
+    const isBd = m.r === 'rarity_birthday';
+    const t = isBd ? 4 : tierOf(m.r);
+    const star = isBd ? '𐙚' : '★'.repeat(t);
+    const cell = document.createElement('div');
+    cell.className = 'mb';
+    cell.innerHTML = `<img alt=""><span class="mb-r" style="${t >= 4 ? 'color:#ffd0f8' : ''}">${star}</span>`;
+    gachaCardImg(m.cid, m.r === 'rarity_4' ? 'after' : 'normal').then(u => { cell.querySelector('img').src = u; }).catch(() => {});
+    cell.addEventListener('click', async () => {
+      const big = $('#member-big'), img = $('#member-big-img');
+      img.style.visibility = 'hidden';
+      try {
+        const u = await gachaCardImg(m.cid, m.r === 'rarity_4' ? 'after' : 'normal');
+        img.src = u; img.style.visibility = '';
+      } catch (e) {}
+      big.style.display = 'flex';
+    });
+    grid.appendChild(cell);
+  }
+  if (!list.length) {
+    grid.innerHTML = '<div style="grid-column:1/-1;color:#5f7896;font-size:13px;text-align:center;padding:40px 0">还没有成员，去「世界的招募」试试运气吧</div>';
+  }
+}
+$('#member-big').addEventListener('click', () => { $('#member-big').style.display = 'none'; });
+
+/* ---------- 页面按钮 ---------- */
+$('#btn-gacha').addEventListener('click', async () => {
+  show('gacha'); applyBackground();
+  await loadGachaIdx();
+  renderGachaPools();
+  renderGachaPreview();
+});
+$('#gacha-back').addEventListener('click', goTitle);
+$('#gacha-pull1').addEventListener('click', () => {
+  const pool = settings.gachaPools.find(p => p.id === _selPool);
+  if (!pool) { showToast('先在左侧选择一个卡池', 2200); return; }
+  startGachaDraw(pool, 1);
+});
+$('#gacha-pull10').addEventListener('click', () => {
+  const pool = settings.gachaPools.find(p => p.id === _selPool);
+  if (!pool) { showToast('先在左侧选择一个卡池', 2200); return; }
+  startGachaDraw(pool, 10);
+});
+$('#btn-members').addEventListener('click', async () => {
+  show('members'); applyBackground();
+  await loadGachaIdx();
+  renderMembers();
+});
+$('#members-back').addEventListener('click', goTitle);
 
 /* ---------- 工具菜单 ---------- */
 function mkSetTool(t) {
