@@ -513,6 +513,22 @@
   .prow .v{color:#8fd8ff;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;margin-left:auto;padding-left:12px;}
   .prow.click{cursor:pointer;}
   .prow.click .v{border-bottom:2px dotted rgba(37,226,255,.5);padding-bottom:1px;}
+  /* 「本命」标签后缀输入框：默认占位「二人组」，可输入 CP/师徒 等关系词 */
+  .lbl-inp{background:rgba(12,20,36,.55);border:1px solid rgba(37,226,255,.3);border-radius:6px;
+    color:#8fd8ff;font-weight:900;font-size:.72em;padding:2px 7px;margin-left:7px;width:4.6em;
+    outline:none;font-family:inherit;text-align:center;vertical-align:baseline;}
+  .lbl-inp:focus{border-color:rgba(37,226,255,.85);box-shadow:0 0 10px rgba(37,226,255,.18);}
+  .lbl-inp::placeholder{color:#4d7ba6;}
+  /* 添加下一对按钮 */
+  .cp-add{margin-top:10px;align-self:flex-start;display:inline-flex;align-items:center;gap:6px;
+    padding:7px 18px;border-radius:999px;border:1px dashed rgba(37,226,255,.5);
+    color:#8fd8ff;font-weight:900;font-size:clamp(12px,1.9vh,15px);cursor:pointer;letter-spacing:.05em;white-space:nowrap;}
+  .cp-add:active{background:rgba(37,226,255,.14);}
+  /* 额外 CP 行的删除小按钮 */
+  .cp-x{flex:0 0 auto;margin-left:8px;color:#5f7896;font-size:.72em;font-weight:900;cursor:pointer;
+    border:1px solid rgba(140,180,220,.25);border-radius:50%;width:1.7em;height:1.7em;
+    display:inline-flex;align-items:center;justify-content:center;align-self:center;}
+  .cp-x:active{color:#ff8fa8;border-color:rgba(255,120,150,.5);}
   .prow .v.song2{font-size:50%;line-height:1.18;text-align:right;white-space:normal;display:-webkit-box;
     -webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;align-self:flex-end;}
   .pf-char-grid{max-height:200px;overflow-y:auto;}
@@ -1223,8 +1239,8 @@ const CARDS = [
 ];
 
 /* ---------- 设置存储 ---------- */
-const DEF_SET = { skin:'lumirect', bgMode:'album', bgCover:res('assets/covers/leoneed1.jpg'),
-  bgCard:res('assets/cards/c11.jpg'), bgCardShade:0.45, customSkin:null, sfxVolume:0.5, speed:7.0, diff:'normal',
+const DEF_SET = { skin:'lumirect', bgMode:'card', bgCover:res('assets/covers/leoneed1.jpg'),
+  bgCard:res('assets/cards/88/card_normal.webp'), bgCardShade:0.45, customSkin:null, sfxVolume:0.5, speed:7.0, diff:'normal',
   keyScale:1.0, judgeLeniency:1.0, holdAlpha:0.5, judgeLift:0, judgeOffset:0, myCards:[], lastSong:0, sound:'tap',
   marks:{}, favs:{}, collapsedUnits:{}, teams:[], activeTeam:-1, songFilter:{ dur:'all', fc:'all', ap:'all', fav:'all' } };
 let settings = Object.assign({}, DEF_SET);
@@ -4505,7 +4521,7 @@ async function removeResCard(i) {
 
 /* 启动时把结算人物 / 主页资源从 IndexedDB 读成 objectURL */
 async function initProfileAssets() {
-  const SEED_VER = 3;   // v2：默认卡 81；v3：补原始横版卡面（手机横屏结算用）
+  const SEED_VER = 4;   // v2：默认卡 81；v3：补原始横版卡面；v4：默认结算图像=卡88透明立绘、默认背景=卡面模式（卡88特训前）
   if ((settings._defSeeded || 0) < SEED_VER) {
     const first = !settings._defSeeded;
     settings._defSeeded = SEED_VER;
@@ -4525,11 +4541,20 @@ async function initProfileAssets() {
       settings.resCards.push({ key: 'def:81_chr', cid: 81, label: '#81 · 初音未来透明', chr: 1 });
     }
     if (first && !settings.resCards.length) settings.resPick = 0;
-    // 当前选中的还是旧默认（def:88_*）时切到卡 81；用户自己选过的其他卡不动
+    // v4：默认结算图像 = 卡 88（透明立绘）：当前还指向旧默认（卡 81 裁剪卡图 / 88 卡图）时切换；用户手动选过的其他卡不动
+    if (!settings.resCards.some(m => m.key === 'def:88_chr')) {
+      cardBlobs['def:88_chr'] = res('assets/cards/88/chr_after.webp');
+      settings.resCards.push({ key: 'def:88_chr', cid: 88, label: '#88 · 初音未来透明', chr: 1 });
+    }
     const cur = settings.resCards[settings.resPick];
-    if (cur && /^def:88/.test(cur.key)) {
-      const i = settings.resCards.findIndex(m => m.key === 'def:81_normal');
-      if (i >= 0) settings.resPick = i;
+    if (!cur || cur.key === 'def:81_normal' || /^def:88_(normal|after)/.test(cur.key)) {
+      const i88 = settings.resCards.findIndex(m => m.key === 'def:88_chr');
+      if (i88 >= 0) settings.resPick = i88;
+    }
+    // v4：默认背景 = 卡面模式（卡 88 特训前卡图）：仅当背景还是出厂默认（专辑+默认封面）时切换，尊重用户自定义
+    if (settings.bgMode === 'album' && settings.bgCover === DEF_SET.bgCover) {
+      settings.bgMode = 'card';
+      settings.bgCard = res('assets/cards/88/card_normal.webp');
     }
     if (!settings.profile.big) {
       cardBlobs['def:88_normal'] = res('assets/cards/88/normal.webp');
@@ -4677,24 +4702,60 @@ function renderProfile() {
   const unit = profileUnitLabel(p.unit);
   const songV = top ? `${top.title}（${top.count} 次）` : '（自动统计）';
   const songLong = top && vWidth(songV) > 11;   // 太长 → 字号减半、分两行
+  if (!Array.isArray(p.cps)) p.cps = [];
+  if (typeof p.cpLabel !== 'string') p.cpLabel = '';
+  // 本命xx行：标签 = 本命 + 内联输入框（占位「二人组」），值 = 点击选择二人
+  const cpRow = (i, v, del) => `<div class="prow click" data-cp="${i}">` +
+    `<span class="k">本命<input class="lbl-inp" data-cpl="${i}" maxlength="8" placeholder="二人组" autocomplete="off" spellcheck="false"></span>` +
+    `<b class="v">${escapeHTML(v)}</b>` +
+    (del ? `<span class="cp-x" data-cpx="${i}" title="删除这一对">✕</span>` : '') +
+    `</div>`;
   $('#prof-info').innerHTML = [
-    ['当前使用按键皮肤', skinDisplayName(), '', false],
-    ['演出最多的歌曲', songV, '', songLong],
-    ['FC 歌曲数', String(cnt.fc), '', false],
-    ['AP 歌曲数', String(cnt.ap), '', false],
-    ['本命组合', unit || '选择', 'unit', false],
-    ['本命CP', p.cp || '填写', 'cp', false]
-  ].map(([k, v, act, small]) => {
-    let vHtml = escapeHTML(v);
-    if (small) { const [l1, l2] = splitVWidth(v); vHtml = `${escapeHTML(l1)}<br>${escapeHTML(l2)}`; }
-    return `<div class="prow${act ? ' click' : ''}"${act ? ` data-act="${act}"` : ''}><span class="k">${k}</span><b class="v${small ? ' song2' : ''}">${vHtml}</b></div>`;
-  }).join('');
+    '<div class="prow"><span class="k">当前使用按键皮肤</span><b class="v">' + escapeHTML(skinDisplayName()) + '</b></div>',
+    `<div class="prow"><span class="k">演出最多的歌曲</span><b class="v${songLong ? ' song2' : ''}">${escapeHTML(songV)}</b></div>`,
+    `<div class="prow"><span class="k">FC 歌曲数</span><b class="v">${cnt.fc}</b></div>`,
+    `<div class="prow"><span class="k">AP 歌曲数</span><b class="v">${cnt.ap}</b></div>`,
+    `<div class="prow click" data-act="unit"><span class="k">本命组合</span><b class="v">${escapeHTML(unit || '选择')}</b></div>`,
+    cpRow(0, p.cp || '填写', false),
+    ...p.cps.map((c, i) => cpRow(i + 1, c.v || '点击选择二人', true)),
+    `<div class="cp-add" id="cp-add-btn">＋ 添加下一对本命二人组</div>`
+  ].join('');
+  // 输入框宽度随内容自适应（CJK 约 1em/字）
+  const fitInp = inp => { inp.style.width = (inp.value.length ? (inp.value.length + 1.4) : 4.6) + 'em'; };
+  $$('#prof-info .lbl-inp').forEach(inp => {
+    fitInp(inp);
+    const i = +inp.dataset.cpl;
+    inp.value = i === 0 ? (p.cpLabel || '') : (p.cps[i - 1] ? p.cps[i - 1].label : '');
+    fitInp(inp);
+    inp.onclick = e => e.stopPropagation();       // 不触发行的选人弹窗
+    inp.oninput = () => {
+      fitInp(inp);
+      if (i === 0) settings.profile.cpLabel = inp.value.trim();
+      else if (settings.profile.cps[i - 1]) settings.profile.cps[i - 1].label = inp.value.trim();
+      saveSettings();
+    };
+  });
   $$('#prof-info .prow.click').forEach(row => {
     row.onclick = () => {
       if (row.dataset.act === 'unit') openUnitModal();
-      else if (row.dataset.act === 'cp') openCpModal();
+      else if (row.dataset.cp !== undefined) openCpModal(+row.dataset.cp);
     };
   });
+  $$('#prof-info .cp-x').forEach(x => {
+    x.onclick = e => {
+      e.stopPropagation();
+      settings.profile.cps.splice(+x.dataset.cpx - 1, 1);
+      saveSettings(); renderProfile();
+    };
+  });
+  const addBtn = $('#cp-add-btn');
+  if (addBtn) addBtn.onclick = () => {
+    settings.profile.cps.push({ label: '', v: '' });
+    saveSettings(); renderProfile();
+    const rows = $$('#prof-info .prow[data-cp]');
+    const last = rows[rows.length - 1];
+    if (last) last.scrollIntoView({ block: 'nearest' });
+  };
 }
 
 /* ---------- 个人主页：格子 / 大图编辑弹窗 ---------- */
@@ -4920,9 +4981,14 @@ function renderCpGrid() {
     grid.appendChild(el);
   });
 }
-function openCpModal() {
+let cpTarget = 0;   // 当前编辑的 CP 对：0 = 第一对（profile.cp），n = 第 n 对（profile.cps[n-1]）
+function openCpModal(idx = 0) {
+  cpTarget = idx;
   cpSel = [];
-  $('#cp-text').value = settings.profile.cp || '';
+  const tgt = idx === 0 ? settings.profile : (settings.profile.cps || [])[idx - 1];
+  $('#cp-text').value = (tgt && tgt.v) || '';
+  const lbl = idx === 0 ? settings.profile.cpLabel : (tgt && tgt.label);
+  $('#modal-cp .dlg-title span').textContent = '本命' + (lbl || '二人组');
   renderCpGrid();
   $('#modal-cp').classList.add('show');
 }
@@ -5093,7 +5159,8 @@ async function renderProfileImage(orient = 'portrait') {
     ['FC 歌曲数', String(cnt.fc)],
     ['AP 歌曲数', String(cnt.ap)],
     ['本命组合', unit || '选择'],
-    ['本命CP', p.cp || '填写']
+    ['本命' + (p.cpLabel || '二人组'), p.cp || '填写'],
+    ...(Array.isArray(p.cps) ? p.cps.filter(c => c && c.v).map(c => ['本命' + (c.label || '二人组'), c.v]) : [])
   ];
   const ix = rx, iwEnd = bx + bw - pad;
   const rowFont = orient === 'landscape' ? 32 : 34;
@@ -5385,7 +5452,9 @@ $('#unit-cancel').addEventListener('click', () => $('#modal-unit').classList.rem
 $('#cp-cancel').addEventListener('click', () => $('#modal-cp').classList.remove('show'));
 $('#cp-clear').addEventListener('click', () => { $('#cp-text').value = ''; cpSel = []; });
 $('#cp-ok').addEventListener('click', () => {
-  settings.profile.cp = $('#cp-text').value.trim();
+  const v = $('#cp-text').value.trim();
+  if (cpTarget === 0) settings.profile.cp = v;
+  else { const t = (settings.profile.cps || [])[cpTarget - 1]; if (t) t.v = v; }
   saveSettings(); renderProfile();
   $('#modal-cp').classList.remove('show');
 });
