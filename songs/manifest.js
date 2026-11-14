@@ -639,6 +639,7 @@ window.SONGS = [
  },
  {
   "title": "SuperSensitive (Short·滚木版)",
+  "kid": "SuperSensitive (Short·消音版)",
   "artist": "A-SOUL",
   "credit": "",
   "unit": "zijiang",

@@ -1389,7 +1389,8 @@ function durationText(sec) {
 }
 
 /* ---------- 曲目星标（完走血量>200 / FC / AP，可手动点也可演出达成自动点亮） ---------- */
-function songKey(s) { return s.title + (s.full ? '|F' : '|S'); }
+/* 曲目唯一键：以 kid（若配置）为准，便于改歌名后仍能接住旧成绩/星标/收藏 */
+function songKey(s) { return (s.kid || s.title) + (s.full ? '|F' : '|S'); }
 /* 显示用标题：把歌名里的「(Short…)」括号剥出来，统一成与【full】相同的标记样式 */
 function songDisp(s) {
   let title = s.title, tag = s.full ? 'full' : '';
