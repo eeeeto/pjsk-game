@@ -548,6 +548,103 @@
   .pf-char-grid .cov{aspect-ratio:1/1;}
   .pf-char-grid .cov span{font-size:9px;}
   .pf-char-grid .cov img{position:absolute;inset:0;width:calc(100% - 8px);height:calc(100% - 8px);margin:4px;}
+  /* ---------- 自定义名片：入口 / 名片库 / 编辑器 ---------- */
+  .mk-entry{width:auto;min-width:40px;border-radius:999px;padding:0 16px;font-size:clamp(12px,1.9vh,14px);letter-spacing:.1em;}
+  .pfc-toolbar{display:flex;gap:12px;padding:clamp(8px,1.6vh,16px) clamp(14px,2.4vw,30px) 0;align-items:center;}
+  .pfc-toolbar .hint{margin-left:auto;color:#5f7896;font-size:12px;letter-spacing:.06em;}
+  .pfc-grid{flex:1;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;
+    padding:clamp(12px,2vh,22px) clamp(14px,2.4vw,30px) 110px;align-content:start;}
+  .pfc-item{position:relative;border-radius:10px;background:rgba(18,27,48,.92);border:1px solid rgba(110,190,255,.22);
+    overflow:hidden;cursor:pointer;aspect-ratio:4/3;box-shadow:0 6px 20px rgba(0,0,0,.35);}
+  .pfc-item:active{transform:scale(.985);}
+  .pfc-item img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+  .pfc-item .nm{position:absolute;left:0;right:0;bottom:0;padding:14px 10px 7px;font-size:12px;font-weight:900;color:#dff2ff;
+    background:linear-gradient(transparent,rgba(5,10,20,.88));white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:.05em;}
+  .pfc-item .use{position:absolute;top:7px;right:7px;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    background:rgba(8,16,30,.72);border:1px solid rgba(140,200,255,.4);color:#5f7896;font-size:13px;font-weight:900;cursor:pointer;z-index:2;}
+  .pfc-item .use.on{color:#ffd86b;border-color:rgba(255,216,107,.6);text-shadow:0 0 8px rgba(255,216,107,.6);}
+  .pfc-item .ck{position:absolute;top:7px;left:7px;width:24px;height:24px;border-radius:50%;z-index:2;
+    border:2px solid rgba(160,200,240,.6);background:rgba(8,16,30,.6);display:flex;align-items:center;justify-content:center;
+    color:transparent;font-weight:900;font-size:14px;}
+  .pfc-item.sel{border-color:#ff8fa8;box-shadow:0 0 0 2px rgba(255,120,150,.4);}
+  .pfc-item.sel .ck{background:#ff8fa8;border-color:#ff8fa8;color:#fff;}
+  .pfc-batchbar{position:absolute;left:0;right:0;bottom:0;display:flex;align-items:center;gap:12px;
+    padding:12px clamp(14px,2.4vw,30px);background:rgba(8,14,26,.94);border-top:1px solid rgba(110,190,255,.2);z-index:5;}
+  .pfc-batchbar span{color:#cfe4ff;font-weight:900;font-size:13px;letter-spacing:.06em;}
+  .pfc-batchbar .btn{margin-left:auto;}
+  .pfc-empty{grid-column:1/-1;color:#5f7896;font-size:13px;padding:30px 0;text-align:center;letter-spacing:.1em;}
+  /* 编辑器 */
+  #screen-pfeditor{background:linear-gradient(180deg,#0c1526,#060a13);}
+  .pfe-top{display:flex;align-items:center;gap:12px;padding:clamp(10px,1.8vh,18px) clamp(12px,2.2vw,26px) 0;}
+  #pfe-name{flex:1;max-width:340px;min-width:0;background:rgba(12,20,36,.6);border:1px solid rgba(140,200,255,.3);border-radius:999px;
+    color:#cfe4ff;font-weight:900;padding:9px 18px;outline:none;font-size:clamp(13px,2vh,16px);font-family:inherit;letter-spacing:.05em;}
+  #pfe-name:focus{border-color:rgba(37,226,255,.7);}
+  .pfe-body{flex:1;display:flex;gap:10px;min-height:0;padding:clamp(8px,1.4vh,14px) clamp(10px,2vw,24px) 0;}
+  .pfe-menu{display:flex;flex-direction:column;gap:8px;background:rgba(18,27,48,.92);border:1px solid rgba(110,190,255,.22);
+    border-radius:14px;padding:10px 8px;flex:0 0 auto;overflow-y:auto;box-shadow:0 8px 26px rgba(0,0,0,.4);}
+  .pfe-mi{width:62px;padding:9px 0;border-radius:10px;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;
+    color:#9fc6ea;font-weight:900;font-size:12px;letter-spacing:.08em;border:1px solid transparent;flex:0 0 auto;}
+  .pfe-mi i{font-style:normal;font-size:18px;line-height:1;color:#7ceaff;font-family:serif;}
+  .pfe-mi.on{color:#7ceaff;border-color:rgba(37,226,255,.45);background:rgba(37,226,255,.1);}
+  .pfe-mi:active{transform:scale(.94);}
+  .pfe-stage{flex:1;display:flex;align-items:center;justify-content:center;min-width:0;}
+  .mk-canvas{position:relative;background:#fff;aspect-ratio:4/3;width:min(100%,calc((100vh - 230px)*4/3));
+    border-radius:6px;overflow:hidden;box-shadow:0 12px 44px rgba(0,0,0,.55),0 0 0 1px rgba(255,255,255,.12);touch-action:none;}
+  .mk-layer{position:absolute;left:0;top:0;user-select:none;-webkit-user-select:none;touch-action:none;cursor:move;}
+  .mk-layer img{width:100%;height:100%;display:block;pointer-events:none;-webkit-user-drag:none;}
+  .mk-layer .txtc{width:100%;height:100%;display:flex;align-items:center;justify-content:center;pointer-events:none;
+    font-weight:900;white-space:pre-wrap;text-align:center;line-height:1.15;word-break:break-all;}
+  .mk-layer.sel{outline:2px dashed #12b7d3;outline-offset:3px;z-index:100;}
+  .mk-handle{position:absolute;width:24px;height:24px;border-radius:50%;background:#12b7d3;border:2px solid #fff;
+    box-shadow:0 2px 10px rgba(0,0,0,.45);z-index:60;touch-action:none;}
+  .mk-h-rot{cursor:grab;}
+  .mk-h-scale{cursor:nwse-resize;}
+  #mk-ink{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:200;}
+  #mk-ink.drawing{pointer-events:auto;cursor:crosshair;}
+  .pfe-side{width:clamp(150px,19vw,230px);display:flex;flex-direction:column;background:rgba(18,27,48,.92);
+    border:1px solid rgba(110,190,255,.22);border-radius:14px;min-height:0;flex:0 0 auto;box-shadow:0 8px 26px rgba(0,0,0,.4);}
+  .pfe-side-title{padding:10px 13px;font-weight:900;color:#9fc6ea;letter-spacing:.16em;font-size:13px;
+    border-bottom:1px solid rgba(110,190,255,.15);display:flex;align-items:center;}
+  .pfe-side-title span{margin-left:auto;color:#5f7896;font-size:10px;letter-spacing:.05em;}
+  .mk-layers{flex:1;overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:6px;}
+  .mk-li{display:flex;align-items:center;gap:7px;padding:7px 8px;border-radius:9px;background:rgba(12,20,36,.6);
+    border:1px solid rgba(140,200,255,.18);font-size:12px;color:#cfe4ff;font-weight:800;touch-action:none;flex:0 0 auto;}
+  .mk-li .grip{color:#5f7896;font-size:13px;flex:0 0 auto;cursor:grab;}
+  .mk-li .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;}
+  .mk-li.on{border-color:#12b7d3;background:rgba(18,183,211,.14);}
+  .mk-li .bi{flex:0 0 auto;width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;
+    background:rgba(60,90,130,.4);cursor:pointer;font-weight:900;font-size:12px;color:#cfe4ff;}
+  .mk-li .bi.del{background:rgba(255,90,120,.25);color:#ffb3c4;}
+  .mk-li.lock{opacity:.9;}
+  .mk-li.dragging{opacity:.5;}
+  .pfe-foot{display:flex;align-items:center;gap:12px;padding:clamp(8px,1.4vh,14px) clamp(12px,2.2vw,28px) clamp(10px,2vh,18px);}
+  .pfe-foot .hint{color:#5f7896;font-size:12px;letter-spacing:.05em;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .pfe-foot .spacer{flex:1;}
+  .mk-cid-row{display:flex;gap:8px;margin-bottom:10px;}
+  .mk-cid-row input{flex:1;}
+  .mk-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:10px;max-height:46vh;overflow-y:auto;padding:2px;}
+  .mk-grid .cov{aspect-ratio:4/3;}
+  .mk-grid .cov span{font-size:9px;}
+  .mk-field{margin-top:10px;}
+  .mk-field .sub-lbl{margin-bottom:6px;}
+  .mk-row{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:800;color:#cfe4ff;}
+  .mk-row input[type="color"]{width:44px;height:32px;border:none;background:none;padding:0;cursor:pointer;}
+  .mk-row input[type="range"]{flex:1;}
+  .mk-row .val{width:3.2em;text-align:right;color:#8fd8ff;}
+  /* 主页大图：模式切换按钮（右下角） */
+  .prof-big .big-toggle{position:absolute;right:8px;bottom:8px;z-index:3;padding:6px 13px;border-radius:999px;
+    background:rgba(8,16,30,.78);border:1px solid rgba(140,200,255,.45);color:#bfdcff;font-weight:900;
+    font-size:12px;letter-spacing:.08em;cursor:pointer;backdrop-filter:blur(4px);}
+  .prof-big .big-toggle:active{transform:scale(.94);}
+  .prof-big.mk-blank{background:#ffffff;}
+  .prof-big.mk-blank img{opacity:0;}
+  @media (max-width:620px){
+    .pfe-menu .pfe-mi{width:50px;font-size:10px;padding:7px 0;}
+    .pfe-side{width:118px;}
+    .mk-li{font-size:10px;padding:5px 6px;gap:5px;}
+    .mk-li .bi{width:20px;height:20px;font-size:10px;}
+    .pfe-mi i{font-size:15px;}
+  }
   /* 主页格子编辑弹窗的类型 pills 与按钮排 */
   .dlg-btns{display:flex;gap:10px;margin-top:14px;}
   .dlg-btns .btn{flex:1;}
@@ -844,6 +941,7 @@
     <div class="page-head prof-head">
       <button class="round-btn" id="profile-back" title="返回">←</button>
       <div class="id-pill" id="profile-id-top">同步的玩家id</div>
+      <button class="round-btn mk-entry" id="profile-mk" title="名片库">名片</button>
       <button class="round-btn" id="profile-share" title="保存为图片">⤴</button>
     </div>
     <div class="prof-scroll">
@@ -863,6 +961,61 @@
       </div>
     </div>
   </section>
+
+  <!-- ================= 名片库 ================= -->
+  <section id="screen-pfcards" class="screen">
+    <div class="page-head prof-head">
+      <button class="round-btn" id="pfc-back" title="返回">←</button>
+      <div class="id-pill">名片库</div>
+    </div>
+    <div class="pfc-toolbar">
+      <button class="btn ghost" id="pfc-manage">管理名片</button>
+      <button class="btn" id="pfc-new">新建名片</button>
+      <span class="hint">带 ★ 的名片会显示在个人主页</span>
+    </div>
+    <div class="pfc-grid" id="pfc-grid"></div>
+    <div class="pfc-batchbar" id="pfc-batchbar" style="display:none">
+      <span id="pfc-count">已选 0 张</span>
+      <button class="btn ghost" id="pfc-cancel-batch">取消</button>
+      <button class="btn pink" id="pfc-del-sel">删除选中</button>
+    </div>
+  </section>
+
+  <!-- ================= 名片编辑器 ================= -->
+  <section id="screen-pfeditor" class="screen">
+    <div class="pfe-top">
+      <button class="round-btn" id="pfe-back" title="返回">←</button>
+      <input id="pfe-name" maxlength="12" placeholder="名片名称">
+      <button class="btn" id="pfe-save">保存</button>
+    </div>
+    <div class="pfe-body">
+      <div class="pfe-menu" id="pfe-menu">
+        <div class="pfe-mi" data-tool="card"><i>卡</i><span>卡图</span></div>
+        <div class="pfe-mi" data-tool="shape"><i>形</i><span>图形</span></div>
+        <div class="pfe-mi" data-tool="ink"><i>线</i><span>画线</span></div>
+        <div class="pfe-mi" data-tool="text"><i>字</i><span>文字</span></div>
+        <div class="pfe-mi" data-tool="image"><i>图</i><span>图片</span></div>
+      </div>
+      <div class="pfe-stage">
+        <div class="mk-canvas" id="mk-canvas">
+          <div id="mk-layers-box" style="position:absolute;inset:0;"></div>
+          <canvas id="mk-ink" width="1200" height="900"></canvas>
+        </div>
+      </div>
+      <div class="pfe-side">
+        <div class="pfe-side-title">图层<span>上 = 最前</span></div>
+        <div class="mk-layers" id="mk-layers"></div>
+      </div>
+    </div>
+    <div class="pfe-foot">
+      <button class="btn ghost" id="mk-ink-undo" style="display:none">撤回一笔</button>
+      <button class="btn ghost" id="mk-ink-clear" style="display:none">清空涂鸦</button>
+      <span class="hint" id="pfe-hint"></span>
+      <span class="spacer"></span>
+      <button class="btn" id="pfe-save2">保存名片</button>
+    </div>
+    <input type="file" id="mk-img-file" accept="image/*" style="display:none">
+  </section>
 </div>
 
 <!-- ================= 个人主页导出：选择竖版 / 横版 ================= -->
@@ -874,6 +1027,95 @@
       <button class="btn" id="pf-exp-land">横版</button>
     </div>
     <button class="btn ghost" id="pf-exp-cancel" style="margin-top:10px">取消</button>
+  </div>
+</div>
+
+<!-- ================= 名片编辑器弹窗组 ================= -->
+<div class="modal" id="modal-mk-list">
+  <div class="dialog" style="width:min(94vw,560px)">
+    <div class="dlg-title">选择<span>卡图</span></div>
+    <div class="mk-cid-row">
+      <input type="text" id="mk-cid" inputmode="numeric" maxlength="7" placeholder="输入卡面编号（纯数字，如 1337）">
+      <button class="btn ghost" id="mk-cid-get">获取</button>
+    </div>
+    <div class="card-dl" id="mk-cid-dl" style="display:none">
+      <div class="card-dl-bar"><i id="mk-cid-dl-fill"></i></div>
+      <span id="mk-cid-dl-txt">准备中…</span>
+    </div>
+    <div class="mk-grid" id="mk-card-grid"></div>
+    <div class="dlg-btns"><button class="btn ghost" id="mk-list-close" style="flex:1">关 闭</button></div>
+  </div>
+</div>
+
+<div class="modal" id="modal-mk-shape">
+  <div class="dialog">
+    <div class="dlg-title">添加<span>图形</span></div>
+    <div class="pills" id="mk-shape-kind">
+      <div class="pill on" data-v="rect">矩形</div>
+      <div class="pill" data-v="circle">圆形</div>
+      <div class="pill" data-v="tri">三角形</div>
+    </div>
+    <div class="mk-field">
+      <div class="sub-lbl">描边颜色</div>
+      <div class="mk-row"><input type="color" id="mk-shape-stroke" value="#12b7d3"><span class="val" id="mk-shape-sw-v">6</span><input type="range" id="mk-shape-sw" min="1" max="30" value="6"><span>粗细</span></div>
+    </div>
+    <div class="mk-field">
+      <div class="sub-lbl">填充</div>
+      <div class="mk-row"><input type="color" id="mk-shape-fill" value="#12b7d3"><label style="display:flex;align-items:center;gap:6px;margin-left:auto"><input type="checkbox" id="mk-shape-fill-on">启用填充</label></div>
+    </div>
+    <div class="dlg-btns">
+      <button class="btn ghost" id="mk-shape-cancel" style="flex:1">取 消</button>
+      <button class="btn pink" id="mk-shape-ok" style="flex:1">添加到画布</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="modal-mk-text">
+  <div class="dialog">
+    <div class="dlg-title">添加<span>文字</span></div>
+    <input type="text" id="mk-text-inp" maxlength="60" placeholder="输入文字内容" style="width:100%">
+    <div class="mk-field">
+      <div class="mk-row"><input type="color" id="mk-text-color" value="#222831"><span class="val" id="mk-text-size-v">64</span><input type="range" id="mk-text-size" min="12" max="220" value="64"><span>字号</span></div>
+    </div>
+    <div class="dlg-btns">
+      <button class="btn ghost" id="mk-text-cancel" style="flex:1">取 消</button>
+      <button class="btn pink" id="mk-text-ok" style="flex:1">添加到画布</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="modal-mk-edit">
+  <div class="dialog" id="mk-edit-dialog" style="width:min(94vw,480px)">
+    <div class="dlg-title">编辑<span>图层</span></div>
+    <div id="mk-edit-body"></div>
+    <div class="dlg-btns"><button class="btn pink" id="mk-edit-close" style="flex:1">完 成</button></div>
+  </div>
+</div>
+
+<div class="modal" id="modal-mk-confirm">
+  <div class="dialog">
+    <div class="dlg-title" id="mk-confirm-title">确认</div>
+    <div id="mk-confirm-txt" style="color:#cfe4ff;font-weight:800;font-size:14px;line-height:1.6"></div>
+    <div class="dlg-btns">
+      <button class="btn ghost" id="mk-confirm-no" style="flex:1">取 消</button>
+      <button class="btn pink" id="mk-confirm-yes" style="flex:1">确 定</button>
+    </div>
+  </div>
+</div>
+
+<!-- 画线工具设置（点「画线」弹出，选笔和颜色） -->
+<div class="modal" id="modal-mk-ink">
+  <div class="dialog">
+    <div class="dlg-title">画线<span>选择笔刷</span></div>
+    <div class="pills" id="mk-ink-pen">
+      <div class="pill on" data-v="round">圆笔</div>
+      <div class="pill" data-v="dash">虚线笔</div>
+      <div class="pill" data-v="hl">荧光笔</div>
+    </div>
+    <div class="mk-field">
+      <div class="mk-row"><input type="color" id="mk-ink-color" value="#ff6b8a"><span class="val" id="mk-ink-w-v">8</span><input type="range" id="mk-ink-w" min="2" max="40" value="8"><span>粗细</span></div>
+    </div>
+    <div class="dlg-btns"><button class="btn pink" id="mk-ink-ok" style="flex:1">开始画线</button></div>
   </div>
 </div>
 
@@ -4827,14 +5069,39 @@ function renderProfile() {
     el.classList.toggle('filled', !!item);
     el.innerHTML = item ? profileItemHTML(item) : '<span class="add">＋</span>';
   });
-  // 左下大图
+  // 左下大图（卡面 / 名片两种显示模式，右下角按钮切换）
   const big = $('#profile-big');
-  if (p.big) {
+  const bigMode = p.bigMode === 'mk' ? 'mk' : 'card';
+  big.classList.remove('mk-blank');
+  if (bigMode === 'mk') {
+    const mcard = profilePfCard();
+    if (mcard) {
+      big.innerHTML = '<img alt="" style="display:none">';
+      renderPfCardUrl(mcard).then(url => {
+        const im = big.querySelector('img');
+        if (im && bigMode === (p.bigMode === 'mk' ? 'mk' : 'card')) { im.src = url; im.style.display = ''; }
+      }).catch(() => {});
+    } else {
+      big.innerHTML = '';                       // 还没有名片：显示一片白色
+      big.classList.add('mk-blank');
+    }
+  } else if (p.big) {
     const url = p.big.key ? (cardBlobs[p.big.key] || '') : (p.big.type === 'char' ? res(`assets/keys/${p.big.v}.png`) : '');
     big.innerHTML = url ? `<img src="${url}" alt="">` : '<div class="ph">点击输入卡面id</div>';
   } else {
     big.innerHTML = '<div class="ph">点击输入卡面id</div>';
   }
+  // 模式切换按钮（右下角）
+  const bigTg = document.createElement('div');
+  bigTg.className = 'big-toggle';
+  bigTg.textContent = bigMode === 'mk' ? '卡面' : '名片';
+  bigTg.title = '在 卡面 / 名片 显示之间切换（数据互不影响）';
+  bigTg.onclick = e => {
+    e.stopPropagation();
+    p.bigMode = bigMode === 'mk' ? 'card' : 'mk';
+    saveSettings(); renderProfile();
+  };
+  big.appendChild(bigTg);
   // 信息列表
   const top = topPlayedSong();
   const cnt = fcApCounts();
@@ -5279,7 +5546,23 @@ async function renderProfileImage(orient = 'portrait') {
   c.restore();
   roundRectPath(c, lx, bigY, bigW, bigH, 6);
   c.fillStyle = '#0b0b0e'; c.fill();
-  if (p.big) {
+  if (p.bigMode === 'mk') {
+    const mcard = profilePfCard();
+    c.save();
+    roundRectPath(c, lx, bigY, bigW, bigH, 6); c.clip();
+    if (mcard) {
+      try {
+        const url = await renderPfCardUrl(mcard);
+        const im = await loadImageAsync(url);
+        const r = Math.max(bigW / im.naturalWidth, bigH / im.naturalHeight);
+        const dw = im.naturalWidth * r, dh = im.naturalHeight * r;
+        c.drawImage(im, lx + (bigW - dw) / 2, bigY + (bigH - dh) / 2, dw, dh);
+      } catch (e) {}
+    } else {
+      c.fillStyle = '#ffffff'; c.fillRect(lx, bigY, bigW, bigH);   // 没有名片：一片白色
+    }
+    c.restore();
+  } else if (p.big) {
     const url = p.big.key ? cardBlobs[p.big.key] : (p.big.type === 'char' ? res(`assets/keys/${p.big.v}.png`) : '');
     if (url) {
       try {
@@ -5717,6 +6000,777 @@ $$('.tab').forEach(t => t.addEventListener('click', () => {
   if (t.dataset.tab === 'team') renderTeams();
   if (t.dataset.tab === 'result') renderResCards();
 }));
+
+/* ============================================================
+   自定义名片：名片库 + 画布编辑器（4:3 横版画布，逻辑尺寸 1200×900）
+   ============================================================ */
+const MK_W = 1200, MK_H = 900, MK_FF = '"Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif';
+if (!Array.isArray(settings.profileCards)) settings.profileCards = [];
+if (!Array.isArray(settings.mkAssets)) settings.mkAssets = [];
+if (typeof settings.profile.bigMode !== 'string') settings.profile.bigMode = 'card';
+
+let MK = null;                  // 编辑器当前状态 {id,name,layers,ink,sel,tool,dirty,ts}
+let mkSeq = 1;
+let pfcBatch = false;
+const pfcSel = new Set();
+const pfCardUrlCache = {};      // 'id:ts' -> objectURL
+
+function mkNewId() { return 'mk' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+function profilePfCard() {
+  const id = settings.profile.pfcardId;
+  return settings.profileCards.find(c => c.id === id) || settings.profileCards[0] || null;
+}
+async function mkEnsureBlobs(keys) {
+  for (const k of keys) {
+    if (!k || cardBlobs[k]) continue;
+    try { const b = await idbGet(k); if (b) cardBlobs[k] = URL.createObjectURL(b); } catch (e) {}
+  }
+}
+function mkImgSize(url) {
+  return new Promise((ok, no) => {
+    const i = new Image();
+    i.onload = () => ok({ w: i.naturalWidth || 600, h: i.naturalHeight || 450 });
+    i.onerror = () => no(new Error('图片读取失败'));
+    i.src = url;
+  });
+}
+
+/* ---------- 名片 → 一张 4:3 图（主页展示 / 名片库缩略图共用） ---------- */
+async function mkDrawLayer(c, l) {
+  try {
+    if (l.type === 'card' || l.type === 'image') {
+      const url = cardBlobs[l.key] || '';
+      if (!url) return;
+      const im = await loadImageAsync(url);
+      c.save();
+      c.translate(l.x, l.y); c.rotate((l.rot || 0) * Math.PI / 180);
+      c.drawImage(im, -l.w / 2, -l.h / 2, l.w, l.h);
+      c.restore();
+    } else if (l.type === 'shape') {
+      const s = l.shadow || {};
+      const dx = Math.cos((s.angle || 0) * Math.PI / 180) * (s.dist || 0);
+      const dy = Math.sin((s.angle || 0) * Math.PI / 180) * (s.dist || 0);
+      c.save();
+      c.translate(l.x, l.y); c.rotate((l.rot || 0) * Math.PI / 180);
+      c.lineWidth = l.strokeW || 4; c.strokeStyle = l.stroke || '#12b7d3'; c.lineJoin = 'round';
+      if (s.dist > 0) { c.shadowColor = s.color || 'rgba(0,0,0,.45)'; c.shadowOffsetX = dx; c.shadowOffsetY = dy; }
+      const half = (l.strokeW || 4) / 2 + 1, w = l.w, h = l.h;
+      c.beginPath();
+      if (l.shape === 'circle') c.ellipse(0, 0, Math.max(1, w / 2 - half), Math.max(1, h / 2 - half), 0, 0, Math.PI * 2);
+      else if (l.shape === 'tri') { c.moveTo(0, -h / 2 + half); c.lineTo(w / 2 - half, h / 2 - half); c.lineTo(-w / 2 + half, h / 2 - half); c.closePath(); }
+      else c.rect(-w / 2 + half, -h / 2 + half, Math.max(1, w - half * 2), Math.max(1, h - half * 2));
+      if (l.fillOn) { c.fillStyle = l.fill || '#12b7d3'; c.fill(); }
+      c.stroke();
+      c.restore();
+    } else if (l.type === 'text') {
+      c.save();
+      c.translate(l.x, l.y); c.rotate((l.rot || 0) * Math.PI / 180);
+      c.fillStyle = l.color || '#222831';
+      c.font = `900 ${l.size || 64}px ${MK_FF}`;
+      c.textAlign = 'center'; c.textBaseline = 'middle';
+      const lines = String(l.text || '').split('\n');
+      const lh = (l.size || 64) * 1.2;
+      lines.forEach((t, i) => c.fillText(t, 0, (i - (lines.length - 1) / 2) * lh));
+      c.restore();
+    }
+  } catch (e) {}
+}
+function mkInkStyle(c, st) {
+  c.strokeStyle = st.color; c.lineCap = 'round'; c.lineJoin = 'round';
+  c.setLineDash([]);
+  if (st.pen === 'dash') c.setLineDash([st.w * 2.4, st.w * 1.8]);
+  if (st.pen === 'hl') { c.globalAlpha = 0.32; c.lineWidth = st.w * 3; }
+  else { c.globalAlpha = 1; c.lineWidth = st.w; }
+}
+function mkDrawInk(c, strokes) {
+  c.save();
+  c.setLineDash([]); c.globalAlpha = 1;
+  for (const st of (strokes || [])) {
+    if (!st.pts || st.pts.length < 2) {
+      if (st.pts && st.pts.length === 1) {   // 单点：画个点
+        mkInkStyle(c, st); c.beginPath();
+        c.arc(st.pts[0].x, st.pts[0].y, Math.max(1, st.w / 2), 0, Math.PI * 2);
+        c.fillStyle = st.color; c.globalAlpha = st.pen === 'hl' ? 0.32 : 1; c.fill(); c.globalAlpha = 1;
+      }
+      continue;
+    }
+    mkInkStyle(c, st);
+    c.beginPath();
+    const p = st.pts;
+    c.moveTo(p[0].x, p[0].y);
+    for (let i = 1; i < p.length - 1; i++) c.quadraticCurveTo(p[i].x, p[i].y, (p[i].x + p[i + 1].x) / 2, (p[i].y + p[i + 1].y) / 2);
+    const last = p[p.length - 1];
+    c.lineTo(last.x, last.y);
+    c.stroke();
+    c.globalAlpha = 1; c.setLineDash([]);
+  }
+  c.restore();
+}
+async function renderPfCardUrl(card) {
+  const ck = card.id + ':' + (card.ts || 0);
+  if (pfCardUrlCache[ck]) return pfCardUrlCache[ck];
+  await mkEnsureBlobs(card.layers.map(l => l.key).filter(Boolean));
+  const cv = document.createElement('canvas');
+  cv.width = MK_W; cv.height = MK_H;
+  const c = cv.getContext('2d');
+  c.fillStyle = '#ffffff'; c.fillRect(0, 0, MK_W, MK_H);
+  for (const l of card.layers) await mkDrawLayer(c, l);
+  mkDrawInk(c, card.ink);
+  const blob = await new Promise(res => { try { cv.toBlob(res, 'image/png'); } catch (e) { res(null); } });
+  if (!blob) throw new Error('名片渲染失败');
+  const url = URL.createObjectURL(blob);
+  Object.keys(pfCardUrlCache).forEach(k => {
+    if (k.split(':')[0] === card.id && k !== ck) { try { URL.revokeObjectURL(pfCardUrlCache[k]); } catch (e) {} delete pfCardUrlCache[k]; }
+  });
+  pfCardUrlCache[ck] = url;
+  return url;
+}
+
+/* ---------- 名片库列表 ---------- */
+function renderPfcards() {
+  const grid = $('#pfc-grid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  if (!settings.profileCards.length) {
+    grid.innerHTML = '<div class="pfc-empty">还没有名片 · 点上方「新建名片」做一张吧</div>';
+  }
+  settings.profileCards.forEach(card => {
+    const el = document.createElement('div');
+    el.className = 'pfc-item' + (pfcBatch && pfcSel.has(card.id) ? ' sel' : '');
+    el.innerHTML = `<img alt="" style="display:none">` +
+      `<div class="nm">${escapeHTML(card.name || '未命名名片')}</div>` +
+      (pfcBatch ? `<div class="ck">✓</div>` :
+        `<div class="use${settings.profile.pfcardId === card.id ? ' on' : ''}" title="设为个人主页名片">★</div>`);
+    const im = el.querySelector('img');
+    renderPfCardUrl(card).then(u => { if (el.isConnected) { im.src = u; im.style.display = ''; } }).catch(() => {});
+    el.onclick = () => {
+      if (pfcBatch) {
+        if (pfcSel.has(card.id)) pfcSel.delete(card.id); else pfcSel.add(card.id);
+        el.classList.toggle('sel', pfcSel.has(card.id));
+        $('#pfc-count').textContent = `已选 ${pfcSel.size} 张`;
+        return;
+      }
+      mkOpenEditor(card);
+    };
+    const use = el.querySelector('.use');
+    if (use) use.onclick = e => {
+      e.stopPropagation();
+      settings.profile.pfcardId = card.id;
+      saveSettings(); renderPfcards();
+    };
+    grid.appendChild(el);
+  });
+}
+function mkDeleteCards(ids) {
+  const keep = settings.profileCards.filter(c => !ids.includes(c.id));
+  const keptKeys = new Set();
+  keep.forEach(c => c.layers.forEach(l => { if (l.type === 'image' && l.key) keptKeys.add(l.key); }));
+  const delKeys = new Set();
+  settings.profileCards.filter(c => ids.includes(c.id)).forEach(c =>
+    c.layers.forEach(l => { if (l.type === 'image' && l.key && !keptKeys.has(l.key)) delKeys.add(l.key); }));
+  delKeys.forEach(async k => { try { await idbDel(k); } catch (e) {} if (cardBlobs[k]) { URL.revokeObjectURL(cardBlobs[k]); delete cardBlobs[k]; } });
+  settings.profileCards = keep;
+  if (ids.includes(settings.profile.pfcardId)) settings.profile.pfcardId = keep.length ? keep[0].id : '';
+  pfcSel.clear();
+  saveSettings(); renderPfcards();
+  if (screen === 'profile') renderProfile();
+}
+function pfcSetBatch(on) {
+  pfcBatch = on; pfcSel.clear();
+  $('#pfc-batchbar').style.display = on ? '' : 'none';
+  $('#pfc-manage').textContent = on ? '退出管理' : '管理名片';
+  $('#pfc-manage').classList.toggle('on', on);
+  $('#pfc-count').textContent = '已选 0 张';
+  renderPfcards();
+}
+
+/* ---------- 通用确认弹窗 ---------- */
+let mkConfirmFn = null;
+function mkConfirm(title, txt, fn) {
+  $('#mk-confirm-title').textContent = title;
+  $('#mk-confirm-txt').textContent = txt;
+  mkConfirmFn = fn;
+  $('#modal-mk-confirm').classList.add('show');
+}
+$('#mk-confirm-no').addEventListener('click', () => { mkConfirmFn = null; $('#modal-mk-confirm').classList.remove('show'); });
+$('#mk-confirm-yes').addEventListener('click', () => { const f = mkConfirmFn; mkConfirmFn = null; $('#modal-mk-confirm').classList.remove('show'); if (f) f(); });
+
+/* ---------- 编辑器 ---------- */
+function mkOpenEditor(card) {
+  MK = card ? JSON.parse(JSON.stringify(card)) : { id: null, name: '', layers: [], ink: [], ts: 0 };
+  MK.sel = null; MK.tool = null; MK.dirty = false;
+  mkSeq = MK.layers.length + 1;
+  $('#pfe-name').value = MK.name || '';
+  show('pfeditor');
+  mkSetTool(null);
+  mkRenderAll();
+}
+function mkPt(e) {
+  const r = $('#mk-canvas').getBoundingClientRect();
+  const s = r.width / MK_W;
+  return { x: (e.clientX - r.left) / s, y: (e.clientY - r.top) / s, s };
+}
+function mkAddLayer(l) {
+  l.id = 'L' + (mkSeq++) + Math.random().toString(36).slice(2, 5);
+  MK.layers.push(l);
+  MK.sel = l.id; MK.dirty = true;
+  mkRenderAll();
+}
+function mkCurLayer() { return MK.layers.find(l => l.id === MK.sel) || null; }
+function mkScaleK() {
+  const el = $('#mk-canvas');
+  const r = el && el.getBoundingClientRect();
+  return r && r.width ? r.width / MK_W : 1;
+}
+function mkStyleLayer(el, l) {
+  const k = mkScaleK();
+  el.style.width = (l.w * k) + 'px';
+  el.style.height = (l.h * k) + 'px';
+  el.style.transform = `translate(${l.x * k}px,${l.y * k}px) translate(-50%,-50%) rotate(${l.rot || 0}deg)`;
+}
+function mkLayerInner(l, k) {
+  k = k || mkScaleK();
+  if (l.type === 'card' || l.type === 'image') {
+    const url = cardBlobs[l.key] || '';
+    return url ? `<img src="${url}" draggable="false" alt="">` : '';
+  }
+  if (l.type === 'shape') {
+    const s = l.shadow || {};
+    const dx = Math.cos((s.angle || 0) * Math.PI / 180) * (s.dist || 0);
+    const dy = Math.sin((s.angle || 0) * Math.PI / 180) * (s.dist || 0);
+    const filt = s.dist > 0 ? `filter:drop-shadow(${dx}px ${dy}px 0 ${s.color || 'rgba(0,0,0,.45)'});` : '';
+    const sw = l.strokeW || 4, half = sw / 2 + 1, w = l.w, h = l.h;
+    let shp = '';
+    if (l.shape === 'circle') shp = `<ellipse cx="${w / 2}" cy="${h / 2}" rx="${Math.max(1, w / 2 - half)}" ry="${Math.max(1, h / 2 - half)}"/>`;
+    else if (l.shape === 'tri') shp = `<polygon points="${w / 2},${half} ${w - half},${h - half} ${half},${h - half}"/>`;
+    else shp = `<rect x="${half}" y="${half}" width="${Math.max(1, w - half * 2)}" height="${Math.max(1, h - half * 2)}"/>`;
+    return `<svg width="${w * k}" height="${h * k}" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" style="display:block;pointer-events:none;${filt}">
+      <g fill="${l.fillOn ? (l.fill || '#12b7d3') : 'none'}" stroke="${l.stroke || '#12b7d3'}" stroke-width="${sw}" stroke-linejoin="round">${shp}</g></svg>`;
+  }
+  if (l.type === 'text') {
+    return `<div class="txtc" style="color:${l.color || '#222831'};font-size:${(l.size || 64) * k}px">${escapeHTML(String(l.text || ''))}</div>`;
+  }
+  return '';
+}
+function mkLayerName(l) {
+  if (l.type === 'card') return `卡图 ${l.label || (l.cid ? '#' + l.cid : '')}`;
+  if (l.type === 'image') return '图片';
+  if (l.type === 'shape') return { rect: '矩形', circle: '圆形', tri: '三角形' }[l.shape] || '图形';
+  if (l.type === 'text') return `文字「${String(l.text || '').slice(0, 6)}」`;
+  return '图层';
+}
+function mkRenderLayersBox() {
+  const box = $('#mk-layers-box');
+  if (!box || !MK) return;
+  box.innerHTML = '';
+  MK.layers.forEach(l => {
+    const el = document.createElement('div');
+    el.className = 'mk-layer' + (MK.sel === l.id ? ' sel' : '');
+    el.dataset.id = l.id;
+    el.innerHTML = mkLayerInner(l);
+    mkStyleLayer(el, l);
+    box.appendChild(el);    if (MK.sel === l.id) {
+      const rot = document.createElement('div');
+      rot.className = 'mk-handle mk-h-rot';
+      rot.style.cssText = 'left:50%;top:-40px;transform:translate(-50%,-50%);';
+      rot.title = '拖动旋转';
+      const sc = document.createElement('div');
+      sc.className = 'mk-handle mk-h-scale';
+      sc.style.cssText = 'right:-14px;bottom:-14px;';
+      sc.title = '拖动缩放';
+      el.appendChild(rot); el.appendChild(sc);
+      mkBindHandle(rot, l, 'rot');
+      mkBindHandle(sc, l, 'scale');
+    }
+  });
+}
+function mkBindHandle(hd, l, kind) {
+  hd.addEventListener('pointerdown', e => {
+    e.stopPropagation(); e.preventDefault();
+    hd.setPointerCapture(e.pointerId);
+    const p0 = mkPt(e);
+    const st = { w: l.w, h: l.h, d0: Math.max(6, Math.hypot(p0.x - l.x, p0.y - l.y)) };
+    const move = ev => {
+      const p = mkPt(ev);
+      if (kind === 'rot') {
+        let a = Math.atan2(p.y - l.y, p.x - l.x) * 180 / Math.PI + 90;
+        a = ((a % 360) + 360) % 360; if (a > 180) a -= 360;
+        l.rot = Math.round(a);
+      } else {
+        const f = clamp(Math.hypot(p.x - l.x, p.y - l.y) / st.d0, 0.12, 8);
+        l.w = Math.round(st.w * f); l.h = Math.round(st.h * f);
+      }
+      MK.dirty = true;
+      const el = $(`#mk-layers-box .mk-layer[data-id="${l.id}"]`);
+      if (el) mkStyleLayer(el, l);
+    };
+    const up = () => {
+      hd.removeEventListener('pointermove', move); hd.removeEventListener('pointerup', up); hd.removeEventListener('pointercancel', up);
+      mkRenderList();
+    };
+    hd.addEventListener('pointermove', move); hd.addEventListener('pointerup', up); hd.addEventListener('pointercancel', up);
+  });
+}
+/* 选中 / 拖动图层（事件委托，图层重建也不丢）。点中的图层立即选中并可在同一手势里拖动；
+   选中的图层会临时置顶（.sel z-index:100），被上层遮住的图层从图层面板选中后也能直接拖动 / 出手柄 */
+$('#mk-layers-box').addEventListener('pointerdown', e => {
+  if (!MK || MK.tool === 'ink') return;
+  const el0 = e.target.closest('.mk-layer');
+  if (!el0) { if (MK.sel) { MK.sel = null; mkRenderAll(); } return; }
+  const l = MK.layers.find(x => x.id === el0.dataset.id);
+  if (!l) return;
+  let el = el0;
+  if (MK.sel !== l.id) {                    // 切换选中：重建后继续同一手势的拖动
+    MK.sel = l.id;
+    mkRenderLayersBox(); mkRenderList();
+    el = $(`#mk-layers-box .mk-layer[data-id="${l.id}"]`);
+  }
+  if (!el) return;
+  e.preventDefault();
+  el.setPointerCapture(e.pointerId);
+  const p0 = mkPt(e), x0 = l.x, y0 = l.y;
+  let moved = false;
+  const move = ev => {
+    const p = mkPt(ev);
+    if (Math.hypot(p.x - p0.x, p.y - p0.y) * p.s > 3) moved = true;
+    if (!moved) return;
+    l.x = Math.round(x0 + (p.x - p0.x)); l.y = Math.round(y0 + (p.y - p0.y));
+    MK.dirty = true;
+    mkStyleLayer(el, l);
+  };
+  const up = () => {
+    el.removeEventListener('pointermove', move); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', up);
+    if (moved) mkRenderList();
+  };
+  el.addEventListener('pointermove', move); el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
+});
+$('#mk-canvas').addEventListener('pointerdown', e => {
+  // 点到画布空白处取消选中（涂鸦模式除外）
+  if (!MK || MK.tool === 'ink') return;
+  if (e.target.closest('.mk-layer')) return;
+  if (e.target.id === 'mk-ink' || e.target.id === 'mk-layers-box' || e.target.id === 'mk-canvas') {
+    if (MK.sel) { MK.sel = null; mkRenderAll(); }
+  }
+});
+
+/* ---------- 涂鸦（最上层，不可拖动） ---------- */
+const mkInkCv = $('#mk-ink');
+const mkInkCtx = mkInkCv.getContext('2d');
+let mkStroke = null;
+mkInkCv.addEventListener('pointerdown', e => {
+  if (!MK || MK.tool !== 'ink') return;
+  e.preventDefault();
+  mkInkCv.setPointerCapture(e.pointerId);
+  mkStroke = { pen: MK.inkPen || 'round', color: MK.inkColor || '#ff6b8a', w: MK.inkW || 8, pts: [mkPt(e)] };
+  mkRedrawInk();
+});
+mkInkCv.addEventListener('pointermove', e => {
+  if (!mkStroke) return;
+  const p = mkPt(e), pts = mkStroke.pts, last = pts[pts.length - 1];
+  if (Math.hypot(p.x - last.x, p.y - last.y) > 1.2) { pts.push(p); mkRedrawInk(); }
+});
+const mkEndStroke = () => {
+  if (!mkStroke) return;
+  MK.ink.push(mkStroke); mkStroke = null;
+  MK.dirty = true;
+  mkRenderList(); mkSyncInkUI();
+};
+mkInkCv.addEventListener('pointerup', mkEndStroke);
+mkInkCv.addEventListener('pointercancel', mkEndStroke);
+function mkRedrawInk() {
+  mkInkCtx.clearRect(0, 0, MK_W, MK_H);
+  if (!MK) return;
+  const all = mkStroke ? MK.ink.concat([mkStroke]) : MK.ink;
+  mkDrawInk(mkInkCtx, all);
+}
+function mkSyncInkUI() {
+  const has = MK && (MK.ink.length > 0 || MK.tool === 'ink' || mkStroke);
+  $('#mk-ink-undo').style.display = has ? '' : 'none';
+  $('#mk-ink-clear').style.display = has ? '' : 'none';
+}
+$('#mk-ink-undo').addEventListener('click', () => { if (MK) { MK.ink.pop(); MK.dirty = true; mkRedrawInk(); mkSyncInkUI(); mkRenderList(); } });
+$('#mk-ink-clear').addEventListener('click', () => {
+  if (!MK || !MK.ink.length) return;
+  mkConfirm('清空涂鸦', '确定清空这张名片的全部涂鸦笔画？', () => { MK.ink = []; MK.dirty = true; mkRedrawInk(); mkSyncInkUI(); mkRenderList(); });
+});
+
+/* ---------- 工具菜单 ---------- */
+function mkSetTool(t) {
+  if (!MK) return;
+  MK.tool = t;
+  $$('#pfe-menu .pfe-mi').forEach(el => el.classList.toggle('on', el.dataset.tool === t));
+  mkInkCv.classList.toggle('drawing', t === 'ink');
+  const hint = $('#pfe-hint');
+  if (hint) hint.textContent = t === 'ink'
+    ? '在画布上拖动即可画线 · 涂鸦固定在最上层'
+    : '点左侧工具添加内容 · 点选中图层后可拖动 / 旋转 / 缩放';
+  mkSyncInkUI();
+}
+$$('#pfe-menu .pfe-mi').forEach(el => el.addEventListener('click', () => {
+  if (!MK) return;
+  const t = el.dataset.tool;
+  if (t === 'card') { mkRenderCardGrid(); $('#modal-mk-list').classList.add('show'); }
+  else if (t === 'shape') {
+    $$('#mk-shape-kind .pill').forEach(p => p.classList.toggle('on', p.dataset.v === 'rect'));
+    $('#modal-mk-shape').classList.add('show');
+  }
+  else if (t === 'ink') { $('#modal-mk-ink').classList.add('show'); }
+  else if (t === 'text') { $('#mk-text-inp').value = ''; $('#modal-mk-text').classList.add('show'); setTimeout(() => $('#mk-text-inp').focus(), 60); }
+  else if (t === 'image') { $('#mk-img-file').value = ''; $('#mk-img-file').click(); }
+}));
+
+/* ---------- 卡图列表：编号下载 + 已有列表 ---------- */
+function mkPushAsset(a) {
+  if (!settings.mkAssets.some(x => x.key === a.key)) settings.mkAssets.push(a);
+}
+function mkCardAlts(l) {
+  if (!l || l.type !== 'card') return [];
+  const list = settings.mkAssets.filter(a => a.cid === l.cid);
+  if (!list.some(a => a.key === l.key) && l.key) list.unshift({ key: l.key, cid: l.cid, label: '当前卡图' });
+  return list;
+}
+const MK_PART_LBL = { normal: '特训前卡面', after: '特训后卡面', normal_chr: '特训前角色图', after_chr: '特训后角色图' };
+function mkRenderCardGrid() {
+  const grid = $('#mk-card-grid');
+  grid.innerHTML = '';
+  mkEnsureBlobs(settings.mkAssets.map(a => a.key)).then(() => {
+    if (!settings.mkAssets.length) {
+      grid.innerHTML = '<div class="pfc-empty">还没有卡图 · 上方输入编号获取</div>';
+      return;
+    }
+    settings.mkAssets.forEach(a => {
+      const el = document.createElement('div');
+      el.className = 'cov';
+      const url = cardBlobs[a.key] || '';
+      if (url) el.style.backgroundImage = `url(${url})`;
+      el.innerHTML = `<span>${escapeHTML(a.label || MK_PART_LBL[a.part] || a.part)}</span>`;
+      el.onclick = async () => {
+        if (!cardBlobs[a.key]) return;
+        try {
+          const dim = await mkImgSize(cardBlobs[a.key]);
+          let w = Math.min(760, dim.w), h = w * dim.h / dim.w;
+          if (h > 640) { h = 640; w = h * dim.w / dim.h; }
+          mkAddLayer({ type: 'card', cid: a.cid, key: a.key, label: a.label, x: MK_W / 2, y: MK_H / 2, w: Math.round(w), h: Math.round(h), rot: 0 });
+          $('#modal-mk-list').classList.remove('show');
+        } catch (e) { showToast('图片读取失败', 1600); }
+      };
+      grid.appendChild(el);
+    });
+  });
+}
+async function mkDownloadCard(cid) {
+  const btn = $('#mk-cid-get');
+  btn.disabled = true;
+  try {
+    dlUI('#mk-cid-dl', true, 0.02, '正在读取卡面数据…');
+    const map = await loadCardMap(p => dlUI('#mk-cid-dl', true, 0.02 + p * 0.15, `正在读取卡面数据… ${Math.round(p * 100)}%`));
+    let ent = map[cid];
+    if (!ent && _cardMapFromIndex) {
+      dlUI('#mk-cid-dl', true, 0.17, '索引中没有该编号，正在读取完整日服数据库…（仅首次较慢）');
+      ent = (await loadCardDbRemote(p => dlUI('#mk-cid-dl', true, 0.17 + p * 0.2, `正在读取完整日服数据库… ${Math.round(p * 100)}%`)))[cid];
+    }
+    if (!ent) throw new Error(`没有找到编号 ${cid} 的卡面`);
+    const [abn, rarity] = ent;
+    const parts = (rarity === 'rarity_3' || rarity === 'rarity_4') ? ['normal', 'after_training'] : ['normal'];
+    const partLbl = { normal: '特训前', after_training: '特训后' };
+    let done = 0, added = 0;
+    for (const part of parts) {
+      const rawKey = `res:${cid}_${part}_raw`;
+      if (!cardBlobs[rawKey]) {
+        dlUI('#mk-cid-dl', true, 0.35 + done * 0.25, `正在下载${partLbl[part]}卡面…`);
+        const rel = `${abn}/${part === 'normal' ? 'card_normal' : 'card_after_training'}.webp`;
+        const direct = CARD_ASSET_BASE + rel;
+        const blob = await fetchBlobProg([direct, `https://wsrv.nl/?url=${encodeURIComponent(direct)}&output=webp`],
+          p => dlUI('#mk-cid-dl', true, 0.35 + (done + p) * 0.2, `正在下载${partLbl[part]}卡面… ${Math.round(p * 100)}%`));
+        await idbPut(rawKey, blob);
+        cardBlobs[rawKey] = URL.createObjectURL(blob);
+        added++;
+      }
+      mkPushAsset({ key: rawKey, cid, part: part === 'normal' ? 'normal' : 'after', label: `#${cid} ${partLbl[part]}卡面` });
+      const chrKey = `res:${cid}_${part}_chr`;
+      if (!cardBlobs[chrKey]) {
+        try {
+          const chrDirect = 'https://storage.sekai.best/sekai-jp-assets/character/member_cutout_trm/' +
+            abn + '/' + (part === 'normal' ? 'normal' : 'after_training') + '.webp';
+          dlUI('#mk-cid-dl', true, 0.55 + done * 0.2, `正在下载${partLbl[part]}透明角色图…`);
+          const cb = await fetchBlobProg([chrDirect, `https://wsrv.nl/?url=${encodeURIComponent(chrDirect)}&output=webp`], () => {});
+          await idbPut(chrKey, cb);
+          cardBlobs[chrKey] = URL.createObjectURL(cb);
+          added++;
+        } catch (e) { /* 这张卡没有透明图 */ }
+      }
+      if (cardBlobs[chrKey]) mkPushAsset({ key: chrKey, cid, part: part === 'normal' ? 'normal_chr' : 'after_chr', label: `#${cid} ${partLbl[part]}角色图`, chr: 1 });
+      done++;
+    }
+    saveSettings();
+    dlUI('#mk-cid-dl', true, 1, added ? `已下载 ${added} 张图并加入列表` : '该编号的卡图已在列表中');
+    mkRenderCardGrid();
+    setTimeout(() => dlUI('#mk-cid-dl', false), 1600);
+  } catch (e) {
+    console.error(e);
+    dlUI('#mk-cid-dl', true, 0, '下载失败：' + (e.message || 'error'));
+    setTimeout(() => dlUI('#mk-cid-dl', false), 2600);
+  } finally { btn.disabled = false; }
+}
+$('#mk-cid-get').addEventListener('click', () => {
+  const v = $('#mk-cid').value.trim();
+  if (!/^\d{1,7}$/.test(v)) { dlUI('#mk-cid-dl', true, 0, '请输入纯数字卡面编号'); setTimeout(() => dlUI('#mk-cid-dl', false), 1600); return; }
+  mkDownloadCard(v);
+});
+$('#mk-list-close').addEventListener('click', () => $('#modal-mk-list').classList.remove('show'));
+
+/* ---------- 图形 / 文字 / 图片添加 ---------- */
+$$('#mk-shape-kind .pill').forEach(p => p.addEventListener('click', () => {
+  $$('#mk-shape-kind .pill').forEach(x => x.classList.remove('on')); p.classList.add('on');
+}));
+$('#mk-shape-ok').addEventListener('click', () => {
+  const kind = ($('#mk-shape-kind .pill.on') || {}).dataset?.v || 'rect';
+  const dim = kind === 'circle' ? { w: 220, h: 220 } : kind === 'tri' ? { w: 260, h: 230 } : { w: 320, h: 210 };
+  mkAddLayer({
+    type: 'shape', shape: kind,
+    stroke: $('#mk-shape-stroke').value, strokeW: +$('#mk-shape-sw').value,
+    fill: $('#mk-shape-fill').value, fillOn: $('#mk-shape-fill-on').checked,
+    shadow: { color: 'rgba(0,0,0,.45)', dist: 0, angle: 45 },
+    x: MK_W / 2, y: MK_H / 2, w: dim.w, h: dim.h, rot: 0
+  });
+  $('#modal-mk-shape').classList.remove('show');
+});
+$('#mk-shape-cancel').addEventListener('click', () => $('#modal-mk-shape').classList.remove('show'));
+$('#mk-ink-ok').addEventListener('click', () => {
+  $('#modal-mk-ink').classList.remove('show');
+  mkSetTool('ink');
+});
+$$('#mk-ink-pen .pill').forEach(p => p.addEventListener('click', () => {
+  $$('#mk-ink-pen .pill').forEach(x => x.classList.remove('on')); p.classList.add('on');
+  MK.inkPen = p.dataset.v;
+}));
+$('#mk-ink-color').addEventListener('input', e => { MK.inkColor = e.target.value; });
+$('#mk-ink-w').addEventListener('input', e => { MK.inkW = +e.target.value; $('#mk-ink-w-v').textContent = e.target.value; });
+$('#mk-text-ok').addEventListener('click', () => {
+  const t = $('#mk-text-inp').value.trim();
+  if (!t) return;
+  const size = +$('#mk-text-size').value;
+  const w = Math.min(MK_W - 60, Math.max(80, vWidth(t) * size + 60));
+  mkAddLayer({ type: 'text', text: t, color: $('#mk-text-color').value, size, x: MK_W / 2, y: MK_H / 2, w: Math.round(w), h: Math.round(size * 1.5), rot: 0 });
+  $('#modal-mk-text').classList.remove('show');
+});
+$('#mk-text-cancel').addEventListener('click', () => $('#modal-mk-text').classList.remove('show'));
+$('#mk-text-size').addEventListener('input', e => { $('#mk-text-size-v').textContent = e.target.value; });
+$('#mk-img-file').addEventListener('change', async e => {
+  const f = e.target.files && e.target.files[0];
+  if (!f || !MK) return;
+  try {
+    const url = URL.createObjectURL(f);
+    const dim = await mkImgSize(url);
+    let w = dim.w, h = dim.h;
+    const maxSide = 1400;
+    let blob = f;
+    if (Math.max(w, h) > maxSide) {           // 过大先压一档，控制 IndexedDB 占用
+      const k = maxSide / Math.max(w, h);
+      const cv = document.createElement('canvas');
+      cv.width = Math.round(w * k); cv.height = Math.round(h * k);
+      cv.getContext('2d').drawImage(await loadImageAsync(url), 0, 0, cv.width, cv.height);
+      blob = await canvasToBlobAsync(cv, 'image/png');
+    }
+    const key = 'mkimg:' + mkNewId();
+    await idbPut(key, blob);
+    cardBlobs[key] = URL.createObjectURL(blob);
+    let lw = Math.min(700, w > maxSide ? maxSide : w), lh = lw * h / w;
+    if (lh > 560) { lh = 560; lw = lh * w / h; }
+    mkAddLayer({ type: 'image', key, x: MK_W / 2, y: MK_H / 2, w: Math.round(lw), h: Math.round(lh), rot: 0 });
+    URL.revokeObjectURL(url);
+  } catch (err) { showToast('图片导入失败', 1800); }
+});
+
+/* ---------- 图层面板 ---------- */
+function mkRenderList() {
+  const list = $('#mk-layers');
+  if (!list || !MK) return;
+  list.innerHTML = '';
+  const addLi = (id, name, opts) => {
+    const li = document.createElement('div');
+    li.className = 'mk-li' + (opts.lock ? ' lock' : '') + (!opts.lock && MK.sel === id ? ' on' : '');
+    li.dataset.id = id || '';
+    li.innerHTML = (opts.lock ? '' : '<span class="grip">≡</span>') +
+      `<span class="nm">${escapeHTML(name)}</span>` +
+      (opts.lock ? '<span style="margin-left:auto;color:#5f7896;font-size:10px;letter-spacing:.05em">最上层</span>' :
+        `<span class="bi ed" title="编辑">⋮</span><span class="bi del" title="删除">✕</span>`);
+    list.appendChild(li);
+    return li;
+  };
+  addLi('__ink__', `涂鸦（${MK.ink.length} 笔）`, { lock: true });
+  for (let i = MK.layers.length - 1; i >= 0; i--) {   // 面板从上到下 = 图层从最前到最后
+    const l = MK.layers[i];
+    addLi(l.id, mkLayerName(l), {});
+  }
+}
+$('#mk-layers').addEventListener('pointerdown', e => {
+  if (!MK || MK.tool === 'ink') return;
+  const li = e.target.closest('.mk-li');
+  if (!li || li.classList.contains('lock')) return;
+  if (e.target.closest('.bi')) return;        // ⋮ / ✕ 走 click
+  const id = li.dataset.id;
+  const y0 = e.clientY; let moved = false;
+  li.setPointerCapture(e.pointerId);
+  li.classList.add('dragging');
+  const move = ev => {
+    if (Math.abs(ev.clientY - y0) > 6) moved = true;
+    if (!moved) return;
+    const hit = document.elementFromPoint(ev.clientX, ev.clientY);
+    const tgt = hit && hit.closest && hit.closest('.mk-li');
+    if (!tgt || tgt.classList.contains('lock') || tgt.dataset.id === id) return;
+    const from = MK.layers.findIndex(l => l.id === id);
+    const to = MK.layers.findIndex(l => l.id === tgt.dataset.id);
+    if (from < 0 || to < 0) return;
+    const [it] = MK.layers.splice(from, 1);
+    MK.layers.splice(to, 0, it);
+    MK.dirty = true;
+    mkRenderLayersBox(); mkRenderList();
+    const nel = $(`#mk-layers .mk-li[data-id="${id}"]`);
+    if (nel) { nel.classList.add('dragging'); nel.setPointerCapture && ev.pointerId != null && nel.setPointerCapture(ev.pointerId); }
+  };
+  const up = () => {
+    li.classList.remove('dragging');
+    li.removeEventListener('pointermove', move); li.removeEventListener('pointerup', up); li.removeEventListener('pointercancel', up);
+    mkRenderList();
+  };
+  li.addEventListener('pointermove', move); li.addEventListener('pointerup', up); li.addEventListener('pointercancel', up);
+});
+$('#mk-layers').addEventListener('click', e => {
+  if (!MK) return;
+  const li = e.target.closest('.mk-li');
+  if (!li || li.classList.contains('lock')) return;
+  const l = MK.layers.find(x => x.id === li.dataset.id);
+  if (!l) return;
+  if (e.target.classList.contains('del')) {
+    mkConfirm('删除图层', `确定删除「${mkLayerName(l)}」？删除后不可恢复。`, () => {
+      MK.layers = MK.layers.filter(x => x.id !== l.id);
+      if (MK.sel === l.id) MK.sel = null;
+      MK.dirty = true; mkRenderAll();
+    });
+    return;
+  }
+  if (e.target.classList.contains('ed')) { mkOpenEdit(l); return; }
+  MK.sel = l.id; mkRenderAll();
+});
+
+/* ---------- ⋮ 编辑图层 ---------- */
+function mkRow(label, inner) {
+  return `<div class="mk-field"><div class="sub-lbl">${label}</div><div class="mk-row">${inner}</div></div>`;
+}
+function mkOpenEdit(l) {
+  const body = $('#mk-edit-body');
+  MK.sel = l.id; mkRenderAll();
+  if (l.type === 'card') {
+    const alts = mkCardAlts(l);
+    body.innerHTML = `<div class="mk-field"><div class="sub-lbl">卡图版本（${escapeHTML(l.label || '#' + (l.cid || ''))}）</div>
+      <div class="pills" id="mk-alt-pills">${alts.map(a =>
+        `<div class="pill${a.key === l.key ? ' on' : ''}" data-key="${a.key}">${escapeHTML(a.label || MK_PART_LBL[a.part] || a.part)}</div>`).join('')}</div></div>`;
+    $$('#mk-alt-pills .pill').forEach(p => p.addEventListener('click', async () => {
+      const a = alts.find(x => x.key === p.dataset.key);
+      if (!a || !cardBlobs[a.key]) { await mkEnsureBlobs([a && a.key]); }
+      if (!a || !cardBlobs[a.key]) { showToast('这张图还没下载', 1500); return; }
+      l.key = a.key; l.label = a.label; MK.dirty = true;
+      $$('#mk-alt-pills .pill').forEach(x => x.classList.toggle('on', x.dataset.key === a.key));
+      mkRenderLayersBox();
+    }));
+  } else if (l.type === 'shape') {
+    body.innerHTML =
+      mkRow('描边', `<input type="color" id="me-stroke" value="${l.stroke || '#12b7d3'}"><span class="val" id="me-sw-v">${l.strokeW || 4}</span><input type="range" id="me-sw" min="1" max="30" value="${l.strokeW || 4}"><span>粗细</span>`) +
+      mkRow('填充', `<input type="color" id="me-fill" value="${(l.fill || '#12b7d3').replace(/, ?/g, ',')}"><label style="display:flex;align-items:center;gap:6px;margin-left:auto"><input type="checkbox" id="me-fill-on" ${l.fillOn ? 'checked' : ''}>启用填充</label>`) +
+      mkRow('阴影', `<input type="color" id="me-shc" value="${l.shadow && l.shadow.color || 'rgba(0,0,0,.45)'.slice(0,7)}"><span class="val" id="me-shd-v">${(l.shadow && l.shadow.dist) || 0}</span><input type="range" id="me-shd" min="0" max="80" value="${(l.shadow && l.shadow.dist) || 0}"><span>距离</span>
+        <span class="val" id="me-sha-v">${(l.shadow && l.shadow.angle) || 45}</span><input type="range" id="me-sha" min="0" max="359" value="${(l.shadow && l.shadow.angle) || 45}"><span>角度</span>`);
+    $('#me-stroke').addEventListener('input', e => { l.stroke = e.target.value; MK.dirty = true; mkRenderLayersBox(); });
+    $('#me-sw').addEventListener('input', e => { l.strokeW = +e.target.value; $('#me-sw-v').textContent = e.target.value; MK.dirty = true; mkRenderLayersBox(); });
+    $('#me-fill').addEventListener('input', e => { l.fill = e.target.value; MK.dirty = true; mkRenderLayersBox(); });
+    $('#me-fill-on').addEventListener('change', e => { l.fillOn = e.target.checked; MK.dirty = true; mkRenderLayersBox(); });
+    $('#me-shc').addEventListener('input', e => { l.shadow.color = e.target.value; MK.dirty = true; mkRenderLayersBox(); });
+    $('#me-shd').addEventListener('input', e => { l.shadow.dist = +e.target.value; $('#me-shd-v').textContent = e.target.value; MK.dirty = true; mkRenderLayersBox(); });
+    $('#me-sha').addEventListener('input', e => { l.shadow.angle = +e.target.value; $('#me-sha-v').textContent = e.target.value; MK.dirty = true; mkRenderLayersBox(); });
+  } else if (l.type === 'text') {
+    body.innerHTML =
+      `<div class="mk-field"><div class="sub-lbl">内容</div><input type="text" id="me-text" maxlength="60" value="${escapeHTML(String(l.text || ''))}" style="width:100%"></div>` +
+      mkRow('样式', `<input type="color" id="me-color" value="${l.color || '#222831'}"><span class="val" id="me-size-v">${l.size || 64}</span><input type="range" id="me-size" min="12" max="220" value="${l.size || 64}"><span>字号</span>`);
+    $('#me-text').addEventListener('input', e => {
+      l.text = e.target.value; MK.dirty = true;
+      l.w = Math.round(Math.min(MK_W - 60, Math.max(80, vWidth(l.text) * l.size + 60)));
+      mkRenderLayersBox();
+    });
+    $('#me-color').addEventListener('input', e => { l.color = e.target.value; MK.dirty = true; mkRenderLayersBox(); });
+    $('#me-size').addEventListener('input', e => { l.size = +e.target.value; $('#me-size-v').textContent = e.target.value; MK.dirty = true; mkRenderLayersBox(); });
+  } else if (l.type === 'image') {
+    body.innerHTML = `<div class="mk-field"><div class="sub-lbl">当前图片</div>
+      <img src="${cardBlobs[l.key] || ''}" style="max-width:100%;max-height:180px;display:block;border-radius:8px;background:#fff">
+      <button class="btn ghost" id="me-img-btn" style="width:100%;margin-top:10px">更换图片</button>
+      <input type="file" id="me-img-file" accept="image/*" style="display:none"></div>`;
+    $('#me-img-btn').addEventListener('click', () => $('#me-img-file').click());
+    $('#me-img-file').addEventListener('change', async e => {
+      const f = e.target.files && e.target.files[0];
+      if (!f) return;
+      try {
+        const url = URL.createObjectURL(f);
+        const dim = await mkImgSize(url);
+        let blob = f;
+        if (Math.max(dim.w, dim.h) > 1400) {
+          const k = 1400 / Math.max(dim.w, dim.h);
+          const cv = document.createElement('canvas');
+          cv.width = Math.round(dim.w * k); cv.height = Math.round(dim.h * k);
+          cv.getContext('2d').drawImage(await loadImageAsync(url), 0, 0, cv.width, cv.height);
+          blob = await canvasToBlobAsync(cv, 'image/png');
+        }
+        const key = 'mkimg:' + mkNewId();
+        await idbPut(key, blob);
+        cardBlobs[key] = URL.createObjectURL(blob);
+        l.key = key; MK.dirty = true;
+        mkRenderLayersBox();
+        $('#modal-mk-edit .dialog img').src = cardBlobs[key];
+        URL.revokeObjectURL(url);
+        showToast('已更换图片', 1400);
+      } catch (err) { showToast('图片导入失败', 1600); }
+    });
+  }
+  $('#modal-mk-edit').classList.add('show');
+}
+$('#mk-edit-close').addEventListener('click', () => { $('#modal-mk-edit').classList.remove('show'); mkRenderList(); });
+
+/* ---------- 编辑器整体渲染 / 保存 / 返回 ---------- */
+function mkRenderAll() { mkRenderLayersBox(); mkRenderList(); mkRedrawInk(); mkSyncInkUI(); }
+/* 窗口/面板尺寸变化：画布缩放系数变了，图层 CSS 定位需要按新比例重排 */
+window.addEventListener('resize', () => {
+  if (MK && $('#screen-pfeditor').classList.contains('active')) mkRenderLayersBox();
+});
+function mkSave() {
+  if (!MK) return;
+  MK.name = $('#pfe-name').value.trim() || ('名片 ' + (settings.profileCards.length + (MK.id ? 0 : 1)));
+  if (!MK.id) {
+    MK.id = mkNewId();
+    settings.profileCards.push(MK);
+    if (!settings.profile.pfcardId) settings.profile.pfcardId = MK.id;
+  } else {
+    const i = settings.profileCards.findIndex(c => c.id === MK.id);
+    if (i >= 0) settings.profileCards[i] = MK; else settings.profileCards.push(MK);
+  }
+  MK.ts = Date.now(); MK.dirty = false;
+  saveSettings();
+  showToast('名片已保存', 1800);
+  show('pfcards'); renderPfcards();
+}
+$('#pfe-save').addEventListener('click', mkSave);
+$('#pfe-save2').addEventListener('click', mkSave);
+$('#pfe-back').addEventListener('click', () => {
+  if (MK && MK.dirty) mkConfirm('退出编辑', '当前名片还没有保存，退出将丢失这次的修改。确定退出？', () => { show('pfcards'); renderPfcards(); });
+  else { show('pfcards'); renderPfcards(); }
+});
+/* 名片库页事件 */
+$('#pfc-back').addEventListener('click', () => { show('profile'); renderProfile(); });
+$('#pfc-new').addEventListener('click', () => mkOpenEditor(null));
+$('#pfc-manage').addEventListener('click', () => pfcSetBatch(!pfcBatch));
+$('#pfc-cancel-batch').addEventListener('click', () => pfcSetBatch(false));
+$('#pfc-del-sel').addEventListener('click', () => {
+  if (!pfcSel.size) { showToast('先勾选要删除的名片', 1500); return; }
+  mkConfirm('批量删除', `确定删除选中的 ${pfcSel.size} 张名片？删除后不可恢复。`, () => { mkDeleteCards([...pfcSel]); pfcSetBatch(false); });
+});
+$('#profile-mk').addEventListener('click', () => { pfcSetBatch(false); show('pfcards'); renderPfcards(); });
 
 /* 阻止双指缩放/长按菜单 */
 document.addEventListener('gesturestart', e => e.preventDefault());
