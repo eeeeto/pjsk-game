@@ -5198,17 +5198,20 @@ $('#res-share').addEventListener('click', async () => {
   catch (e) { console.warn('[share]', e); showToast('生成成绩图失败', 2200); }
 });
 
-/* 成绩图：白底黑字（与结算页同风格） */
+/* 成绩图：深色科技风（与整体 UI 同配色） */
 async function renderResultImage() {
   const W = 1200, H = 820;
   const cv = document.createElement('canvas');
   cv.width = W; cv.height = H;
   const c = cv.getContext('2d');
   const FF = '"Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif';
-  c.fillStyle = '#efeff2'; c.fillRect(0, 0, W, H);
+  // 背景：深蓝渐变（与游戏页面一致）
+  const bg = c.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, '#0c1526'); bg.addColorStop(1, '#060a13');
+  c.fillStyle = bg; c.fillRect(0, 0, W, H);
+  const panel = (x, y, w, h, r) => { roundRectPath(c, x, y, w, h, r); c.fillStyle = 'rgba(20,32,58,.92)'; c.fill(); c.strokeStyle = 'rgba(37,226,255,.35)'; c.lineWidth = 2; c.stroke(); };
   // 顶部条：封面 + 歌名 + 难度
-  roundRectPath(c, 40, 30, W - 80, 128, 30);
-  c.fillStyle = '#d6d6da'; c.fill();
+  panel(40, 30, W - 80, 128, 30);
   const coverUrl = G.song.cover || res('assets/covers/other1.jpg');
   try {
     const im = await loadImageAsync(coverUrl);
@@ -5219,74 +5222,76 @@ async function renderResultImage() {
     c.restore();
   } catch (e) {
     c.fillStyle = '#0a0d14'; c.fillRect(66, 48, 92, 92);
-    c.fillStyle = '#ffffff'; c.font = `700 22px ${FF}`; c.textAlign = 'center';
+    c.fillStyle = '#cfe4ff'; c.font = `700 22px ${FF}`; c.textAlign = 'center';
     c.fillText('封面', 112, 102); c.textAlign = 'left';
   }
   const dsp = songDisp(G.song);
-  c.fillStyle = '#101216'; c.font = `900 42px ${FF}`;
+  c.fillStyle = '#e8f4ff'; c.font = `900 42px ${FF}`;
   c.fillText(dsp.title.slice(0, 22) + (dsp.tag ? `【${dsp.tag}】` : ''), 186, 100);
-  c.fillStyle = '#3c4350'; c.font = `800 27px ${FF}`;
+  c.fillStyle = '#8fb8dd'; c.font = `800 27px ${FF}`;
   c.fillText('难度' + (G.diff === 'ultra' ? 'MASTER' : (G.diff === 'hard' ? 'HARD' : 'MEDIUM')), 186, 140);
-  // 人物大图（右半）
+  // 人物大图（右半）：深蓝面板 + 青描边，卡图铺满
   const charMeta = settings.resCards[clamp(settings.resPick || 0, 0, Math.max(0, settings.resCards.length - 1))];
   const charUrl = charMeta ? cardBlobs[charMeta.key] : '';
   const chX = 780, chY = 190, chW = 380, chH = 500;
+  panel(chX, chY, chW, chH, 12);
+  c.save();
+  roundRectPath(c, chX + 2, chY + 2, chW - 4, chH - 4, 10); c.clip();
+  let charDrawn = false;
   if (charUrl) {
     try {
       const im = await loadImageAsync(charUrl);
-      if (charMeta.chr) {
-        // 透明底角色图：contain 完整显示，不裁剪
-        const r = Math.min(chW / im.naturalWidth, chH / im.naturalHeight);
-        const dw = im.naturalWidth * r, dh = im.naturalHeight * r;
-        c.drawImage(im, chX + (chW - dw) / 2, chY + (chH - dh) / 2, dw, dh);
-      } else {
-        const r = Math.max(chW / im.naturalWidth, chH / im.naturalHeight);
-        const dw = im.naturalWidth * r, dh = im.naturalHeight * r;
-        c.save();
-        roundRectPath(c, chX, chY, chW, chH, 8); c.clip();
-        c.drawImage(im, chX + (chW - dw) / 2, chY + (chH - dh) / 2, dw, dh);
-        c.restore();
-      }
+      const r = Math.max(chW / im.naturalWidth, chH / im.naturalHeight);
+      const dw = im.naturalWidth * r, dh = im.naturalHeight * r;
+      c.drawImage(im, chX + (chW - dw) / 2, chY + (chH - dh) / 2, dw, dh);
+      charDrawn = true;
     } catch (e) {}
-  } else {
-    // 占位：圆 + 长条 + 「人物」字（与结算页占位一致）
-    c.fillStyle = '#a9a9ad';
-    c.beginPath(); c.arc(chX + chW / 2, chY + 130, 110, 0, Math.PI * 2); c.fill();
-    roundRectPath(c, chX + 60, chY + 260, chW - 120, chH - 260, 40); c.fill();
-    c.fillStyle = '#17181c'; c.font = `900 74px ${FF}`; c.textAlign = 'center';
+  }
+  if (!charDrawn) {
+    c.fillStyle = 'rgba(37,226,255,.14)'; c.textAlign = 'center';
+    c.font = `900 74px ${FF}`; c.fillStyle = '#4d9fd0';
     c.fillText('人', chX + chW / 2, chY + 150);
     c.fillText('物', chX + chW / 2, chY + 380);
     c.textAlign = 'left';
   }
-  // 新纪录
-  c.fillStyle = '#101216'; c.font = `900 30px ${FF}`; c.textAlign = 'center';
-  if (G._newRecord) c.fillText('◆新纪录!◆', 470, 250);
+  c.restore();
+  // 新纪录（青色发光）
+  c.textAlign = 'center';
+  if (G._newRecord) {
+    c.shadowColor = '#7ceaff'; c.shadowBlur = 16;
+    c.fillStyle = '#7ceaff'; c.font = `900 30px ${FF}`;
+    c.fillText('◆新纪录!◆', 470, 250);
+    c.shadowBlur = 0;
+  }
   c.textAlign = 'left';
-  // 判定列表
+  // 判定列表：标签浅白蓝、数值青色
   const cc = G.counts, pad = n => String(n).padStart(4, '0');
   const rows = ['PERFECT', 'GREAT', 'GOOD', 'BAD', 'MISS'];
   c.font = `900 32px ${FF}`;
   rows.forEach((k, i) => {
     const y = 320 + i * 62;
-    c.fillStyle = '#101216';
+    c.fillStyle = '#cfe4ff';
     c.fillText(k, 120, y);
+    c.fillStyle = '#8fd8ff';
     c.fillText(pad(cc[k.toLowerCase()]), 400, y);
   });
   // COMBO
-  c.fillStyle = '#101216'; c.font = `900 34px ${FF}`;
+  c.fillStyle = '#cfe4ff'; c.font = `900 34px ${FF}`;
   c.fillText('COMBO', 520, 320);
-  c.font = `900 44px ${FF}`;
+  c.fillStyle = '#e8f4ff'; c.font = `900 44px ${FF}`;
   c.fillText(pad(G.maxCombo), 520, 382);
-  // FC / AP 大字
-  const isAP = cc.perfect === cc.perfect + cc.great + cc.good + cc.bad + cc.miss && cc.perfect > 0;
+  // FC / AP 大字（青色发光）
   const totalNotes = cc.perfect + cc.great + cc.good + cc.bad + cc.miss;
+  const isAP = cc.miss + cc.bad + cc.good + cc.great === 0 && cc.perfect > 0;
   const isFC = G.damage === 0 && totalNotes > 0;
-  c.fillStyle = '#111216'; c.font = `900 64px ${FF}`;
+  c.shadowColor = '#7ceaff'; c.shadowBlur = 20;
+  c.fillStyle = '#7ceaff'; c.font = `900 64px ${FF}`;
   if (isAP) c.fillText('ALL PERFECT', 120, 680);
   else if (isFC) c.fillText('FULL COMBO', 120, 680);
-  c.fillStyle = '#565d68'; c.font = `800 24px ${FF}`;
+  c.shadowBlur = 0;
+  c.fillStyle = '#8fb8dd'; c.font = `800 24px ${FF}`;
   c.fillText(`音符 ${totalNotes} · 剩余 HP ${Math.round(G.hp)}`, 120, 730);
-  c.fillStyle = '#7a7a80'; c.font = `600 20px ${FF}`;
+  c.fillStyle = '#5f7ba0'; c.font = `600 20px ${FF}`;
   c.fillText(new Date().toLocaleString('zh-CN') + ' · PROJECT SEKAI FAN STAGE', 40, H - 26);
   return cv;
 }
