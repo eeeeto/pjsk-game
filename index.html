@@ -299,11 +299,6 @@
   .nm-row:last-child{border-bottom:0;}
   .nm-name{flex:1;min-width:0;font-size:12.5px;color:#cfe4ff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .nm-size{flex:none;font-size:10.5px;color:#5f7896;font-variant-numeric:tabular-nums;}
-  .nm-foot{display:flex;align-items:center;gap:8px;margin-top:2px;font-size:11px;color:#7f97b8;}
-  .nm-pwd{color:#8fa8c4;}
-  .nm-dl{margin-left:auto;color:#25e2ff;text-decoration:none;font-weight:800;
-    border:1px solid rgba(37,226,255,.32);border-radius:999px;padding:2px 12px;}
-  .nm-dl:active{background:rgba(37,226,255,.14);}
   @media (max-width:640px){.nm-scroll{grid-template-columns:1fr;}}
 
   /* 开发者相关页 */
@@ -1187,7 +1182,7 @@
   <section id="screen-newmusic" class="screen">
     <div class="page-head">
       <h2>新曲<em>速递</em></h2>
-      <div class="tip"><b class="song-count" id="nm-count">共 59 首</b><br>11.15 上新歌单<br><span class="tip-sub">按组合分类 · 点「下载」取歌</span></div>
+      <div class="tip"><b class="song-count" id="nm-count">共 59 首</b><br>11.15 上新歌单<br><span class="tip-sub">按组合分类 · 曲目清单</span></div>
     </div>
     <div class="nm-scroll" id="nm-list"></div>
     <div class="bottom-bar">
@@ -6251,7 +6246,7 @@ $('#dev-back').addEventListener('click', () => { goTitle(); });
 
 /* ---------- 新曲速递（11.15 上新歌单） ---------- */
 const NEW_MUSIC = [
-  { cat: "虚拟歌手", sub: "ボカロ", pwd: "4321", url: "https://wwawh.lanzouc.com/b01i607ewf", songs: [
+  { cat: "虚拟歌手", sub: "ボカロ", songs: [
     ["サツキ - おばけ体験(feat.重音テト)", "1.1 M"],
     ["電ǂ鯨 - 童話になったらいいのに", "1.5 M"],
     ["佐藤乃子歌愛ユキ - たぶん、夢(feat.歌愛ユキ)", "1.2 M"],
@@ -6285,7 +6280,7 @@ const NEW_MUSIC = [
     ["いよわ初音ミク - パジャミィ", "1.6 M"],
     ["香椎モイミ羽累 - 紫色の向日葵", "2.1 M"],
   ] },
-  { cat: "其他世界", sub: "其他作品", pwd: "ezha", url: "https://wwawh.lanzouc.com/b01i607jfi", songs: [
+  { cat: "其他世界", sub: "其他作品", songs: [
     ["Ado - 愛して愛して愛して", "2.0 M"],
     ["宝鐘マリン - きゃぴ", "1.5 M"],
     ["A-SOUL-LeapTop", "1.5 M"],
@@ -6300,30 +6295,30 @@ const NEW_MUSIC = [
     ["Goosehouse - 光るなら", "1.9 M"],
     ["黒うさぎ - アポフェニア", "1.1 M"],
   ] },
-  { cat: "Leo/need", sub: "Leo/need", pwd: "a90k", url: "https://wwawh.lanzouc.com/b01i608wfc", songs: [
+  { cat: "Leo/need", sub: "Leo/need", songs: [
     ["日野森志歩 巡音ルカ 星乃一歌 天馬咲希 望月穗波 - このまんまでいこう(Game Size.)", "1.7 M"],
     ["ロキ(short)", "2.1 M"],
   ] },
-  { cat: "MORE MORE JUMP!", sub: "MORE MORE JUMP!", pwd: "8t0r", url: "https://wwawh.lanzouc.com/b01i608wgd", songs: [
+  { cat: "MORE MORE JUMP!", sub: "MORE MORE JUMP!", songs: [
     ["天使のクローバー", "726.2 K"],
     ["ツギハギスタッカート（short）", "2.5 M"],
     ["ハッピーシンセサイザ(short)", "813.6 K"],
   ] },
-  { cat: "Vivid BAD SQUAD", sub: "Vivid BAD SQUAD", pwd: "6hyi", url: "https://wwawh.lanzouc.com/b01i608whe", songs: [
+  { cat: "Vivid BAD SQUAD", sub: "Vivid BAD SQUAD", songs: [
     ["劣等上等（short）", "2.0 M"],
   ] },
-  { cat: "Wonderlands×Showtime", sub: "Wonderlands×Showtime", pwd: "31ga", url: "https://wwawh.lanzouc.com/b01i608wif", songs: [
+  { cat: "Wonderlands×Showtime", sub: "Wonderlands×Showtime", songs: [
     ["天马司、神代类、镜音连 - 行星环", "993.4 K"],
     ["ブリキノダンス(short)", "2.0 M"],
   ] },
-  { cat: "25時、ナイトコードで。", sub: "Nightcord at 25:00", pwd: "e1qy", url: "https://wwawh.lanzouc.com/b01i608wjg", songs: [
+  { cat: "25時、ナイトコードで。", sub: "Nightcord at 25:00", songs: [
     ["dna25时x镜音铃", "1.2 M"],
     ["dnalive25时x镜音铃", "2.3 M"],
     ["は雨25时x镜音连", "1.5 M"],
     ["かいりきベア25時、ナイトコードで。鏡音レン - バグ(feat.宵崎奏&朝比奈まふゆ&東雲絵名&暁山瑞希&鏡音レン)", "1.3 M"],
     ["シャルル(short)", "2.1 M"],
   ] },
-  { cat: "混活 / 联动", sub: "Mixed & Collab", pwd: "8hyv", url: "https://wwawh.lanzouc.com/b01i608wna", songs: [
+  { cat: "混活 / 联动", sub: "Mixed & Collab", songs: [
     ["SEKAI（short）", "2.3 M"],
   ] },
 ];
@@ -6349,10 +6344,6 @@ function renderNewMusic() {
       list.appendChild(row);
     }
     card.appendChild(list);
-    const foot = document.createElement('div');
-    foot.className = 'nm-foot';
-    foot.innerHTML = `<span class="nm-pwd">提取密码 ${escapeHTML(g.pwd)}</span><a class="nm-dl" href="${g.url}" target="_blank" rel="noopener">下载 ↗</a>`;
-    card.appendChild(foot);
     box.appendChild(card);
   }
   const cnt = $('#nm-count');
