@@ -7327,6 +7327,7 @@ let _gachaIdx = null, _gachaIdxLoading = null;
 let _poolRosterCache = {};      // poolId -> [cardId]
 let _selPool = -1;              // 当前选中的卡池 id
 let _heroList = [], _heroIdx = 0;   // 主视觉四星卡列表与当前索引
+let _heroTimer = null;              // 卡面自动轮播定时器
 let _gachaDrawing = false;      // 抽卡演出进行中
 
 async function loadGachaIdx() {
@@ -7618,6 +7619,7 @@ function renderGachaPreview() {
   const empty = $('#gacha-empty'), info = $('#gacha-info'), hero = $('#gacha-hero'), heroImg = $('#gacha-hero-img'), now = $('#gacha-now');
   const pool = settings.gachaPools.find(p => p.id === _selPool);
   if (!pool) {
+    stopHeroTimer();
     empty.style.display = ''; info.style.display = 'none'; hero.style.display = 'none'; now.textContent = '';
     return;
   }
@@ -7633,8 +7635,23 @@ function renderGachaPreview() {
   heroImg.removeAttribute('src');
   heroImg.style.visibility = 'hidden';
   stars.textContent = ''; stars.classList.remove('bd');
-  if (!roster4.length) return;          // 没有四星则不显示卡面
+  if (!roster4.length) { stopHeroTimer(); return; }          // 没有四星则不显示卡面
   loadGachaHero();
+  startHeroTimer();
+}
+function stopHeroTimer() {
+  if (_heroTimer) { clearInterval(_heroTimer); _heroTimer = null; }
+}
+function startHeroTimer() {
+  stopHeroTimer();
+  if (!_heroList || _heroList.length <= 1) return;   // 只有一张就不轮
+  _heroTimer = setInterval(() => {
+    // 页面隐藏或已离开招募页就先跳过，回来后接着轮
+    const sc = document.getElementById('screen-gacha');
+    if (document.hidden || !sc || sc.offsetParent === null) return;
+    _heroIdx = (_heroIdx + 1) % _heroList.length;
+    loadGachaHero();
+  }, 2000);
 }
 function loadGachaHero() {
   if (!_heroList || !_heroList.length) return;
@@ -7642,7 +7659,7 @@ function loadGachaHero() {
   const cid = _heroList[_heroIdx % _heroList.length];
   const heroImg = $('#gacha-hero-img'), stars = $('#gacha-hero-stars');
   stars.textContent = '★★★★';
-  $('#gacha-hero-count').textContent = `${_heroIdx + 1} / ${_heroList.length} · 点击切换`;
+  $('#gacha-hero-count').textContent = `${_heroIdx + 1} / ${_heroList.length} · 自动轮播 · 点击切换`;
   const wantId = poolId, wantIdx = _heroIdx;
   heroImg.style.visibility = 'hidden';
   gachaCardImg(cid, 'after').then(url => {
@@ -7654,6 +7671,7 @@ $('#gacha-preview').addEventListener('click', () => {
   if (!_heroList || _heroList.length <= 1) return;
   _heroIdx = (_heroIdx + 1) % _heroList.length;
   loadGachaHero();
+  startHeroTimer();   // 手动点击后重新计时，避免刚换就又被自动切走
 });
 
 /* ---------- 添加卡池弹窗 ---------- */
