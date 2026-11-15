@@ -930,7 +930,7 @@
     </div>
     <div class="tabs">
       <div class="tab on" data-tab="skin">按键图案</div>
-      <div class="tab" data-tab="sound">按键音效</div>
+      <div class="tab" data-tab="sound">听 觉</div>
       <div class="tab" data-tab="bg">背景</div>
       <div class="tab" data-tab="team">配队选择</div>
       <div class="tab" data-tab="result">打歌结算</div>
@@ -969,7 +969,13 @@
         <input type="file" id="skin-file" accept="image/*" style="display:none">
       </div>
       <div class="panel" id="panel-sound">
-        <p class="hint">默认使用 Tap 1 音效，其余来自资源包「音效」文件夹。选中后会每 2 秒循环试听。</p>
+        <p class="hint">BGM 是首页 / 个人主页 / 世界招募 / 设置页播放的背景音乐，拖到 0 即关闭。按键音效默认使用 Tap 1，其余来自资源包「音效」文件夹，选中后会每 2 秒循环试听。</p>
+        <div class="vol-row">
+          <span class="vol-lbl">BGM 音量</span>
+          <input type="range" id="bgm-vol" min="0" max="1" step="0.05" value="0.45">
+          <b id="bgm-vol-val">45%</b>
+        </div>
+        <div class="sub" style="margin:-6px 0 14px">当前曲目：Always Together（プロジェクトセカイ）</div>
         <div class="vol-row">
           <span class="vol-lbl">按键音效音量</span>
           <input type="range" id="sfx-vol" min="0" max="1" step="0.05" value="0.5">
@@ -1111,6 +1117,7 @@
       <div class="gs-grid" id="gs-grid"></div>
       <div class="gs-actions">
         <button class="btn ghost" id="gs-back">返回卡池列表</button>
+        <button class="btn ghost" id="gs-share">保存图片</button>
         <button class="btn pink" id="gs-again">再招募</button>
       </div>
     </div>
@@ -1814,7 +1821,7 @@ const CARDS = [
 
 /* ---------- 设置存储 ---------- */
 const DEF_SET = { skin:'lumirect', bgMode:'card', bgCover:res('assets/covers/leoneed1.jpg'),
-  bgCard:res('assets/cards/88/card_normal.webp'), bgCardShade:0.45, customSkin:null, sfxVolume:0.5, speed:7.0, diff:'normal',
+  bgCard:res('assets/cards/88/card_normal.webp'), bgCardShade:0.45, customSkin:null, sfxVolume:0.5, bgmVolume:0.45, speed:7.0, diff:'normal',
   keyScale:1.0, judgeLeniency:1.0, holdAlpha:0.5, judgeLift:0, judgeOffset:0, myCards:[], lastSong:0, sound:'tap',
   marks:{}, favs:{}, collapsedUnits:{}, teams:[], activeTeam:-1, songFilter:{ dur:'all', fc:'all', ap:'all', fav:'all' },
   gachaRate4:3, gachaPools:[], members:[] };
@@ -1886,6 +1893,82 @@ function applyBackground() {
   document.body.dataset.bg = mode;
 }
 
+/* ---------- 全局背景音乐 ----------
+   首页 / 个人主页（含名片编辑）/ 世界招募 / 设置 播放同一首 BGM，其余页面自动淡出暂停。
+   浏览器限制自动播放：首次点击/按键后补播一次；音量由设置里的「BGM 音量」控制。 */
+const BGM_PAGES = { title: 1, profile: 1, pfcards: 1, pfeditor: 1, gacha: 1, settings: 1 };
+const BGM_SRC = res('assets/bgm/always-together.mp3');
+let bgmAudio = null, bgmFadeTimer = 0, bgmBlocked = false;
+
+function bgmVolume() {
+  const v = Number(settings.bgmVolume);
+  return Number.isFinite(v) ? clamp(v, 0, 1) : 0.45;
+}
+function bgmShouldPlay() {
+  return !!BGM_PAGES[screen] && document.visibilityState !== 'hidden' && bgmVolume() > 0.001;
+}
+function bgmEnsure() {
+  if (bgmAudio) return bgmAudio;
+  let a;
+  try { a = new Audio(); } catch (e) { return null; }
+  const urls = mirrorUrls(BGM_SRC);
+  a.id = 'bgm-audio';
+  a.dataset.idx = '0';
+  a.src = encodeURI(urls[0]);
+  a.loop = true;
+  a.preload = 'auto';
+  a.volume = 0;
+  a.style.display = 'none';
+  try { document.body.appendChild(a); } catch (e) {}
+  // 镜像兜底：CDN 抖动时依次换源
+  a.addEventListener('error', () => {
+    const idx = Number(a.dataset.idx || 0) + 1;
+    if (idx >= urls.length) return;
+    a.dataset.idx = String(idx);
+    a.src = encodeURI(urls[idx]);
+    if (bgmShouldPlay()) { const p = a.play(); if (p && p.catch) p.catch(() => {}); }
+  });
+  bgmAudio = a;
+  return a;
+}
+function bgmFadeTo(target, ms, done) {
+  const a = bgmAudio;
+  if (!a) { if (done) done(); return; }
+  if (bgmFadeTimer) { clearInterval(bgmFadeTimer); bgmFadeTimer = 0; }
+  const v0 = a.volume, t0 = performance.now(), dur = Math.max(16, ms || 0);
+  if (Math.abs(v0 - target) < 0.004) { try { a.volume = target; } catch (e) {} if (done) done(); return; }
+  bgmFadeTimer = setInterval(() => {
+    const k = Math.min(1, (performance.now() - t0) / dur);
+    try { a.volume = Math.max(0, Math.min(1, v0 + (target - v0) * k)); } catch (e) {}
+    if (k >= 1) { clearInterval(bgmFadeTimer); bgmFadeTimer = 0; if (done) done(); }
+  }, 40);
+}
+function bgmSync() {
+  const a = bgmEnsure();
+  if (!a) return;
+  if (bgmShouldPlay()) {
+    bgmBlocked = false;
+    if (a.paused) {
+      const p = a.play();
+      if (p && p.catch) p.catch(() => { bgmBlocked = true; });   // 被拦截 → 等下一次点击再补
+    }
+    bgmFadeTo(bgmVolume(), 1200);
+  } else {
+    bgmFadeTo(0, 420, () => { if (!bgmShouldPlay()) { try { a.pause(); } catch (e) {} } });
+  }
+}
+function bgmUnlock() {
+  window.removeEventListener('pointerdown', bgmUnlock, true);
+  window.removeEventListener('keydown', bgmUnlock, true);
+  window.removeEventListener('touchstart', bgmUnlock, true);
+  // 延后一拍：让这次点击引发的页面切换先执行，避免刚点进去就响一下又停
+  setTimeout(() => { if (!bgmAudio || bgmAudio.paused || bgmBlocked) { try { bgmSync(); } catch (e) {} } }, 0);
+}
+window.addEventListener('pointerdown', bgmUnlock, true);
+window.addEventListener('keydown', bgmUnlock, true);
+window.addEventListener('touchstart', bgmUnlock, true);
+document.addEventListener('visibilitychange', () => { try { bgmSync(); } catch (e) {} });
+
 /* ---------- 界面切换 ---------- */
 let screen = 'title';
 function show(name) {
@@ -1894,6 +1977,7 @@ function show(name) {
   const el = $('#screen-' + name);
   if (el) el.classList.add('active');
   document.body.dataset.view = name === 'songs' ? 'songs' : (name === 'settings' ? 'settings' : (name === 'game' ? 'game' : 'title'));
+  try { bgmSync(); } catch (e) {}
   try { scheduleFitApp(); } catch (e) {}          // 进/出游戏页时重新贴合可见区域
 }
 function goTitle() {
@@ -7397,6 +7481,256 @@ $('#gs-back').addEventListener('click', () => {
   renderGachaPreview();
 });
 
+/* ---------- 抽卡结果横图（分享） ---------- */
+function gachaShareInfo(cid) {
+  const ent = _gachaIdx && _gachaIdx.cards[cid];
+  if (!ent) return { char: '未知角色', card: '' };
+  return { char: ((_gachaIdx.chars || {})[ent[2]]) || '未知角色', card: ent[4] || '' };
+}
+/* 按字符折行（中文/日文没有空格，只能逐字量宽），超过 maxLines 用省略号收尾 */
+function wrapCJK(c, text, maxW, maxLines) {
+  const chars = Array.from(String(text || ''));
+  const out = [];
+  let cur = '';
+  for (const ch of chars) {
+    const t = cur + ch;
+    if (cur && c.measureText(t).width > maxW) {
+      if (out.length === maxLines - 1) {
+        out.push(cur.slice(0, -1) + '…');
+        return out;
+      }
+      out.push(cur); cur = ch;
+    } else cur = t;
+  }
+  if (cur) out.push(cur);
+  return out;
+}
+function drawCoverImg(c, im, x, y, w, h, r) {
+  c.save();
+  roundRectPath(c, x, y, w, h, r);
+  c.clip();
+  const s = Math.max(w / im.width, h / im.height);
+  const dw = im.width * s, dh = im.height * s;
+  c.drawImage(im, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
+  c.restore();
+}
+async function renderGachaShareImage() {
+  const W = 1600, H = 1000;
+  const cv = document.createElement('canvas');
+  cv.width = W; cv.height = H;
+  const c = cv.getContext('2d');
+  const F = '"Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif';
+  const list = _gdQueue.slice();
+  const n = list.length;
+  if (!n) throw new Error('没有招募结果');
+
+  // 背景：夜空渐变 + 两团柔光
+  const bg = c.createLinearGradient(0, 0, W * 0.35, H);
+  bg.addColorStop(0, '#16203c'); bg.addColorStop(0.5, '#0a1020'); bg.addColorStop(1, '#05070f');
+  c.fillStyle = bg; c.fillRect(0, 0, W, H);
+  const blob = (x, y, r, col) => {
+    const rg = c.createRadialGradient(x, y, 0, x, y, r);
+    rg.addColorStop(0, col); rg.addColorStop(1, 'rgba(0,0,0,0)');
+    c.fillStyle = rg; c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fill();
+  };
+  blob(150, 90, 540, 'rgba(37,226,255,.15)');
+  blob(W - 110, H - 60, 580, 'rgba(255,120,220,.13)');
+
+  // 顶部标题
+  c.textAlign = 'left'; c.textBaseline = 'alphabetic';
+  c.font = `800 22px ${F}`;
+  c.fillStyle = 'rgba(37,226,255,.8)';
+  c.fillText('P R O J E C T   S E K A I   F A N   S T A G E', 96, 62);
+  c.font = `900 62px ${F}`;
+  c.fillStyle = '#eaf4ff';
+  c.shadowColor = 'rgba(37,226,255,.35)'; c.shadowBlur = 26;
+  c.fillText('「世界」的招募', 96, 136);
+  c.shadowBlur = 0;
+  // 卡池名（右侧，自动缩字号）
+  const poolName = (_gdPool && _gdPool.name) || '';
+  if (poolName) {
+    let ps = 26;
+    c.font = `${ps}px ${F}`;
+    while (ps > 16 && c.measureText(poolName).width > 640) { ps--; c.font = `${ps}px ${F}`; }
+    c.fillStyle = 'rgba(160,195,230,.9)';
+    c.textAlign = 'right';
+    c.fillText(poolName, W - 96, 128);
+    c.textAlign = 'left';
+  }
+  // 分割线
+  const lg = c.createLinearGradient(96, 0, W - 96, 0);
+  lg.addColorStop(0, 'rgba(37,226,255,.55)'); lg.addColorStop(0.6, 'rgba(120,180,255,.18)'); lg.addColorStop(1, 'rgba(255,255,255,0)');
+  c.fillStyle = lg; c.fillRect(96, 162, W - 192, 2);
+
+  // 卡位
+  const single = n === 1;
+  const slots = [];
+  if (single) {
+    slots.push({ x: 96, y: 198, w: 478, h: 638 });
+  } else {
+    const cols = 5, gap = 24, cw = 248, ch = 331;
+    const x0 = Math.round((W - (cols * cw + (cols - 1) * gap)) / 2);
+    const y0 = 198;
+    for (let i = 0; i < n; i++) {
+      slots.push({ x: x0 + (i % cols) * (cw + gap), y: y0 + Math.floor(i / cols) * (ch + 26), w: cw, h: ch });
+    }
+  }
+  // 底板
+  slots.forEach((s, i) => {
+    const r = list[i], tier = r.tier;
+    roundRectPath(c, s.x, s.y, s.w, s.h, 16);
+    const g2 = c.createLinearGradient(s.x, s.y, s.x, s.y + s.h);
+    g2.addColorStop(0, 'rgba(20,32,58,.96)'); g2.addColorStop(1, 'rgba(8,13,26,.98)');
+    c.fillStyle = g2; c.fill();
+    c.strokeStyle = tier >= 4 ? 'rgba(255,205,245,.5)' : (tier === 3 ? 'rgba(255,226,122,.42)' : 'rgba(159,220,255,.3)');
+    c.lineWidth = 2; c.stroke();
+  });
+
+  // 四星卡面（objectURL 已在本地，画进 canvas 不会污染）
+  await Promise.all(slots.map(async (s, i) => {
+    const r = list[i];
+    if (r.tier < 4) return;
+    try {
+      const url = await gachaCardImg(r.cid, 'normal');
+      const im = await loadImageAsync(url, 9000);
+      drawCoverImg(c, im, s.x, s.y, s.w, s.h, 16);
+      // 底部信息渐变
+      c.save();
+      roundRectPath(c, s.x, s.y, s.w, s.h, 16); c.clip();
+      const gh = Math.round(s.h * 0.3);
+      const gb = c.createLinearGradient(0, s.y + s.h - gh, 0, s.y + s.h);
+      gb.addColorStop(0, 'rgba(4,7,14,0)'); gb.addColorStop(1, 'rgba(4,7,14,.94)');
+      c.fillStyle = gb; c.fillRect(s.x, s.y + s.h - gh, s.w, gh);
+      c.restore();
+    } catch (e) { /* 图挂了就只留底板与文字 */ }
+  }));
+
+  // 文字层（图片之后画，避免被盖住）
+  const RAR_COL = { 2: '#9fdcff', 3: '#ffe27a' };
+  slots.forEach((s, i) => {
+    const r = list[i];
+    const tier = r.tier;
+    const isBd = _gachaIdx && _gachaIdx.cards[r.cid] && _gachaIdx.cards[r.cid][1] === 'rarity_birthday';
+    const star = isBd ? '𐙚' : '★'.repeat(tier);
+    const info = gachaShareInfo(r.cid);
+    if (tier >= 4) {
+      // 右上角星数
+      c.textAlign = 'right'; c.textBaseline = 'alphabetic';
+      c.font = `900 ${single ? 34 : 22}px ${F}`;
+      c.fillStyle = '#ffd0f8';
+      c.shadowColor = 'rgba(255,120,220,.8)'; c.shadowBlur = 14;
+      c.fillText(star, s.x + s.w - 14, s.y + (single ? 46 : 32));
+      c.shadowBlur = 0;
+      // 底部角色名 + 卡名
+      c.textAlign = 'left';
+      c.font = `900 ${single ? 30 : 23}px ${F}`;
+      c.fillStyle = '#ffffff';
+      const cy = s.y + s.h - (single ? 54 : 40);
+      c.fillText(info.char, s.x + 16, cy);
+      c.font = `${single ? 20 : 15}px ${F}`;
+      c.fillStyle = 'rgba(200,220,245,.82)';
+      const cl = wrapCJK(c, info.card, s.w - 32, 1);
+      c.fillText(cl[0] || '', s.x + 16, s.y + s.h - (single ? 22 : 16));
+    } else {
+      // 二星 / 三星：只有星数与文字
+      c.textAlign = 'center'; c.textBaseline = 'alphabetic';
+      const col = RAR_COL[tier] || '#9fdcff';
+      c.font = `900 ${single ? 96 : 46}px ${F}`;
+      c.fillStyle = col;
+      c.shadowColor = col; c.shadowBlur = single ? 34 : 18;
+      c.fillText(star, s.x + s.w / 2, s.y + s.h * (single ? 0.44 : 0.42));
+      c.shadowBlur = 0;
+      c.font = `900 ${single ? 36 : 21}px ${F}`;
+      c.fillStyle = '#dbe9fb';
+      c.fillText(info.char, s.x + s.w / 2, s.y + s.h - (single ? 74 : 54));
+      c.font = `${single ? 22 : 14}px ${F}`;
+      c.fillStyle = 'rgba(160,195,230,.8)';
+      const cl = wrapCJK(c, info.card, s.w - 26, 1);
+      c.fillText(cl[0] || '', s.x + s.w / 2, s.y + s.h - (single ? 34 : 24));
+      c.textAlign = 'left';
+    }
+  });
+
+  // 单抽右侧信息块
+  if (single) {
+    const r = list[0];
+    const info = gachaShareInfo(r.cid);
+    const x = 636;
+    c.textAlign = 'left';
+    c.font = `800 24px ${F}`;
+    c.fillStyle = 'rgba(37,226,255,.85)';
+    c.fillText('本 次 招 募', x, 268);
+    // 角色名（超长自动缩）
+    let ns = 62;
+    c.font = `900 ${ns}px ${F}`;
+    while (ns > 34 && c.measureText(info.char).width > 830) { ns -= 2; c.font = `900 ${ns}px ${F}`; }
+    c.fillStyle = '#ffffff';
+    c.fillText(info.char, x, 356);
+    // 卡名折行
+    c.font = `26px ${F}`;
+    c.fillStyle = 'rgba(190,215,245,.9)';
+    wrapCJK(c, info.card, 830, 2).forEach((ln, i) => c.fillText(ln, x, 412 + i * 40));
+    // 星数
+    const isBd2 = _gachaIdx && _gachaIdx.cards[r.cid] && _gachaIdx.cards[r.cid][1] === 'rarity_birthday';
+    const star2 = isBd2 ? '𐙚' : '★'.repeat(r.tier);
+    c.font = `900 48px ${F}`;
+    c.fillStyle = r.tier >= 4 ? '#ffd0f8' : (RAR_COL[r.tier] || '#9fdcff');
+    c.shadowColor = c.fillStyle; c.shadowBlur = 20;
+    c.fillText(star2, x, 520);
+    c.shadowBlur = 0;
+    // 分隔线
+    c.fillStyle = 'rgba(120,180,255,.22)';
+    c.fillRect(x, 570, 830, 1);
+    // 卡池与日期
+    const poolLine = (_gdPool && _gdPool.name) || '';
+    c.font = `22px ${F}`;
+    c.fillStyle = 'rgba(160,195,230,.9)';
+    wrapCJK(c, poolLine, 830, 1).forEach(ln => c.fillText(ln, x, 618));
+    const d = new Date();
+    const ds = `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
+    c.font = `20px ${F}`;
+    c.fillStyle = 'rgba(120,155,190,.8)';
+    c.fillText(ds, x, 662);
+  }
+
+  // 底栏
+  const dateNow = new Date();
+  const dstr = `${dateNow.getFullYear()}.${String(dateNow.getMonth() + 1).padStart(2, '0')}.${String(dateNow.getDate()).padStart(2, '0')}`;
+  c.fillStyle = 'rgba(120,180,255,.16)';
+  c.fillRect(96, 898, W - 192, 1);
+  c.font = `800 24px ${F}`;
+  c.fillStyle = 'rgba(200,220,245,.9)';
+  c.textAlign = 'left';
+  c.fillText(`招募结果 · ${single ? '单次招募' : n + ' 连'}`, 96, 948);
+  c.textAlign = 'right';
+  c.font = `20px ${F}`;
+  c.fillStyle = 'rgba(130,165,200,.85)';
+  const host = (location.host || '').replace(/^www\./, '');
+  c.fillText(`${dstr}   ·   ${host || 'PJSK FAN STAGE'}`, W - 96, 946);
+  c.textAlign = 'left';
+  return cv;
+}
+$('#gs-share').addEventListener('click', async () => {
+  const btn = $('#gs-share');
+  if (btn.dataset.busy) return;
+  btn.dataset.busy = '1';
+  const raw = btn.textContent;
+  btn.textContent = '生成中…';
+  showToast('正在生成招募结果图…', 1400);
+  try {
+    const cv = await renderGachaShareImage();
+    const stamp = String(Date.now()).slice(-6);
+    await shareCanvas(cv, `pjsk-gacha-${stamp}.png`, '「世界」的招募 · 我的招募结果');
+    showToast('招募结果已生成', 1800);
+  } catch (e) {
+    console.warn('[gacha share]', e);
+    showToast('生成图片失败，请再试一次', 2600);
+  } finally {
+    btn.textContent = raw;
+    delete btn.dataset.busy;
+  }
+});
+
 /* ---------- 成员 ---------- */
 const UNIT_NAMES = { light_sound: 'Leo/need', idol: 'MORE MORE JUMP!', street: 'Vivid BAD SQUAD',
   theme_park: 'Wonderlands×Showtime', school_refusal: '25時、ナイトコードで。', piapro: '虚拟歌手' };
@@ -8119,6 +8453,27 @@ $('#sfx-vol').addEventListener('input', e => {
   if (sfxPrevAudio) { try { sfxPrevAudio.volume = settings.sfxVolume; } catch (err) {} }
 });
 syncSfxVolumeUI();
+
+/* BGM 音量 */
+function syncBgmVolumeUI() {
+  const v = Math.max(0, Math.min(1, Number.isFinite(settings.bgmVolume) ? settings.bgmVolume : 0.45));
+  const r = $('#bgm-vol');
+  if (r) r.value = v;
+  const t = $('#bgm-vol-val');
+  if (t) t.textContent = Math.round(v * 100) + '%';
+}
+const bgmVolEl = $('#bgm-vol');
+if (bgmVolEl) {
+  bgmVolEl.addEventListener('input', e => {
+    settings.bgmVolume = Number(e.target.value);
+    const t = $('#bgm-vol-val');
+    if (t) t.textContent = Math.round(settings.bgmVolume * 100) + '%';
+    saveSettings();
+    try { bgmSync(); } catch (err) {}   // 拖动即时生效（0 则淡出暂停）
+  });
+}
+syncBgmVolumeUI();
+try { bgmSync(); } catch (e) {}
 
 /* 资源就绪：撤掉启动遮罩，界面可交互 */
 (function(){
