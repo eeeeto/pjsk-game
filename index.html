@@ -897,9 +897,16 @@
   /* ---------- 成员 ---------- */
   .member-grid{flex:1;display:grid;grid-template-columns:repeat(8,1fr);gap:10px;width:100%;padding:10px 26px 16px;
     overflow-y:auto;align-content:start;}
-  .member-grid .mb{position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;background:#0a1120;cursor:pointer;
+  .member-grid .mb{position:relative;display:flex;flex-direction:column;cursor:pointer;min-width:0;}
+  .member-grid .mb .mb-art{position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;background:#0a1120;
     /* 只留一圈细边：大量白色发光阴影在 iPad 上滚动时每帧全量重绘，直接把页面卡死 */
     box-shadow:0 0 0 2px rgba(255,255,255,.85);}
+  /* 卡牌下方：卡名 + 角色名 */
+  .member-grid .mb .mb-cap{margin-top:4px;text-align:center;line-height:1.25;overflow:hidden;min-width:0;}
+  .member-grid .mb .mb-cap b{display:block;font-size:clamp(9px,1.55vh,12px);font-weight:800;color:#dbe8fa;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .member-grid .mb .mb-cap small{display:block;font-size:clamp(8px,1.35vh,11px);font-weight:700;color:#7f97b8;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .mb-swap{position:absolute;right:4px;bottom:4px;width:26px;height:26px;border-radius:8px;border:1px solid rgba(255,255,255,.5);
     background:rgba(6,12,26,.86);color:#cfe4ff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;
     z-index:2;cursor:pointer;transition:transform .12s;}
@@ -914,8 +921,8 @@
     padding:12px 14px;box-shadow:0 12px 40px rgba(0,0,0,.6);max-width:min(420px,86vw);}
   .mf-chip.danger{border-color:rgba(255,94,168,.65);color:#ffb3d3;}
   /* 选择模式：勾选中的成员卡 */
-  .member-grid .mb.pick{box-shadow:0 0 0 3px #ff5ea8;}
-  .member-grid .mb.pick::after{content:"✓";position:absolute;top:5px;left:5px;width:22px;height:22px;border-radius:7px;
+  .member-grid .mb.pick .mb-art{box-shadow:0 0 0 3px #ff5ea8;}
+  .member-grid .mb.pick .mb-art::after{content:"✓";position:absolute;top:5px;left:5px;width:22px;height:22px;border-radius:7px;
     background:#ff5ea8;color:#fff;font-size:14px;font-weight:900;display:flex;align-items:center;justify-content:center;z-index:3;}
   .mf-row{display:flex;align-items:center;gap:10px;}
   .mf-row + .mf-row{margin-top:8px;}
@@ -926,7 +933,7 @@
   .mf-chip.on{background:rgba(111,215,255,.3);color:#fff;border-color:rgba(111,215,255,.7);box-shadow:0 0 10px rgba(111,215,255,.3);}
   .mf-chip:active{transform:scale(.95);}
   .member-grid .mb:hover{transform:translateY(-3px);}
-  .member-grid .mb img{width:100%;height:100%;object-fit:cover;object-position:50% 14%;display:block;}
+  .member-grid .mb-art img{width:100%;height:100%;object-fit:cover;object-position:50% 14%;display:block;}
   .member-grid .mb .mb-r{position:absolute;top:3px;left:5px;font-size:12px;color:#ffe27a;letter-spacing:-1px;text-shadow:0 1px 3px rgba(0,0,0,.9);}
   #member-big{position:fixed;inset:0;z-index:270;background:#04060d;display:flex;align-items:center;justify-content:center;cursor:pointer;}
   #member-big img{max-width:96%;max-height:96%;object-fit:contain;box-shadow:0 12px 60px rgba(0,0,0,.8);border-radius:8px;}
@@ -1220,6 +1227,7 @@
     <div id="member-filter" style="display:none">
       <div class="mf-row"><span>星数</span><div class="mf-chips" id="mf-star"></div></div>
       <div class="mf-row"><span>组合</span><div class="mf-chips" id="mf-unit"></div></div>
+      <div class="mf-row"><span>排序</span><div class="mf-chips" id="mf-sort"></div></div>
     </div>
     <!-- 成员清理面板 -->
     <div id="member-clean" style="display:none">
@@ -8257,20 +8265,26 @@ function lazyMemberImg(cell, cid, part) {
 /* 成员格分页渲染：一次只挂 48 个，滚到接近底部再追加，
    几百个格子一次性建出来在 iPad 上光是样式计算就会卡死 */
 const MB_PAGE = 48;
-/* 行高显式锁定为列宽：部分引擎（含桌面 Chrome 无头版实测）aspect-ratio 不参与行轨道
-   尺寸计算，行高被压得比格子的正方形高度小，导致行与行纵向重叠、卡牌堆在一起。
-   直接把 grid-auto-rows 设成与列宽一致的像素值，所有引擎表现一致 */
+/* 行高显式锁定：桌面 Chrome 无头版实测 aspect-ratio 网格项不参与行轨道尺寸计算，
+   行高会被压得比格子小，导致行与行纵向重叠。行高 = 列宽（卡片正方形）+ 下方文字块高度。
+   函数名保留 mbFitRows，渲染/追加后都会再调一次（文字块高度随字号变化） */
+function mbFitRows() {
+  const grid = document.getElementById('member-grid');
+  if (!grid) return;
+  const cs = getComputedStyle(grid);
+  const w = grid.clientWidth - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
+  const cols = (cs.gridTemplateColumns || '').trim().split(/\s+/).length || 8;
+  const gap = parseFloat(cs.columnGap) || 0;
+  if (w <= 0 || !cols) return;
+  const colW = Math.max(40, (w - (cols - 1) * gap) / cols);
+  const cap = grid.querySelector('.mb-cap');
+  const capH = cap ? cap.getBoundingClientRect().height + 4 : 0;
+  grid.style.gridAutoRows = (colW + capH) + 'px';
+}
 (function () {
   const grid = document.getElementById('member-grid');
   if (!grid || typeof ResizeObserver === 'undefined') return;
-  const fit = () => {
-    const cs = getComputedStyle(grid);
-    const w = grid.clientWidth - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
-    const cols = (cs.gridTemplateColumns || '').trim().split(/\s+/).length || 8;
-    const gap = parseFloat(cs.columnGap) || 0;
-    if (w > 0 && cols > 0) grid.style.gridAutoRows = Math.max(40, (w - (cols - 1) * gap) / cols) + 'px';
-  };
-  new ResizeObserver(fit).observe(grid);
+  new ResizeObserver(mbFitRows).observe(grid);
 })();
 let _mbList = [], _mbShown = 0;
 function renderMembers() {
@@ -8283,7 +8297,11 @@ function renderMembersInner() {
   _mbQueue = [];                                   // 重新渲染时丢弃上一轮未开始的加载任务
   const f = settings.memberFilter || { star: 'all', unit: 'all' };
   const stored = Array.isArray(settings.members) ? settings.members : [];
-  const all = stored.slice().reverse();    // 新招的排前面
+  // 顺序：stored 为获取先后（早→晚）。最近获取 = 反序；星数排序 = 星级高→低，同级内仍是最近获取优先
+  let all = stored.slice().reverse();
+  if ((f.sort || 'recent') === 'star') {
+    all = all.slice().sort((a, b) => memberTier(b) - memberTier(a));
+  }
   const list = all.filter(m => {
     if (f.star === 'bd') return m.r === 'rarity_birthday';
     if (f.star && f.star !== 'all') return memberTier(m) === Number(f.star);
@@ -8312,9 +8330,21 @@ function makeMemberCell(m) {
   const isBd = m.r === 'rarity_birthday';
   const t = memberTier(m);
   const star = isBd ? '𐙚' : '★'.repeat(t);
+  const ent = (_gachaIdx && _gachaIdx.cards[m.cid]) || null;
+  const cardName = ent ? (ent[4] || '') : '';
+  const charName = ent ? ((_gachaIdx.chars || {})[ent[2]] || '') : '';
   const cell = document.createElement('div');
   cell.className = 'mb';
-  cell.innerHTML = `<img alt="" loading="lazy" decoding="async"><span class="mb-r" style="${t >= 4 ? 'color:#ffd0f8' : ''}">${star}</span>`;
+  const art = document.createElement('div');
+  art.className = 'mb-art';
+  art.innerHTML = `<img alt="" loading="lazy" decoding="async"><span class="mb-r" style="${t >= 4 ? 'color:#ffd0f8' : ''}">${star}</span>`;
+  cell.appendChild(art);
+  // 卡牌下方：卡名 + 角色名
+  const capEl = document.createElement('div');
+  capEl.className = 'mb-cap';
+  capEl.title = (cardName ? cardName + ' · ' : '') + charName;
+  capEl.innerHTML = `<b>${escapeHTML(cardName || '—')}</b><small>${escapeHTML(charName)}</small>`;
+  cell.appendChild(capEl);
   // 三星 / 四星（非生日卡）：右下角特训前/后转换按钮
   if (!isBd && t >= 3) {
     const sw = document.createElement('div');
@@ -8328,7 +8358,7 @@ function makeMemberCell(m) {
       sw.textContent = m.af ? '后' : '前';
       queueMemberImg(cell, m.cid, memberImgPart(m));
     });
-    cell.appendChild(sw);
+    art.appendChild(sw);
   }
   lazyMemberImg(cell, m.cid, memberImgPart(m));
   cell.addEventListener('click', async () => {
@@ -8361,6 +8391,7 @@ function appendMemberPage() {
   for (const m of slice) frag.appendChild(makeMemberCell(m));
   grid.appendChild(frag);
   _mbShown += slice.length;
+  requestAnimationFrame(mbFitRows);
 }
 /* 成员格的滚动容器是 .member-grid（overflow:auto），scroll 事件不冒泡，用捕获监听 */
 document.addEventListener('scroll', e => {
@@ -8435,6 +8466,7 @@ $('#mc-del-picked').addEventListener('click', () => {
 
 /* 成员筛选：星数 + 组合 */
 const MF_STARS = [['all', '全部'], ['1', '★1'], ['2', '★2'], ['3', '★3'], ['4', '★4'], ['bd', '𐙚生日']];
+const MF_SORTS = [['recent', '最近获取'], ['star', '★ 高→低']];
 const MF_UNITS = [['all', '全部组合'], ...Object.entries(UNIT_NAMES).map(([k, v]) => [k, v])];
 function renderMemberFilter() {
   const f = settings.memberFilter;
@@ -8453,6 +8485,19 @@ function renderMemberFilter() {
     c.textContent = label;
     c.addEventListener('click', () => { settings.memberFilter.unit = v; saveSettings(); renderMemberFilter(); renderMembers(); });
     unitBox.appendChild(c);
+  }
+  // 排序：最近获取 / 星数从高到低
+  const sortBox = $('#mf-sort');
+  if (sortBox) {
+    sortBox.innerHTML = '';
+    const cur = f.sort || 'recent';
+    for (const [v, label] of MF_SORTS) {
+      const c = document.createElement('div');
+      c.className = 'mf-chip' + (cur === v ? ' on' : '');
+      c.textContent = label;
+      c.addEventListener('click', () => { settings.memberFilter.sort = v; saveSettings(); renderMemberFilter(); renderMembers(); });
+      sortBox.appendChild(c);
+    }
   }
 }
 $('#member-filter-btn').addEventListener('click', async () => {
