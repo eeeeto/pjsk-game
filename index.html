@@ -896,7 +896,8 @@
   .member-grid{flex:1;display:grid;grid-template-columns:repeat(8,1fr);gap:10px;width:100%;padding:10px 26px 16px;
     overflow-y:auto;align-content:start;}
   .member-grid .mb{position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;background:#0a1120;cursor:pointer;
-    box-shadow:0 0 0 2px rgba(255,255,255,.85),0 0 14px rgba(255,255,255,.4);transition:transform .15s;}
+    box-shadow:0 0 0 2px rgba(255,255,255,.85),0 0 14px rgba(255,255,255,.4);transition:transform .15s;
+    content-visibility:auto;contain-intrinsic-size:auto 200px;}
   .mb-swap{position:absolute;right:4px;bottom:4px;width:26px;height:26px;border-radius:8px;border:1px solid rgba(255,255,255,.5);
     background:rgba(6,12,26,.86);color:#cfe4ff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;
     z-index:2;cursor:pointer;transition:transform .12s;}
@@ -7397,6 +7398,23 @@ function gachaCardImgCached(cid, part) {
   return cardBlobs[`gimg${cid}_${part}`] || '';
 }
 
+/* 成员列表专用缩略图：全尺寸卡面 2520px 一张解码后约 25MB 位图，iPad Safari 滚一圈就
+   触发内存回收甚至整个页面崩溃；列表里只加载 480px 缩略图（一张 <1MB），点开大图才取原图 */
+async function gachaCardThumb(cid, part) {
+  const key = `gthumb${cid}_${part}`;
+  if (cardBlobs[key]) return cardBlobs[key];
+  try { const b = await idbGet(key); if (b) { cardBlobs[key] = URL.createObjectURL(b); return cardBlobs[key]; } } catch (e) {}
+  const ent = _gachaIdx && _gachaIdx.cards[cid];
+  if (!ent) throw new Error('no card ' + cid);
+  const rel = `${ent[0]}/${part === 'after' ? 'card_after_training' : 'card_normal'}.webp`;
+  const direct = CARD_ASSET_BASE + rel;
+  const thumb = `https://wsrv.nl/?url=${encodeURIComponent(direct)}&w=480&output=webp&q=82`;
+  const blob = await fetchBlobProg([thumb, direct]);   // 缩图服务挂了退回原图
+  await idbPut(key, blob);
+  cardBlobs[key] = URL.createObjectURL(blob);
+  return cardBlobs[key];
+}
+
 /* ---------- 抽卡设置（设置页） ---------- */
 function gachaRateParts() {
   const r4 = clamp(Number(settings.gachaRate4) || 3, 3, 7);
@@ -8075,7 +8093,7 @@ function pumpMemberImg() {
     const job = _mbQueue.shift();
     _mbActive++;
     Promise.resolve()
-      .then(() => gachaCardImg(job.cid, job.part))
+      .then(() => gachaCardThumb(job.cid, job.part))   // 列表只加载缩略图，防 iPad 内存崩溃
       .then(u => { const im = job.cell && job.cell.querySelector('img'); if (im && job.cell.isConnected) im.src = u; })
       .catch(() => {})
       .then(() => { _mbActive--; pumpMemberImg(); });
@@ -8201,7 +8219,12 @@ document.addEventListener('pointerdown', e => {
   const p = $('#member-filter');
   if (p.style.display !== 'none' && !e.target.closest('#member-filter') && !e.target.closest('#member-filter-btn')) p.style.display = 'none';
 }, true);
-$('#member-big').addEventListener('click', () => { $('#member-big').style.display = 'none'; });
+$('#member-big').addEventListener('click', () => {
+  $('#member-big').style.display = 'none';
+  // 关掉就放掉全屏大图，别让上一张原图一直占着内存
+  const im = $('#member-big-img');
+  if (im) im.removeAttribute('src');
+});
 
 /* ---------- 页面按钮 ---------- */
 $('#btn-gacha').addEventListener('click', async () => {
