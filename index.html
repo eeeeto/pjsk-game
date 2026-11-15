@@ -7288,15 +7288,25 @@ function gachaPoolRoster(pool) {
   const idx = _gachaIdx;
   let lst = (idx.rosters && idx.rosters[key]) ? idx.rosters[key].slice() : [];
   if (!lst.length) {
-    // 窗口法：卡牌发布时间落在卡池开放区间内
-    lst = Object.keys(idx.cards).map(Number).filter(cid => {
+    // 窗口法：该池 UP 新卡 + 截至卡池结束的全部常驻卡（与真实抽卡池一致）。
+    // 只取窗口新卡时，很多池窗口内只有 1~9 张卡，会导致十连大量重复同一张卡
+    const win = Object.keys(idx.cards).map(Number).filter(cid => {
       const c = idx.cards[cid];
       return c[3] >= pool.s && c[3] <= pool.e;
     });
-    if (!lst.length) {
-      // 常驻池兜底：截至卡池结束时的全部常驻卡
-      lst = (idx.perm || []).filter(cid => idx.cards[cid] && idx.cards[cid][3] <= pool.e);
-    }
+    const seen = new Set(win);
+    const permU = (idx.perm || []).filter(cid => idx.cards[cid] && idx.cards[cid][3] <= pool.e && !seen.has(cid));
+    lst = win.concat(permU);
+  }
+  // 名单小于十连长度时必然大量重复同一张卡：补入截至卡池结束的全部常驻卡
+  if (lst.length && lst.length < 10) {
+    const seen = new Set(lst);
+    const extra = (idx.perm || []).filter(cid => idx.cards[cid] && idx.cards[cid][3] <= pool.e && !seen.has(cid));
+    lst = lst.concat(extra);
+  }
+  if (!lst.length) {
+    // 兜底：截至卡池结束时的全部常驻卡
+    lst = (idx.perm || []).filter(cid => idx.cards[cid] && idx.cards[cid][3] <= pool.e);
   }
   _poolRosterCache[key] = lst;
   return lst;
