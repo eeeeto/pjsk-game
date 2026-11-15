@@ -896,7 +896,8 @@
   .member-grid{flex:1;display:grid;grid-template-columns:repeat(8,1fr);gap:10px;width:100%;padding:10px 26px 16px;
     overflow-y:auto;align-content:start;}
   .member-grid .mb{position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;background:#0a1120;cursor:pointer;
-    box-shadow:0 0 0 2px rgba(255,255,255,.85),0 0 14px rgba(255,255,255,.4);transition:transform .15s;
+    /* 只留一圈细边：大量白色发光阴影在 iPad 上滚动时每帧全量重绘，直接把页面卡死 */
+    box-shadow:0 0 0 2px rgba(255,255,255,.85);
     content-visibility:auto;contain-intrinsic-size:auto 200px;}
   .mb-swap{position:absolute;right:4px;bottom:4px;width:26px;height:26px;border-radius:8px;border:1px solid rgba(255,255,255,.5);
     background:rgba(6,12,26,.86);color:#cfe4ff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;
@@ -906,6 +907,15 @@
   #member-filter{position:fixed;right:clamp(12px,3vw,32px);bottom:calc(64px + max(10px,env(safe-area-inset-bottom)));
     z-index:200;background:rgba(9,16,32,.92);border:1px solid rgba(140,190,255,.3);border-radius:14px;
     padding:12px 14px;box-shadow:0 12px 40px rgba(0,0,0,.6);backdrop-filter:blur(10px);max-width:min(420px,86vw);}
+  /* 成员清理面板（样式与筛选面板一致，红边框做区分） */
+  #member-clean{position:fixed;right:clamp(12px,3vw,32px);bottom:calc(64px + max(10px,env(safe-area-inset-bottom)));
+    z-index:200;background:rgba(9,16,32,.92);border:1px solid rgba(255,94,168,.4);border-radius:14px;
+    padding:12px 14px;box-shadow:0 12px 40px rgba(0,0,0,.6);max-width:min(420px,86vw);}
+  .mf-chip.danger{border-color:rgba(255,94,168,.65);color:#ffb3d3;}
+  /* 选择模式：勾选中的成员卡 */
+  .member-grid .mb.pick{box-shadow:0 0 0 3px #ff5ea8;}
+  .member-grid .mb.pick::after{content:"✓";position:absolute;top:5px;left:5px;width:22px;height:22px;border-radius:7px;
+    background:#ff5ea8;color:#fff;font-size:14px;font-weight:900;display:flex;align-items:center;justify-content:center;z-index:3;}
   .mf-row{display:flex;align-items:center;gap:10px;}
   .mf-row + .mf-row{margin-top:8px;}
   .mf-row > span{font-size:12px;font-weight:800;color:#7f97b8;letter-spacing:.1em;flex:none;}
@@ -1203,11 +1213,24 @@
     <div class="bottom-bar">
       <button class="btn ghost" id="members-back">返 回</button>
       <div class="center"></div>
+      <button class="btn ghost" id="member-clean-btn">清 理</button>
       <button class="btn ghost" id="member-filter-btn">筛 选</button>
     </div>
     <div id="member-filter" style="display:none">
       <div class="mf-row"><span>星数</span><div class="mf-chips" id="mf-star"></div></div>
       <div class="mf-row"><span>组合</span><div class="mf-chips" id="mf-unit"></div></div>
+    </div>
+    <!-- 成员清理面板 -->
+    <div id="member-clean" style="display:none">
+      <div class="mf-row"><span>按星数删</span><div class="mf-chips" id="mc-star"></div></div>
+      <div class="mf-row" style="margin-top:10px">
+        <span>手动删</span>
+        <div class="mf-chips">
+          <div class="mf-chip" id="mc-pick">选择模式</div>
+          <div class="mf-chip danger" id="mc-del-picked" style="display:none">删除所选（<b id="mc-pick-n">0</b>）</div>
+        </div>
+      </div>
+      <div style="font-size:11px;color:#63768f;margin-top:9px;line-height:1.5">删除后不可恢复。开启选择模式后，点击卡片即可勾选，再点「删除所选」。</div>
     </div>
   </section>
 
@@ -7409,7 +7432,19 @@ async function gachaCardThumb(cid, part) {
   const rel = `${ent[0]}/${part === 'after' ? 'card_after_training' : 'card_normal'}.webp`;
   const direct = CARD_ASSET_BASE + rel;
   const thumb = `https://wsrv.nl/?url=${encodeURIComponent(direct)}&w=480&output=webp&q=82`;
-  const blob = await fetchBlobProg([thumb, direct]);   // 缩图服务挂了退回原图
+  let blob;
+  try {
+    // 缩图服务可能整体挂起：挂太久就放弃，退回原图（原图路径同样加超时兜底）
+    blob = await Promise.race([
+      fetchBlobProg([thumb]),
+      new Promise((_, no) => setTimeout(() => no(new Error('thumb timeout')), 15000)),
+    ]);
+  } catch (e) {
+    blob = await Promise.race([
+      fetchBlobProg([direct]),
+      new Promise((_, no) => setTimeout(() => no(new Error('img timeout')), 25000)),
+    ]);
+  }
   await idbPut(key, blob);
   cardBlobs[key] = URL.createObjectURL(blob);
   return cardBlobs[key];
@@ -7563,21 +7598,11 @@ function openGachaAddDialog() {
       settings.gachaPools.push({ id: g.id, name: g.name, abn: g.abn || '', type: g.type, s: g.s, e: g.e, rates: g.rates || [] });
       _selPool = g.id;
       saveSettings(); renderGachaPools(); renderGachaPreview();
-      // 当期卡牌中的二星/三星自动加入成员列表
-      document.getElementById('lm-text').textContent = '正在整理卡池成员…';
-      let added = 0;
-      for (const cid of gachaPoolRoster(g)) {
-        const ent = _gachaIdx.cards[cid];
-        if (!ent || tierOf(ent[1]) >= 4) continue;
-        if (!settings.members.some(m => m.cid === cid)) {
-          settings.members.push({ cid, r: ent[1] });
-          added++;
-        }
-      }
-      if (added) saveSettings();
       hideLoad();
       close();
-      showToast(`已添加卡池：${g.name}${added ? ` · ${added} 位成员加入` : ''}`, 2600);
+      // 注意：不再把卡池名单里的卡自动记为「成员」——名单里有几百张常驻卡，
+      // 用户没抽到也会全显示在成员页，既不符合事实又会让成员页内存爆炸
+      showToast(`已添加卡池：${g.name}`, 2600);
     } catch (e) {
       hideLoad();
       status.textContent = '读取卡池失败，请稍后重试';
@@ -8094,7 +8119,11 @@ function pumpMemberImg() {
     _mbActive++;
     Promise.resolve()
       .then(() => gachaCardThumb(job.cid, job.part))   // 列表只加载缩略图，防 iPad 内存崩溃
-      .then(u => { const im = job.cell && job.cell.querySelector('img'); if (im && job.cell.isConnected) im.src = u; })
+      .then(u => {
+        const im = job.cell && job.cell.querySelector('img');
+        // 下载期间已滚出视口的不再上屏，避免白占内存
+        if (im && job.cell.isConnected && job.cell.dataset.live !== '0') im.src = u;
+      })
       .catch(() => {})
       .then(() => { _mbActive--; pumpMemberImg(); });
   }
@@ -8110,17 +8139,27 @@ function lazyMemberImg(cell, cid, part) {
   cell.dataset.cid = cid; cell.dataset.part = part;
   if (!('IntersectionObserver' in window)) { queueMemberImg(cell, cid, part); return; }
   if (!memberImgIO) {
+    // 双向回收：靠近视口就加载缩略图，滚远就卸掉 src 释放已解码位图，
+    // 让内存始终只有视口附近十几张，而不是滚过的每一张
     memberImgIO = new IntersectionObserver(es => {
       for (const en of es) {
-        if (!en.isIntersecting) continue;
-        memberImgIO.unobserve(en.target);
-        const c = en.target;
-        queueMemberImg(c, c.dataset.cid, c.dataset.part || 'normal');
+        const c = en.target, im = c.querySelector('img');
+        if (en.isIntersecting) {
+          c.dataset.live = '1';
+          if (im && !im.getAttribute('src')) queueMemberImg(c, c.dataset.cid, c.dataset.part || 'normal');
+        } else {
+          c.dataset.live = '0';
+          if (im) im.removeAttribute('src');
+        }
       }
-    }, { rootMargin: '280px 0px', threshold: 0.01 });
+    }, { rootMargin: '320px 0px', threshold: 0.01 });
   }
   memberImgIO.observe(cell);
 }
+/* 成员格分页渲染：一次只挂 48 个，滚到接近底部再追加，
+   几百个格子一次性建出来在 iPad 上光是样式计算就会卡死 */
+const MB_PAGE = 48;
+let _mbList = [], _mbShown = 0;
 function renderMembers() {
   try { renderMembersInner(); }
   catch (e) { console.warn('[members]', e); showToast('成员页加载出错，已跳过异常数据', 2800); }
@@ -8143,51 +8182,144 @@ function renderMembersInner() {
     }
     return true;
   });
+  _mbList = list; _mbShown = 0;
   const cntEl = $('#member-count');
   if (cntEl) cntEl.textContent = (f.star === 'all' && f.unit === 'all') ? `共 ${all.length} 人` : `${list.length} / ${all.length} 人`;
-  for (const m of list) {
-    const isBd = m.r === 'rarity_birthday';
-    const t = memberTier(m);
-    const star = isBd ? '𐙚' : '★'.repeat(t);
-    const cell = document.createElement('div');
-    cell.className = 'mb';
-    cell.innerHTML = `<img alt="" loading="lazy" decoding="async"><span class="mb-r" style="${t >= 4 ? 'color:#ffd0f8' : ''}">${star}</span>`;
-    // 三星 / 四星（非生日卡）：右下角特训前/后转换按钮
-    if (!isBd && t >= 3) {
-      const sw = document.createElement('div');
-      sw.className = 'mb-swap' + (m.af ? ' on' : '');
-      sw.textContent = m.af ? '后' : '前';
-      sw.title = '切换特训前 / 特训后';
-      sw.addEventListener('click', e => {
-        e.stopPropagation();
-        m.af = !m.af; saveSettings();
-        sw.classList.toggle('on', m.af);
-        sw.textContent = m.af ? '后' : '前';
-        queueMemberImg(cell, m.cid, memberImgPart(m));
-      });
-      cell.appendChild(sw);
-    }
-    lazyMemberImg(cell, m.cid, memberImgPart(m));
-    cell.addEventListener('click', async () => {
-      const big = $('#member-big'), img = $('#member-big-img');
-      img.style.visibility = 'hidden';
-      try {
-        const u = await gachaCardImg(m.cid, memberImgPart(m));
-        img.src = u; img.style.visibility = '';
-        big.style.display = 'flex';
-      } catch (e) {
-        big.style.display = 'none';                 // 加载失败别留一张全屏黑，看起来就像闪退
-        showToast('卡图加载失败，请检查网络后再试', 2400);
-      }
-    });
-    grid.appendChild(cell);
-  }
   if (!all.length) {
     grid.innerHTML = '<div style="grid-column:1/-1;color:#5f7896;font-size:13px;text-align:center;padding:40px 0">还没有成员，去「世界的招募」试试运气吧</div>';
-  } else if (!list.length) {
+    return;
+  }
+  if (!list.length) {
     grid.innerHTML = '<div style="grid-column:1/-1;color:#5f7896;font-size:13px;text-align:center;padding:40px 0">没有符合筛选条件的成员</div>';
+    return;
+  }
+  appendMemberPage();
+}
+function makeMemberCell(m) {
+  const isBd = m.r === 'rarity_birthday';
+  const t = memberTier(m);
+  const star = isBd ? '𐙚' : '★'.repeat(t);
+  const cell = document.createElement('div');
+  cell.className = 'mb';
+  cell.innerHTML = `<img alt="" loading="lazy" decoding="async"><span class="mb-r" style="${t >= 4 ? 'color:#ffd0f8' : ''}">${star}</span>`;
+  // 三星 / 四星（非生日卡）：右下角特训前/后转换按钮
+  if (!isBd && t >= 3) {
+    const sw = document.createElement('div');
+    sw.className = 'mb-swap' + (m.af ? ' on' : '');
+    sw.textContent = m.af ? '后' : '前';
+    sw.title = '切换特训前 / 特训后';
+    sw.addEventListener('click', e => {
+      e.stopPropagation();
+      m.af = !m.af; saveSettings();
+      sw.classList.toggle('on', m.af);
+      sw.textContent = m.af ? '后' : '前';
+      queueMemberImg(cell, m.cid, memberImgPart(m));
+    });
+    cell.appendChild(sw);
+  }
+  lazyMemberImg(cell, m.cid, memberImgPart(m));
+  cell.addEventListener('click', async () => {
+    // 选择模式下点击 = 勾选 / 取消勾选（配合「清理」面板删除）
+    if (_mbPickMode) {
+      if (_mbPicked.has(m.cid)) { _mbPicked.delete(m.cid); cell.classList.remove('pick'); }
+      else { _mbPicked.add(m.cid); cell.classList.add('pick'); }
+      const nEl = document.getElementById('mc-pick-n');
+      if (nEl) nEl.textContent = _mbPicked.size;
+      return;
+    }
+    const big = $('#member-big'), img = $('#member-big-img');
+    img.style.visibility = 'hidden';
+    try {
+      const u = await gachaCardImg(m.cid, memberImgPart(m));
+      img.src = u; img.style.visibility = '';
+      big.style.display = 'flex';
+    } catch (e) {
+      big.style.display = 'none';                 // 加载失败别留一张全屏黑，看起来就像闪退
+      showToast('卡图加载失败，请检查网络后再试', 2400);
+    }
+  });
+  return cell;
+}
+function appendMemberPage() {
+  if (_mbShown >= _mbList.length) return;
+  const grid = $('#member-grid');
+  const slice = _mbList.slice(_mbShown, _mbShown + MB_PAGE);
+  const frag = document.createDocumentFragment();
+  for (const m of slice) frag.appendChild(makeMemberCell(m));
+  grid.appendChild(frag);
+  _mbShown += slice.length;
+}
+/* 成员格的滚动容器是 .member-grid（overflow:auto），scroll 事件不冒泡，用捕获监听 */
+document.addEventListener('scroll', e => {
+  const g = e.target;
+  if (screen !== 'members' || _mbShown >= _mbList.length) return;
+  if (!(g instanceof Element) || !g.classList || !g.classList.contains('member-grid')) return;
+  if (g.scrollTop + g.clientHeight >= g.scrollHeight - 600) appendMemberPage();
+}, { passive: true, capture: true });
+/* 成员清理：按星数批量删 + 选择模式逐张删 */
+let _mbPickMode = false;
+const _mbPicked = new Set();
+function setMemberPickMode(on) {
+  _mbPickMode = on;
+  _mbPicked.clear();
+  const chip = document.getElementById('mc-pick');
+  if (chip) chip.classList.toggle('on', on);
+  const delBtn = document.getElementById('mc-del-picked');
+  if (delBtn) delBtn.style.display = on ? '' : 'none';
+  const nEl = document.getElementById('mc-pick-n');
+  if (nEl) nEl.textContent = '0';
+  document.querySelectorAll('#member-grid .mb.pick').forEach(c => c.classList.remove('pick'));
+  if (on) showToast('选择模式已开启：点击卡片勾选要删除的卡', 2600);
+}
+function renderCleanPanel() {
+  const counts = {};
+  for (const m of settings.members || []) {
+    if (m.r === 'rarity_birthday') counts.bd = (counts.bd || 0) + 1;
+    else { const t = memberTier(m); counts[t] = (counts[t] || 0) + 1; }
+  }
+  const box = document.getElementById('mc-star');
+  if (!box) return;
+  box.innerHTML = '';
+  const items = [['2', `★2 (${counts[2] || 0})`], ['3', `★3 (${counts[3] || 0})`], ['4', `★4 (${counts[4] || 0})`], ['bd', `𐙚生日 (${counts.bd || 0})`]];
+  for (const [v, label] of items) {
+    const c = document.createElement('div');
+    c.className = 'mf-chip';
+    c.textContent = label;
+    c.addEventListener('click', () => {
+      const n = v === 'bd' ? (counts.bd || 0) : (counts[Number(v)] || 0);
+      if (!n) { showToast('这个星数没有卡牌', 1800); return; }
+      mkConfirm('删除确认', `确定要删除全部「${label}」卡牌吗？共 ${n} 张，删除后不可恢复。`, () => {
+        settings.members = (settings.members || []).filter(m =>
+          v === 'bd' ? m.r !== 'rarity_birthday' : memberTier(m) !== Number(v));
+        saveSettings(); renderMembers(); renderCleanPanel();
+        showToast(`已删除 ${n} 张卡牌`, 2200);
+      });
+    });
+    box.appendChild(c);
   }
 }
+$('#member-clean-btn').addEventListener('click', async () => {
+  const panel = $('#member-clean');
+  const showing = panel.style.display !== 'none';
+  $('#member-filter').style.display = 'none';           // 两个面板互斥
+  if (showing) { panel.style.display = 'none'; setMemberPickMode(false); return; }
+  try { if (!_gachaIdx) await loadGachaIdx(); } catch (e) {}
+  renderCleanPanel();
+  panel.style.display = 'block';
+});
+$('#mc-pick').addEventListener('click', () => setMemberPickMode(!_mbPickMode));
+$('#mc-del-picked').addEventListener('click', () => {
+  if (!_mbPicked.size) { showToast('还没有勾选任何卡牌', 1800); return; }
+  const n = _mbPicked.size;
+  mkConfirm('删除确认', `确定要删除已勾选的 ${n} 张卡牌吗？删除后不可恢复。`, () => {
+    settings.members = (settings.members || []).filter(m => !_mbPicked.has(m.cid));
+    saveSettings();
+    setMemberPickMode(false);
+    renderMembers();
+    showToast(`已删除 ${n} 张卡牌`, 2200);
+  });
+});
+
 /* 成员筛选：星数 + 组合 */
 const MF_STARS = [['all', '全部'], ['2', '★2'], ['3', '★3'], ['4', '★4'], ['bd', '𐙚生日']];
 const MF_UNITS = [['all', '全部组合'], ...Object.entries(UNIT_NAMES).map(([k, v]) => [k, v])];
@@ -8212,7 +8344,11 @@ function renderMemberFilter() {
 }
 $('#member-filter-btn').addEventListener('click', async () => {
   const p = $('#member-filter');
-  if (p.style.display === 'none') { if (!_gachaIdx) await loadGachaIdx(); renderMemberFilter(); p.style.display = 'block'; }
+  if (p.style.display === 'none') {
+    $('#member-clean').style.display = 'none'; setMemberPickMode(false);   // 两个面板互斥
+    if (!_gachaIdx) await loadGachaIdx();
+    renderMemberFilter(); p.style.display = 'block';
+  }
   else p.style.display = 'none';
 });
 document.addEventListener('pointerdown', e => {
