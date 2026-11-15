@@ -18,6 +18,8 @@ const CUTOUT = 'https://storage.sekai.best/sekai-jp-assets/character/member_cuto
 const IDX_PATH = path.join(ROOT, 'assets/gacha-index.json');
 const IMG = path.join(ROOT, 'assets/cardimg');
 const CONC = 8;
+/* 调试用：MASTER_DIR=/path/to/dir 时从本地读 cards.json/gachas.json，不联网 */
+const LOCAL_MASTER = process.env.MASTER_DIR || null;
 
 function fetchJson(url) {
   return new Promise((resolve, reject) => {
@@ -90,9 +92,9 @@ async function main() {
   console.log('local: cards', Object.keys(idx.cards).length, 'gachas', idx.gachas.length, 'v', idx.v);
 
   console.log('fetching master cards.json …');
-  const cards = await fetchJson(MASTER + 'cards.json');
+  const cards = LOCAL_MASTER ? JSON.parse(fs.readFileSync(path.join(LOCAL_MASTER, 'cards.json'), 'utf-8')) : await fetchJson(MASTER + 'cards.json');
   console.log('fetching master gachas.json …');
-  const gachas = await fetchJson(MASTER + 'gachas.json');
+  const gachas = LOCAL_MASTER ? JSON.parse(fs.readFileSync(path.join(LOCAL_MASTER, 'gachas.json'), 'utf-8')) : await fetchJson(MASTER + 'gachas.json');
   console.log('remote: cards', cards.length, 'gachas', gachas.length);
 
   // ---- 新卡 ----
@@ -144,7 +146,8 @@ async function main() {
   }
   if (gAdd) console.log('new gachas:', gAdd);
 
-  if (okNew || gAdd || needRepair.length) {
+  /* 只有真正新增卡/卡池（或 repair 成功补齐缺失文件）才写索引，避免每 6 小时空提交 */
+  if (okNew || gAdd) {
     const day = new Date().toISOString().slice(0, 10).replace(/-/g, '');
     idx.v = Number(day + (idx.v % 100 === 0 ? '01' : String(Math.min(99, (idx.v % 100) + 1)).padStart(2, '0')));
     fs.writeFileSync(IDX_PATH, JSON.stringify(idx));
