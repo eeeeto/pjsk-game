@@ -1814,15 +1814,16 @@ async function fetchRes(url, timeoutMs = 12000) {
   let lastErr = new Error('fetch failed');
   for (const u of urls) {
     const ctl = new AbortController();
-    const t = setTimeout(() => ctl.abort(), timeoutMs);
+    let headerTimer = setTimeout(() => ctl.abort(), timeoutMs);
     try {
-      // 短超时只负责“多久内拿到响应头”；正文下载另给宽松窗口，
-      // 慢镜像上的大文件（3~5MB 音频）不至于下到一半被掐掉
+      // 12 秒超时只负责「多久内拿到响应头」，拿到后立即解除，
+      // 否则定时器会在正文下载中途触发 abort，把慢网络下的大文件掐死（表现为部分机型加载曲目失败）
       const r = await fetch(encodeURI(u), { signal: ctl.signal });
       if (!r.ok) { lastErr = new Error('HTTP ' + r.status); continue; }
-      return await withTimeout(r.arrayBuffer(), 45000, '正文下载超时');
+      clearTimeout(headerTimer); headerTimer = null;
+      return await withTimeout(r.arrayBuffer(), 90000, '正文下载超时');
     } catch (e) { lastErr = e; }
-    finally { clearTimeout(t); }
+    finally { if (headerTimer) clearTimeout(headerTimer); }
   }
   throw lastErr;
 }
@@ -3098,7 +3099,7 @@ async function startGame(song, diff, speed) {
   dEl.textContent = diff === 'hard' ? 'HARD' : (diff === 'ultra' ? 'MASTER' : 'MEDIUM');
   $('#load-txt').textContent = '正在读取音频…';
   show('game');
-  // 加载看门狗：任何环节卡死（弱网 / 解码异常 / 浏览器吞掉回调）最多等 45 秒，
+  // 加载看门狗：任何环节卡死（弱网 / 解码异常 / 浏览器吞掉回调）最多等 90 秒，
   // 然后体面地退回首页，而不是一直停在加载页被当成闪退
   const wd = setTimeout(() => {
     if (myToken !== gameToken) return;
@@ -3107,7 +3108,7 @@ async function startGame(song, diff, speed) {
     G.active = false; G.finished = true;
     showToast('加载超时了，换个网络或稍后再试');
     goTitle();
-  }, 45000);
+  }, 90000);
   await new Promise(r => setTimeout(r, 60));
   try {
     const ac = audioCtx();
@@ -3119,7 +3120,7 @@ async function startGame(song, diff, speed) {
     $('#load-txt').textContent = '正在解码音频…';
     await new Promise(r => setTimeout(r, 30));
     G.buffer = null;                       // 解码前先放掉上局音频，降低移动端内存峰值
-    const buffer = await decodeAudioSafe(ac, ab);
+    const buffer = await decodeAudioSafe(ac, ab, song.duration);
     if (myToken !== gameToken) return;
     $('#load-txt').textContent = '正在分析节奏 · 生成谱面…';
     await new Promise(r => setTimeout(r, 40));
@@ -3151,27 +3152,64 @@ async function startGame(song, diff, speed) {
   }
 }
 
-/* 解码音频：部分移动浏览器上 decodeAudioData 可能既不 resolve 也不 reject（或被 OOM 拒绝），
-   这里加超时和一次重试，避免加载画面无限卡住被当成闪退 */
-async function decodeAudioSafe(ac, ab) {
-  const once = () => new Promise((resolve, reject) => {
+/* 解码音频：部分移动浏览器上 decodeAudioData 可能既不 resolve 也不 reject（或被 OOM 拒绝）。
+   注意 decodeAudioData 会立刻 detach 传入的 ArrayBuffer，所以每次解码都传 slice() 副本，
+   保证原始缓冲可以用来重试（旧实现直接复用同一缓冲重试，实际必然失败）。
+   长曲解码成 44.1kHz 立体声 PCM 要 100MB+ 内存，低端机常常 OOM，
+   因此长曲优先走 22050Hz 低规格解码（内存减半，再降混单声道后再减半），失败才回正常解码 */
+function decodeViaCtx(ab, rate, ac, timeoutMs = 25000) {
+  let ctx;
+  if (rate) {
+    const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+    ctx = new OAC(1, 1, rate);
+  } else ctx = ac;
+  return new Promise((resolve, reject) => {
     let done = false;
     const timer = setTimeout(() => {
       if (!done) { done = true; reject(new Error('解码超时')); }
-    }, 25000);
+    }, timeoutMs);
     const ok = b => { if (done) return; done = true; clearTimeout(timer); resolve(b); };
     const bad = e => { if (done) return; done = true; clearTimeout(timer); reject(e || new Error('解码失败')); };
     try {
-      const p = ac.decodeAudioData(ab, ok, bad);
+      const p = ctx.decodeAudioData(ab.slice(), ok, bad);
       if (p && p.then) p.then(ok, bad);
     } catch (e) { bad(e); }
   });
+}
+/* 降混单声道：解码后的 PCM 减半，长曲能省几十 MB 常驻内存 */
+function bufferToMono(buf) {
+  if (!buf || buf.numberOfChannels <= 1) return buf;
   try {
-    return await once();
+    const n = buf.length, rate = buf.sampleRate;
+    const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+    const tmp = new OAC(1, 1, rate);          // 只借 createBuffer 用，不启动渲染
+    const out = tmp.createBuffer(1, n, rate);
+    const d = out.getChannelData(0);
+    const chs = [];
+    for (let c = 0; c < buf.numberOfChannels; c++) chs.push(buf.getChannelData(c));
+    for (let i = 0; i < n; i++) {
+      let s = 0;
+      for (let c = 0; c < chs.length; c++) s += chs[c][i];
+      d[i] = s / chs.length;
+    }
+    return out;
+  } catch (e) { return buf; }
+}
+async function decodeAudioSafe(ac, ab, seconds) {
+  const long = (Number(seconds) || 0) > 120 || (ab && ab.byteLength || 0) > 6 * 1024 * 1024;
+  if (long) {
+    try {
+      const low = await decodeViaCtx(ab, 22050);
+      return bufferToMono(low);
+    } catch (e) { console.warn('[decode] 低规格解码失败，改用正常解码', e); }
+  }
+  try {
+    return await decodeViaCtx(ab, 0, ac);
   } catch (e) {
-    if (!ab || ab.byteLength === 0) throw e;      // 缓冲区已被消费，无法重试
-    await new Promise(r => setTimeout(r, 250));
-    return await once();
+    if (long) throw e;
+    // 短曲正常解码也失败（弱设备 OOM）：低规格兜底再试一次
+    const low = await decodeViaCtx(ab, 22050);
+    return bufferToMono(low);
   }
 }
 
