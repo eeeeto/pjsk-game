@@ -823,6 +823,22 @@
     overflow-y:auto;align-content:start;}
   .member-grid .mb{position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;background:#0a1120;cursor:pointer;
     box-shadow:0 0 0 2px rgba(255,255,255,.85),0 0 14px rgba(255,255,255,.4);transition:transform .15s;}
+  .mb-swap{position:absolute;right:4px;bottom:4px;width:26px;height:26px;border-radius:8px;border:1px solid rgba(255,255,255,.5);
+    background:rgba(6,12,26,.72);color:#cfe4ff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;
+    z-index:2;cursor:pointer;backdrop-filter:blur(4px);transition:transform .12s;}
+  .mb-swap:active{transform:scale(.9);}
+  .mb-swap.on{background:rgba(111,215,255,.35);color:#fff;border-color:rgba(111,215,255,.8);}
+  #member-filter{position:fixed;right:clamp(12px,3vw,32px);bottom:calc(64px + max(10px,env(safe-area-inset-bottom)));
+    z-index:200;background:rgba(9,16,32,.92);border:1px solid rgba(140,190,255,.3);border-radius:14px;
+    padding:12px 14px;box-shadow:0 12px 40px rgba(0,0,0,.6);backdrop-filter:blur(10px);max-width:min(420px,86vw);}
+  .mf-row{display:flex;align-items:center;gap:10px;}
+  .mf-row + .mf-row{margin-top:8px;}
+  .mf-row > span{font-size:12px;font-weight:800;color:#7f97b8;letter-spacing:.1em;flex:none;}
+  .mf-chips{display:flex;flex-wrap:wrap;gap:6px;}
+  .mf-chip{padding:4px 12px;border-radius:999px;font-size:12px;font-weight:800;color:#cfe4ff;cursor:pointer;
+    background:rgba(255,255,255,.07);border:1px solid rgba(140,200,255,.25);transition:background .15s,color .15s;user-select:none;}
+  .mf-chip.on{background:rgba(111,215,255,.3);color:#fff;border-color:rgba(111,215,255,.7);box-shadow:0 0 10px rgba(111,215,255,.3);}
+  .mf-chip:active{transform:scale(.95);}
   .member-grid .mb:hover{transform:translateY(-3px);}
   .member-grid .mb img{width:100%;height:100%;object-fit:cover;object-position:50% 14%;display:block;}
   .member-grid .mb .mb-r{position:absolute;top:3px;left:5px;font-size:12px;color:#ffe27a;letter-spacing:-1px;text-shadow:0 1px 3px rgba(0,0,0,.9);}
@@ -1096,7 +1112,11 @@
     <div class="bottom-bar">
       <button class="btn ghost" id="members-back">返 回</button>
       <div class="center"></div>
-      <div></div>
+      <button class="btn ghost" id="member-filter-btn">筛 选</button>
+    </div>
+    <div id="member-filter" style="display:none">
+      <div class="mf-row"><span>星数</span><div class="mf-chips" id="mf-star"></div></div>
+      <div class="mf-row"><span>组合</span><div class="mf-chips" id="mf-unit"></div></div>
     </div>
   </section>
 
@@ -1803,6 +1823,8 @@ if (!Array.isArray(settings.myCards)) settings.myCards = [];
 settings.gachaRate4 = clamp(Number(settings.gachaRate4) || 3, 3, 7);
 if (!Array.isArray(settings.gachaPools)) settings.gachaPools = [];
 if (!Array.isArray(settings.members)) settings.members = [];
+settings.members.forEach(m => { if (typeof m.af !== 'boolean') m.af = false; });   // 特训前(false)/特训后(true)
+if (!settings.memberFilter) settings.memberFilter = { star: 'all', unit: 'all' };
 // 结算人物列表 / 个人主页（图片本体存 IndexedDB，settings 只存元数据）
 if (!Array.isArray(settings.resCards)) settings.resCards = [];
 settings.resPick = clamp(Number(settings.resPick) || 0, 0, Math.max(0, settings.resCards.length - 1));
@@ -7256,16 +7278,8 @@ function gdShowCard(i) {
     gachaCardImg(r.cid, 'normal').then(u => { img.src = u; }).catch(() => {});
     cap.innerHTML = `<div class="gd-stars" style="color:#ffd0f8">${gdStars(ent)}</div>
       <div class="gd-names">${escapeHTML(ent[4] || '')}<small>${charName}</small></div>`;
-  } else if (r.tier === 3) {
-    // 三星：特训前卡图居中 + 星数 / 角色名
-    const img = document.createElement('img');
-    img.className = 'gd-portrait';
-    stage.appendChild(img);
-    gachaCardImg(r.cid, 'normal').then(u => { img.src = u; }).catch(() => {});
-    cap.innerHTML = `<div class="gd-stars">${gdStars(ent)}</div>
-      <div class="gd-names"><small>${escapeHTML(gdRandomChar())}</small></div>`;
   } else {
-    // 二星：不显示卡图，只显示星数与角色名
+    // 二星 / 三星：不显示卡图，只显示星数与角色名
     cap.classList.add('gd-cap-big');
     cap.innerHTML = `<div class="gd-stars">${gdStars(ent)}</div>
       <div class="gd-names"><small>${escapeHTML(gdRandomChar())}</small></div>`;
@@ -7338,36 +7352,99 @@ $('#gs-back').addEventListener('click', () => {
 });
 
 /* ---------- 成员 ---------- */
-function memberImgKey(cid, r) { return `gimg${cid}_${(r === 'rarity_4' || r === 'rarity_birthday') ? 'after' : 'normal'}`; }
+const UNIT_NAMES = { light_sound: 'Leo/need', idol: 'MORE MORE JUMP!', street: 'Vivid BAD SQUAD',
+  theme_park: 'Wonderlands×Showtime', school_refusal: '25時、ナイトコードで。', piapro: '虚拟歌手' };
+function memberImgPart(m) { return (m.r === 'rarity_4' && m.af) ? 'after' : 'normal'; }   // 默认特训前，转换后特训后
+function memberTier(m) { return m.r === 'rarity_birthday' ? 4 : tierOf(m.r); }
 function renderMembers() {
   const grid = $('#member-grid');
   grid.innerHTML = '';
-  $('#member-count').textContent = `共 ${settings.members.length} 人`;
-  const list = settings.members.slice().reverse();    // 新招的排前面
+  const f = settings.memberFilter;
+  const all = settings.members.slice().reverse();    // 新招的排前面
+  const list = all.filter(m => {
+    if (f.star === 'bd') return m.r === 'rarity_birthday';
+    if (f.star && f.star !== 'all') return memberTier(m) === Number(f.star);
+    return true;
+  }).filter(m => {
+    if (f.unit && f.unit !== 'all' && _gachaIdx && _gachaIdx.units) {
+      const ent = _gachaIdx.cards[m.cid];
+      return ent && _gachaIdx.units[ent[2]] === f.unit;
+    }
+    return true;
+  });
+  $('#member-count').textContent = (f.star === 'all' && f.unit === 'all') ? `共 ${all.length} 人` : `${list.length} / ${all.length} 人`;
   for (const m of list) {
     const ent = _gachaIdx ? _gachaIdx.cards[m.cid] : null;
     const isBd = m.r === 'rarity_birthday';
-    const t = isBd ? 4 : tierOf(m.r);
+    const t = memberTier(m);
     const star = isBd ? '𐙚' : '★'.repeat(t);
     const cell = document.createElement('div');
     cell.className = 'mb';
     cell.innerHTML = `<img alt=""><span class="mb-r" style="${t >= 4 ? 'color:#ffd0f8' : ''}">${star}</span>`;
-    gachaCardImg(m.cid, m.r === 'rarity_4' ? 'after' : 'normal').then(u => { cell.querySelector('img').src = u; }).catch(() => {});
+    // 三星 / 四星（非生日卡）：右下角特训前/后转换按钮
+    if (!isBd && t >= 3) {
+      const sw = document.createElement('div');
+      sw.className = 'mb-swap' + (m.af ? ' on' : '');
+      sw.textContent = m.af ? '后' : '前';
+      sw.title = '切换特训前 / 特训后';
+      sw.addEventListener('click', e => {
+        e.stopPropagation();
+        m.af = !m.af; saveSettings();
+        sw.classList.toggle('on', m.af);
+        sw.textContent = m.af ? '后' : '前';
+        gachaCardImg(m.cid, memberImgPart(m)).then(u => { cell.querySelector('img').src = u; }).catch(() => {});
+      });
+      cell.appendChild(sw);
+    }
+    gachaCardImg(m.cid, memberImgPart(m)).then(u => { cell.querySelector('img').src = u; }).catch(() => {});
     cell.addEventListener('click', async () => {
       const big = $('#member-big'), img = $('#member-big-img');
       img.style.visibility = 'hidden';
       try {
-        const u = await gachaCardImg(m.cid, m.r === 'rarity_4' ? 'after' : 'normal');
+        const u = await gachaCardImg(m.cid, memberImgPart(m));
         img.src = u; img.style.visibility = '';
       } catch (e) {}
       big.style.display = 'flex';
     });
     grid.appendChild(cell);
   }
-  if (!list.length) {
+  if (!all.length) {
     grid.innerHTML = '<div style="grid-column:1/-1;color:#5f7896;font-size:13px;text-align:center;padding:40px 0">还没有成员，去「世界的招募」试试运气吧</div>';
+  } else if (!list.length) {
+    grid.innerHTML = '<div style="grid-column:1/-1;color:#5f7896;font-size:13px;text-align:center;padding:40px 0">没有符合筛选条件的成员</div>';
   }
 }
+/* 成员筛选：星数 + 组合 */
+const MF_STARS = [['all', '全部'], ['2', '★2'], ['3', '★3'], ['4', '★4'], ['bd', '𐙚生日']];
+const MF_UNITS = [['all', '全部组合'], ...Object.entries(UNIT_NAMES).map(([k, v]) => [k, v])];
+function renderMemberFilter() {
+  const f = settings.memberFilter;
+  const starBox = $('#mf-star'), unitBox = $('#mf-unit');
+  starBox.innerHTML = ''; unitBox.innerHTML = '';
+  for (const [v, label] of MF_STARS) {
+    const c = document.createElement('div');
+    c.className = 'mf-chip' + (String(f.star) === v ? ' on' : '');
+    c.textContent = label;
+    c.addEventListener('click', () => { settings.memberFilter.star = v; saveSettings(); renderMemberFilter(); renderMembers(); });
+    starBox.appendChild(c);
+  }
+  for (const [v, label] of MF_UNITS) {
+    const c = document.createElement('div');
+    c.className = 'mf-chip' + (String(f.unit) === v ? ' on' : '');
+    c.textContent = label;
+    c.addEventListener('click', () => { settings.memberFilter.unit = v; saveSettings(); renderMemberFilter(); renderMembers(); });
+    unitBox.appendChild(c);
+  }
+}
+$('#member-filter-btn').addEventListener('click', async () => {
+  const p = $('#member-filter');
+  if (p.style.display === 'none') { if (!_gachaIdx) await loadGachaIdx(); renderMemberFilter(); p.style.display = 'block'; }
+  else p.style.display = 'none';
+});
+document.addEventListener('pointerdown', e => {
+  const p = $('#member-filter');
+  if (p.style.display !== 'none' && !e.target.closest('#member-filter') && !e.target.closest('#member-filter-btn')) p.style.display = 'none';
+}, true);
 $('#member-big').addEventListener('click', () => { $('#member-big').style.display = 'none'; });
 
 /* ---------- 页面按钮 ---------- */
