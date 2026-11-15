@@ -778,15 +778,23 @@
   #gacha-draw.on{display:block;}
   .gd-orbs{position:absolute;inset:0;pointer-events:none;}
   .gd-orb-pos{position:absolute;transform:translate(-50%,-50%);}
-  .gd-orb{position:relative;display:block;width:clamp(40px,8.2vh,70px);height:clamp(40px,8.2vh,70px);border-radius:50%;
+  .gd-orb{position:relative;display:block;width:clamp(46px,9.2vh,78px);height:clamp(46px,9.2vh,78px);border-radius:50%;
     animation:orbFloat 2.8s ease-in-out infinite;}
-  .gd-orb.gd-orb-c{width:clamp(66px,13.5vh,112px);height:clamp(66px,13.5vh,112px);z-index:2;}
+  /* 发光球：外围大光晕（跟浮动同步呼吸） */
+  .gd-orb::before{content:"";position:absolute;inset:-135%;border-radius:50%;z-index:-1;
+    background:radial-gradient(circle,var(--glow,rgba(140,200,255,.4)) 0%,transparent 62%);
+    filter:blur(4px);animation:orbGlow 2.8s ease-in-out infinite;}
+  @keyframes orbGlow{0%,100%{opacity:.7;transform:scale(.9)}50%{opacity:1;transform:scale(1.12)}}
+  .gd-orb.gd-orb-c{width:clamp(72px,14.6vh,120px);height:clamp(72px,14.6vh,120px);z-index:2;}
   .gd-orb.gd-orb-c::after{content:"";position:absolute;inset:-22%;border-radius:50%;
-    border:1px solid rgba(255,255,255,.22);animation:orbHalo 2.6s ease-out infinite;}
+    border:1px solid rgba(255,255,255,.25);animation:orbHalo 2.6s ease-out infinite;}
   @keyframes orbHalo{0%{transform:scale(.8);opacity:.9}100%{transform:scale(1.35);opacity:0}}
-  .gd-orb.c2{background:radial-gradient(circle at 38% 32%,#d6faff,#2ec8ff 55%,#0b7fb8);box-shadow:0 0 34px 6px rgba(46,200,255,.55);}
-  .gd-orb.c3{background:radial-gradient(circle at 38% 32%,#fff6cf,#ffd84d 55%,#c98a00);box-shadow:0 0 34px 6px rgba(255,216,77,.55);}
-  .gd-orb.c4{background:radial-gradient(circle at 38% 32%,#ffd7f4,#e070ff 48%,#7a3cff);box-shadow:0 0 40px 8px rgba(214,102,255,.6);}
+  .gd-orb.c2{--glow:rgba(46,200,255,.5);background:radial-gradient(circle at 44% 36%,#ffffff,#bdf0ff 26%,#2ec8ff 58%,rgba(11,127,184,.04) 76%);
+    box-shadow:0 0 20px 3px rgba(46,200,255,.6),0 0 58px 16px rgba(46,200,255,.22);}
+  .gd-orb.c3{--glow:rgba(255,216,77,.5);background:radial-gradient(circle at 44% 36%,#ffffff,#ffefad 26%,#ffd84d 58%,rgba(201,138,0,.04) 76%);
+    box-shadow:0 0 20px 3px rgba(255,216,77,.6),0 0 58px 16px rgba(255,216,77,.22);}
+  .gd-orb.c4{--glow:rgba(214,102,255,.55);background:radial-gradient(circle at 44% 36%,#ffffff,#f2c4ff 26%,#d666ff 52%,rgba(122,60,255,.04) 76%);
+    box-shadow:0 0 22px 4px rgba(214,102,255,.65),0 0 66px 20px rgba(214,102,255,.25);}
   @keyframes orbFloat{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-26px) scale(1.08)}}
   .gd-tap-hint{position:absolute;bottom:7vh;left:0;right:0;text-align:center;color:#9db4d4;font-size:14px;letter-spacing:.3em;
     animation:hintPulse 1.6s ease-in-out infinite;}
