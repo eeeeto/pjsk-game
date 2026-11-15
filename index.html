@@ -871,6 +871,8 @@
     text-shadow:0 4px 16px #0d2a52,0 0 30px rgba(150,210,255,.5);}
   .gd-cap.gd-cap-big .gd-names{font-size:clamp(20px,3.6vh,28px);margin-top:10px;}
   .gd-cap.gd-cap-big .gd-names small{font-size:clamp(24px,4.6vh,36px);}
+  /* 四星：卡面铺满全屏，文字块仍贴右下角，但字号与二三星保持一致 */
+  .gd-cap.gd-cap-big.gd-cap-card{bottom:5vh;right:4vw;}
   .gd-skip-tip{position:absolute;top:12px;right:16px;font-size:11px;color:#7f97b8;letter-spacing:.15em;z-index:4;}
   .gd-skip{position:absolute;top:max(12px,env(safe-area-inset-top));right:16px;z-index:10;
     padding:7px 18px;border-radius:999px;border:1px solid rgba(190,220,255,.45);background:rgba(8,14,28,.62);
@@ -7372,7 +7374,12 @@ async function gachaCardsRemote() {
 }
 
 /* 卡池花名册：内置 rosters → 复刻池回退 → 窗口法 → 常驻池兜底 */
-function tierOf(r) { return r === 'rarity_4' || r === 'rarity_birthday' ? 4 : (r === 'rarity_3' ? 3 : 2); }
+function tierOf(r) {
+  if (r === 'rarity_4' || r === 'rarity_birthday') return 4;
+  if (r === 'rarity_3') return 3;
+  if (r === 'rarity_1') return 1;
+  return 2;
+}
 function gachaPoolRoster(pool) {
   const key = String(pool.id);
   if (_poolRosterCache[key]) return _poolRosterCache[key];
@@ -7412,10 +7419,54 @@ async function gachaCardImg(cid, part) {
   if (!ent) throw new Error('no card ' + cid);
   const rel = `${ent[0]}/${part === 'after' ? 'card_after_training' : 'card_normal'}.webp`;
   const direct = CARD_ASSET_BASE + rel;
-  const blob = await fetchBlobProg([direct, `https://wsrv.nl/?url=${encodeURIComponent(direct)}&output=webp`]);
+  // 三个候选源：官方资源站 → wsrv 图片代理 → 官方源加随机参数重试（绕开中间层缓存的坏响应）
+  const urls = [
+    direct,
+    `https://wsrv.nl/?url=${encodeURIComponent(direct)}&output=webp&q=90`,
+    direct + '?r=' + Date.now(),
+  ];
+  let blob = null, lastErr = null;
+  for (let round = 0; round < 2 && !blob; round++) {
+    for (const u of urls) {
+      try {
+        // 关键：fetchBlobProg 本身没有超时，请求挂起会永远不出图 → 这里每源给 9~18 秒上限
+        blob = await Promise.race([
+          fetchBlobProg([u]),
+          new Promise((_, no) => setTimeout(() => no(new Error('img timeout')), round ? 18000 : 9000)),
+        ]);
+        if (blob && blob.size > 800) break;
+        blob = null;
+      } catch (e) { lastErr = e; }
+    }
+    if (!blob) await new Promise(r => setTimeout(r, 500));
+  }
+  if (!blob) throw lastErr || new Error('卡图加载失败');
   await idbPut(key, blob);
   cardBlobs[key] = URL.createObjectURL(blob);
   return cardBlobs[key];
+}
+
+/* 揭示 / 结算用：带兜底的卡图上屏。命中缓存同步显示；失败重试一次，
+   仍失败就调 onFail 换成「无图但星级可见」的版式，绝不留下空白格 */
+function cardImgWithFallback(img, cid, part, onFail) {
+  let tries = 0;
+  const show = () => {
+    try { img.src = gachaCardImgCached(cid, part); } catch (e) {}
+  };
+  const load = () => {
+    tries++;
+    gachaCardImg(cid, part).then(u => { img.src = u; }).catch(() => {
+      if (tries < 2) setTimeout(load, 1100);
+      else if (onFail) onFail();
+    });
+  };
+  img.addEventListener('error', () => {
+    // blob 解码失败或 URL 失效：清掉再取一次
+    img.removeAttribute('src');
+    if (tries < 2) setTimeout(load, 700); else if (onFail) onFail();
+  });
+  show();
+  load();
 }
 
 /* ---------- 全屏加载遮罩（进入卡池 / 添加卡池 / 抽卡预热共用） ---------- */
@@ -7679,7 +7730,7 @@ function gachaPickTier(pool) {
 }
 function gachaPull(pool, n) {
   const roster = gachaPoolRoster(pool);
-  const byTier = { 2: [], 3: [], 4: [] };
+  const byTier = { 1: [], 2: [], 3: [], 4: [] };
   for (const cid of roster) {
     const ent = _gachaIdx.cards[cid];
     if (ent) byTier[tierOf(ent[1])].push(cid);
@@ -7793,14 +7844,14 @@ function gdShowCard(i) {
   cap.className = 'gd-cap';
   const charName = escapeHTML((_gachaIdx.chars || {})[ent[2]] || '');
   if (r.tier >= 4) {
-    // 四星：特训前卡面铺满全屏 + 卡名 / 角色名
+    // 四星：特训前卡面铺满全屏 + 卡名 / 角色名；文字块字号与二三星一致
+    cap.classList.add('gd-cap-big', 'gd-cap-card');
     const img = document.createElement('img');
     img.className = 'gd-full';
     stage.appendChild(img);
-    // 命中预热缓存就直接同步上屏（0 延迟），没命中才异步补
-    const pre = gachaCardImgCached(r.cid, 'normal');
-    if (pre) img.src = pre;
-    else gachaCardImg(r.cid, 'normal').then(u => { img.src = u; }).catch(() => {});
+    // 命中预热缓存就直接同步上屏（0 延迟）；失败重试一次，仍失败就撤掉图只留文字，
+    // 避免黑图/破图/空白（此前网络抖动时就是一片空）
+    cardImgWithFallback(img, r.cid, 'normal', () => { img.remove(); });
     cap.innerHTML = `<div class="gd-stars" style="color:#ffd0f8">${gdStars(ent)}</div>
       <div class="gd-names">${escapeHTML(ent[4] || '')}<small>${charName}</small></div>`;
   } else {
@@ -7864,9 +7915,11 @@ function gdShowSummary() {
     if (r.tier >= 4) {
       // 只有四星（含生日卡）显示卡面
       cell.innerHTML = `<img alt=""><span class="gs-r" style="color:#ffd0f8">${star}</span>`;
-      const pre = gachaCardImgCached(r.cid, 'normal');
-      if (pre) cell.querySelector('img').src = pre;
-      else gachaCardImg(r.cid, 'normal').then(u => { cell.querySelector('img').src = u; }).catch(() => {});
+      cardImgWithFallback(cell.querySelector('img'), r.cid, 'normal', () => {
+        // 加载彻底失败：退回「只显示大号星级」的版式，不出现空白格
+        cell.classList.add('gs-noimg');
+        cell.innerHTML = `<span class="gs-r gs-r-big" style="color:#ffd0f8">${star}</span>`;
+      });
     } else {
       // 二星 / 三星：格子里只显示星数文字
       cell.classList.add('gs-noimg');
@@ -8340,7 +8393,7 @@ function renderCleanPanel() {
   const box = document.getElementById('mc-star');
   if (!box) return;
   box.innerHTML = '';
-  const items = [['2', `★2 (${counts[2] || 0})`], ['3', `★3 (${counts[3] || 0})`], ['4', `★4 (${counts[4] || 0})`], ['bd', `𐙚生日 (${counts.bd || 0})`]];
+  const items = [['1', `★1 (${counts[1] || 0})`], ['2', `★2 (${counts[2] || 0})`], ['3', `★3 (${counts[3] || 0})`], ['4', `★4 (${counts[4] || 0})`], ['bd', `𐙚生日 (${counts.bd || 0})`]];
   for (const [v, label] of items) {
     const c = document.createElement('div');
     c.className = 'mf-chip';
@@ -8381,7 +8434,7 @@ $('#mc-del-picked').addEventListener('click', () => {
 });
 
 /* 成员筛选：星数 + 组合 */
-const MF_STARS = [['all', '全部'], ['2', '★2'], ['3', '★3'], ['4', '★4'], ['bd', '𐙚生日']];
+const MF_STARS = [['all', '全部'], ['1', '★1'], ['2', '★2'], ['3', '★3'], ['4', '★4'], ['bd', '𐙚生日']];
 const MF_UNITS = [['all', '全部组合'], ...Object.entries(UNIT_NAMES).map(([k, v]) => [k, v])];
 function renderMemberFilter() {
   const f = settings.memberFilter;
@@ -8447,9 +8500,29 @@ $('#gacha-pull10').addEventListener('click', () => {
   if (!pool) { showToast('先在左侧选择一个卡池', 2200); return; }
   mkConfirm('确认招募', '是否要招募十次？', () => { _gachaDrawing = false; startGachaDraw(pool, 10); });
 });
+/* 一次性把全部一星卡加入成员库：一星卡不在任何招募池里，只能这样获得。
+   用 settings.members1Star 标记，只执行一次（用户之后手动删掉不会再加回来） */
+function addOneStarMembers() {
+  if (!_gachaIdx || settings.members1Star) return 0;
+  if (!Array.isArray(settings.members)) settings.members = [];
+  const have = new Set(settings.members.map(m => m.cid));
+  let added = 0;
+  for (const [cid, ent] of Object.entries(_gachaIdx.cards)) {
+    if (!ent || ent[1] !== 'rarity_1') continue;
+    const id = Number(cid);
+    if (have.has(id)) continue;
+    settings.members.push({ cid: id, r: 'rarity_1' });
+    have.add(id); added++;
+  }
+  settings.members1Star = true;
+  saveSettings();
+  if (added) showToast(`已把 ${added} 张一星卡加入成员库`, 2600);
+  return added;
+}
 $('#btn-members').addEventListener('click', async () => {
   show('members'); applyBackground();
   try { await loadGachaIdx(); } catch (e) { console.warn('[members idx]', e); }
+  try { addOneStarMembers(); } catch (e) { console.warn('[members 1star]', e); }
   renderMembers();
 });
 $('#members-back').addEventListener('click', goTitle);
