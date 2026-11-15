@@ -814,6 +814,21 @@
   /* 抽卡演出浮层 */
   #gacha-draw{position:fixed;inset:0;z-index:260;display:none;background:#060a16;overflow:hidden;}
   #gacha-draw.on{display:block;}
+
+  /* 全屏加载遮罩：进入卡池 / 添加卡池 / 抽卡预热共用 */
+  #load-mask{position:fixed;inset:0;z-index:420;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;
+    background:radial-gradient(circle at 50% 44%,rgba(20,34,64,.97),rgba(4,6,12,.99));
+    opacity:0;visibility:hidden;pointer-events:none;transition:opacity .22s ease,visibility .22s;}
+  #load-mask.on{opacity:1;visibility:visible;pointer-events:auto;}
+  #load-mask .lm-ring{width:56px;height:56px;border-radius:50%;border:3px solid rgba(120,180,255,.16);
+    border-top-color:#25e2ff;border-right-color:#ff78dc;animation:lmspin .85s linear infinite;}
+  @keyframes lmspin{to{transform:rotate(360deg)}}
+  #load-mask .lm-text{font-size:12.5px;letter-spacing:.18em;color:#a8c6e8;font-weight:700;}
+  #load-mask .lm-bar{width:min(300px,58vw);height:3px;border-radius:2px;background:rgba(120,180,255,.16);overflow:hidden;
+    opacity:0;transition:opacity .2s;}
+  #load-mask .lm-bar.on{opacity:1;}
+  #load-mask .lm-bar i{display:block;height:100%;width:0;border-radius:2px;
+    background:linear-gradient(90deg,#25e2ff,#ff78dc);transition:width .18s ease;}
   .gd-orbs{position:absolute;inset:0;pointer-events:none;}
   .gd-orb-pos{position:absolute;transform:translate(-50%,-50%);}
   .gd-orb{position:relative;display:block;width:clamp(46px,9.2vh,78px);height:clamp(46px,9.2vh,78px);border-radius:50%;
@@ -1168,6 +1183,13 @@
         <button class="btn pink" id="gs-again">再招募</button>
       </div>
     </div>
+  </div>
+
+  <!-- 全屏加载遮罩 -->
+  <div id="load-mask">
+    <div class="lm-ring"></div>
+    <div class="lm-text" id="lm-text">加载中…</div>
+    <div class="lm-bar" id="lm-bar"><i></i></div>
   </div>
 
   <!-- ================= 成员 ================= -->
@@ -7327,6 +7349,54 @@ async function gachaCardImg(cid, part) {
   return cardBlobs[key];
 }
 
+/* ---------- 全屏加载遮罩（进入卡池 / 添加卡池 / 抽卡预热共用） ---------- */
+let _loadAt = 0, _loadTimer = 0;
+function showLoad(text, prog) {
+  const m = document.getElementById('load-mask');
+  if (!m) return;
+  clearTimeout(_loadTimer);
+  const t = document.getElementById('lm-text');
+  if (t) t.textContent = text || '加载中…';
+  setLoadProg(prog);
+  m.classList.add('on');
+  _loadAt = performance.now();
+}
+function setLoadProg(p) {
+  const bar = document.getElementById('lm-bar');
+  if (!bar) return;
+  const has = p != null && isFinite(p);
+  bar.classList.toggle('on', has);
+  if (has) bar.firstElementChild.style.width = Math.round(Math.max(0, Math.min(1, p)) * 100) + '%';
+}
+function hideLoad() {
+  const m = document.getElementById('load-mask');
+  if (!m) return;
+  // 至少露 340ms，避免网络快时遮罩一闪而过
+  const wait = Math.max(0, 340 - (performance.now() - _loadAt));
+  clearTimeout(_loadTimer);
+  _loadTimer = setTimeout(() => m.classList.remove('on'), wait);
+}
+/* 预热：把本次结果里的四星卡图先下载进本地缓存，揭示时才能立刻出图 */
+async function preloadGachaCards(results, onProg) {
+  const cids = [...new Set(results.filter(r => r.tier >= 4).map(r => r.cid))];
+  if (!cids.length) { if (onProg) onProg(1); return; }
+  let i = 0, done = 0;
+  const worker = async () => {
+    while (i < cids.length) {
+      const cid = cids[i++];
+      try { await gachaCardImg(cid, 'normal'); } catch (e) {}
+      done++;
+      if (onProg) onProg(done / cids.length);
+    }
+  };
+  // 并发 3：手机上一次开十几条图片请求反而更慢
+  await Promise.all(Array.from({ length: Math.min(3, cids.length) }, worker));
+}
+/* 同步取已缓存的卡图（揭示 / 结算用，命中就是 0 延迟） */
+function gachaCardImgCached(cid, part) {
+  return cardBlobs[`gimg${cid}_${part}`] || '';
+}
+
 /* ---------- 抽卡设置（设置页） ---------- */
 function gachaRateParts() {
   const r4 = clamp(Number(settings.gachaRate4) || 3, 3, 7);
@@ -7450,39 +7520,50 @@ function openGachaAddDialog() {
     const gid = Number(v);
     if (settings.gachaPools.some(p => p.id === gid)) { status.textContent = '这个卡池已经添加过了'; return; }
     status.textContent = '正在读取卡池数据…';
-    await loadGachaIdx();
-    let g = (_gachaIdx.gachas || []).find(x => x.id === gid);
-    if (!g) {
-      status.textContent = '内置索引没有该编号，正在读取在线卡池库…';
-      try {
-        const rg = await gachaLookupRemote(gid);
-        if (!rg) { status.textContent = `没有找到编号 ${gid} 的卡池`; return; }
-        g = { id: rg.id, name: rg.name, abn: rg.assetbundleName || '', type: rg.gachaType, s: rg.startAt, e: rg.endAt, rates: (rg.gachaCardRarityRates || []).filter(r => r.lotteryType === 'normal').map(r => ({ r: r.cardRarityType, rate: r.rate })) };
-        _gachaIdx.gachas.push(g);
-        // 远端卡池多半是刚出的新卡，内置卡牌表里没有 → 拉远端卡牌库补充
-        try { await gachaCardsRemote(); } catch (e) {}
-        _poolRosterCache = {};
-      } catch (e) {
-        status.textContent = '读取在线卡池库失败，请检查网络后重试';
-        return;
+    showLoad('正在读取卡池数据…', null);
+    try {
+      await loadGachaIdx();
+      let g = (_gachaIdx.gachas || []).find(x => x.id === gid);
+      if (!g) {
+        status.textContent = '内置索引没有该编号，正在读取在线卡池库…';
+        document.getElementById('lm-text').textContent = '正在读取在线卡池库…';
+        try {
+          const rg = await gachaLookupRemote(gid);
+          if (!rg) { status.textContent = `没有找到编号 ${gid} 的卡池`; hideLoad(); return; }
+          g = { id: rg.id, name: rg.name, abn: rg.assetbundleName || '', type: rg.gachaType, s: rg.startAt, e: rg.endAt, rates: (rg.gachaCardRarityRates || []).filter(r => r.lotteryType === 'normal').map(r => ({ r: r.cardRarityType, rate: r.rate })) };
+          _gachaIdx.gachas.push(g);
+          // 远端卡池多半是刚出的新卡，内置卡牌表里没有 → 拉远端卡牌库补充
+          document.getElementById('lm-text').textContent = '正在补充新卡数据…';
+          try { await gachaCardsRemote(); } catch (e) {}
+          _poolRosterCache = {};
+        } catch (e) {
+          status.textContent = '读取在线卡池库失败，请检查网络后重试';
+          hideLoad();
+          return;
+        }
       }
-    }
-    settings.gachaPools.push({ id: g.id, name: g.name, abn: g.abn || '', type: g.type, s: g.s, e: g.e, rates: g.rates || [] });
-    _selPool = g.id;
-    saveSettings(); renderGachaPools(); renderGachaPreview();
-    close();
-    // 当期卡牌中的二星/三星自动加入成员列表
-    let added = 0;
-    for (const cid of gachaPoolRoster(g)) {
-      const ent = _gachaIdx.cards[cid];
-      if (!ent || tierOf(ent[1]) >= 4) continue;
-      if (!settings.members.some(m => m.cid === cid)) {
-        settings.members.push({ cid, r: ent[1] });
-        added++;
+      settings.gachaPools.push({ id: g.id, name: g.name, abn: g.abn || '', type: g.type, s: g.s, e: g.e, rates: g.rates || [] });
+      _selPool = g.id;
+      saveSettings(); renderGachaPools(); renderGachaPreview();
+      // 当期卡牌中的二星/三星自动加入成员列表
+      document.getElementById('lm-text').textContent = '正在整理卡池成员…';
+      let added = 0;
+      for (const cid of gachaPoolRoster(g)) {
+        const ent = _gachaIdx.cards[cid];
+        if (!ent || tierOf(ent[1]) >= 4) continue;
+        if (!settings.members.some(m => m.cid === cid)) {
+          settings.members.push({ cid, r: ent[1] });
+          added++;
+        }
       }
+      if (added) saveSettings();
+      hideLoad();
+      close();
+      showToast(`已添加卡池：${g.name}${added ? ` · ${added} 位成员加入` : ''}`, 2600);
+    } catch (e) {
+      hideLoad();
+      status.textContent = '读取卡池失败，请稍后重试';
     }
-    if (added) saveSettings();
-    showToast(`已添加卡池：${g.name}${added ? ` · ${added} 位成员加入` : ''}`, 2600);
   };
   mk.querySelector('#gacha-add-ok').addEventListener('click', doAdd);
   input.addEventListener('keydown', e => { if (e.key === 'Enter') doAdd(); });
@@ -7557,6 +7638,21 @@ async function startGachaDraw(pool, n) {
   _gachaDrawing = true; _gdPool = pool; _gdN = n;
   gachaAddMembers(results);
   _gdQueue = results; _gdIdx = -1;
+
+  // 抽卡 → 发光球之间先做准备：四星卡图下载进缓存 + 字体就绪，揭示时才能秒开
+  showLoad('正在准备招募演出…', 0);
+  try {
+    await Promise.race([
+      preloadGachaCards(results, p => {
+        setLoadProg(p);
+        const t = document.getElementById('lm-text');
+        if (t) t.textContent = p >= 1 ? '即将开始…' : `正在准备卡面 ${Math.round(p * 100)}%`;
+      }),
+      new Promise(r => setTimeout(r, 12000)),   // 网络太差别卡死：最多等 12 秒，剩下的边演边补
+    ]);
+    try { if (document.fonts && document.fonts.ready) await Promise.race([document.fonts.ready, new Promise(r => setTimeout(r, 900))]); } catch (e) {}
+  } finally { hideLoad(); }
+
   bgmSuppress(true);          // 揭示阶段（发光球 → 逐张展示）停 BGM，进结算再响
 
   const draw = $('#gacha-draw');
@@ -7613,7 +7709,10 @@ function gdShowCard(i) {
     const img = document.createElement('img');
     img.className = 'gd-full';
     stage.appendChild(img);
-    gachaCardImg(r.cid, 'normal').then(u => { img.src = u; }).catch(() => {});
+    // 命中预热缓存就直接同步上屏（0 延迟），没命中才异步补
+    const pre = gachaCardImgCached(r.cid, 'normal');
+    if (pre) img.src = pre;
+    else gachaCardImg(r.cid, 'normal').then(u => { img.src = u; }).catch(() => {});
     cap.innerHTML = `<div class="gd-stars" style="color:#ffd0f8">${gdStars(ent)}</div>
       <div class="gd-names">${escapeHTML(ent[4] || '')}<small>${charName}</small></div>`;
   } else {
@@ -7677,7 +7776,9 @@ function gdShowSummary() {
     if (r.tier >= 4) {
       // 只有四星（含生日卡）显示卡面
       cell.innerHTML = `<img alt=""><span class="gs-r" style="color:#ffd0f8">${star}</span>`;
-      gachaCardImg(r.cid, 'normal').then(u => { cell.querySelector('img').src = u; }).catch(() => {});
+      const pre = gachaCardImgCached(r.cid, 'normal');
+      if (pre) cell.querySelector('img').src = pre;
+      else gachaCardImg(r.cid, 'normal').then(u => { cell.querySelector('img').src = u; }).catch(() => {});
     } else {
       // 二星 / 三星：格子里只显示星数文字
       cell.classList.add('gs-noimg');
@@ -8104,10 +8205,17 @@ $('#member-big').addEventListener('click', () => { $('#member-big').style.displa
 
 /* ---------- 页面按钮 ---------- */
 $('#btn-gacha').addEventListener('click', async () => {
+  // 先把卡池索引读好再进页面，避免进去后空列表闪一下再填充
+  showLoad('正在读取卡池…', null);
+  try {
+    await loadGachaIdx();
+    renderGachaPools();
+    renderGachaPreview();
+  } catch (e) {
+    showToast('卡池数据读取失败，请检查网络后重试', 2600);
+  }
   show('gacha'); applyBackground();
-  await loadGachaIdx();
-  renderGachaPools();
-  renderGachaPreview();
+  hideLoad();
 });
 $('#gacha-back').addEventListener('click', goTitle);
 $('#gacha-pull1').addEventListener('click', () => {
