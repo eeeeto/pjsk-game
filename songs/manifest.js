@@ -275,7 +275,7 @@ window.SONGS = [
   "cover": "assets/covers/n252.jpg"
  },
  {
-  "title": "失敗作",
+  "title": "失敗作少女",
   "artist": "25時、ナイトコードで。",
   "credit": "",
   "unit": "n25",
@@ -506,7 +506,7 @@ window.SONGS = [
   "cover": "assets/covers/vocaloid1.jpg"
  },
  {
-  "title": "失敗作 (MARETU Remix)",
+  "title": "失敗作少女 (MARETU Remix)",
   "artist": "初音ミク",
   "credit": "作编曲：かいりきベア MARETU",
   "unit": "vocaloid",
@@ -1321,7 +1321,7 @@ window.SONGS = [
   "cover": "assets/covers/n251.jpg",
  },
  {
-  "title": "は雨",
+  "title": "私は雨",
   "artist": "25時、ナイトコードで。× 鏡音レン",
   "credit": "",
   "unit": "n25",
