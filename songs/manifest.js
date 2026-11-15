@@ -1076,7 +1076,7 @@ window.SONGS = [
   "duration": 258.03,
   "file": "songs/s112.mp3",
   "full": true,
-  "cover": "assets/covers/other1.jpg",
+  "cover": "assets/covers/other2.jpg",
  },
  {
   "title": "きゃぴ",
@@ -1087,7 +1087,7 @@ window.SONGS = [
   "duration": 200.2,
   "file": "songs/s113.mp3",
   "full": true,
-  "cover": "assets/covers/other1.jpg",
+  "cover": "assets/covers/other2.jpg",
  },
  {
   "title": "LeapTop",
@@ -1120,7 +1120,7 @@ window.SONGS = [
   "duration": 205.47,
   "file": "songs/s116.mp3",
   "full": true,
-  "cover": "assets/covers/other1.jpg",
+  "cover": "assets/covers/other2.jpg",
  },
  {
   "title": "ずうっといっしょ！",
@@ -1131,7 +1131,7 @@ window.SONGS = [
   "duration": 181.51,
   "file": "songs/s117.mp3",
   "full": true,
-  "cover": "assets/covers/other1.jpg",
+  "cover": "assets/covers/other2.jpg",
  },
  {
   "title": "Re：",
@@ -1142,7 +1142,7 @@ window.SONGS = [
   "duration": 240.99,
   "file": "songs/s118.mp3",
   "full": true,
-  "cover": "assets/covers/other1.jpg",
+  "cover": "assets/covers/other2.jpg",
  },
  {
   "title": "琥珀の身体",
@@ -1153,7 +1153,7 @@ window.SONGS = [
   "duration": 263.78,
   "file": "songs/s119.mp3",
   "full": true,
-  "cover": "assets/covers/other1.jpg",
+  "cover": "assets/covers/other2.jpg",
  },
  {
   "title": "儚くて",
@@ -1164,7 +1164,7 @@ window.SONGS = [
   "duration": 244.22,
   "file": "songs/s120.mp3",
   "full": true,
-  "cover": "assets/covers/other1.jpg",
+  "cover": "assets/covers/other2.jpg",
  },
  {
   "title": "1年2ヶ月20日",
@@ -1175,7 +1175,7 @@ window.SONGS = [
   "duration": 310.24,
   "file": "songs/s121.mp3",
   "full": true,
-  "cover": "assets/covers/other1.jpg",
+  "cover": "assets/covers/other2.jpg",
  },
  {
   "title": "今でもILoveYou",
@@ -1186,7 +1186,7 @@ window.SONGS = [
   "duration": 262.48,
   "file": "songs/s122.mp3",
   "full": true,
-  "cover": "assets/covers/other1.jpg",
+  "cover": "assets/covers/other2.jpg",
  },
  {
   "title": "光るなら",
@@ -1197,7 +1197,7 @@ window.SONGS = [
   "duration": 254.19,
   "file": "songs/s123.mp3",
   "full": true,
-  "cover": "assets/covers/other1.jpg",
+  "cover": "assets/covers/other2.jpg",
  },
  {
   "title": "アポフェニア",
@@ -1208,7 +1208,7 @@ window.SONGS = [
   "duration": 146.75,
   "file": "songs/s124.mp3",
   "full": true,
-  "cover": "assets/covers/other1.jpg",
+  "cover": "assets/covers/other2.jpg",
  },
  {
   "title": "このまんまでいこう(Game Size.)",
