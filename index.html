@@ -7638,18 +7638,13 @@ async function renderGachaShareImage() {
       c.shadowColor = 'rgba(255,120,220,.8)'; c.shadowBlur = 14;
       c.fillText(star, s.x + s.w - 14, s.y + (single ? 46 : 32));
       c.shadowBlur = 0;
-      // 底部角色名 + 卡名
+      // 底部角色名（不显示卡名）
       c.textAlign = 'left';
       c.font = `900 ${single ? 30 : 23}px ${F}`;
       c.fillStyle = '#ffffff';
-      const cy = s.y + s.h - (single ? 54 : 40);
-      c.fillText(info.char, s.x + 16, cy);
-      c.font = `${single ? 20 : 15}px ${F}`;
-      c.fillStyle = 'rgba(200,220,245,.82)';
-      const cl = wrapCJK(c, info.card, s.w - 32, 1);
-      c.fillText(cl[0] || '', s.x + 16, s.y + s.h - (single ? 22 : 16));
+      c.fillText(info.char, s.x + 16, s.y + s.h - (single ? 34 : 26));
     } else {
-      // 二星 / 三星：只有星数与文字
+      // 二星 / 三星：只有星数与角色名
       c.textAlign = 'center'; c.textBaseline = 'alphabetic';
       const col = RAR_COL[tier] || '#9fdcff';
       c.font = `900 ${single ? 96 : 46}px ${F}`;
@@ -7659,11 +7654,7 @@ async function renderGachaShareImage() {
       c.shadowBlur = 0;
       c.font = `900 ${single ? 36 : 21}px ${F}`;
       c.fillStyle = '#dbe9fb';
-      c.fillText(info.char, s.x + s.w / 2, s.y + s.h - (single ? 74 : 54));
-      c.font = `${single ? 22 : 14}px ${F}`;
-      c.fillStyle = 'rgba(160,195,230,.8)';
-      const cl = wrapCJK(c, info.card, s.w - 26, 1);
-      c.fillText(cl[0] || '', s.x + s.w / 2, s.y + s.h - (single ? 34 : 24));
+      c.fillText(info.char, s.x + s.w / 2, s.y + s.h - (single ? 52 : 34));
       c.textAlign = 'left';
     }
   });
@@ -7683,31 +7674,27 @@ async function renderGachaShareImage() {
     while (ns > 34 && c.measureText(info.char).width > 830) { ns -= 2; c.font = `900 ${ns}px ${F}`; }
     c.fillStyle = '#ffffff';
     c.fillText(info.char, x, 356);
-    // 卡名折行
-    c.font = `26px ${F}`;
-    c.fillStyle = 'rgba(190,215,245,.9)';
-    wrapCJK(c, info.card, 830, 2).forEach((ln, i) => c.fillText(ln, x, 412 + i * 40));
-    // 星数
+    // 星数（不显示卡名）
     const isBd2 = _gachaIdx && _gachaIdx.cards[r.cid] && _gachaIdx.cards[r.cid][1] === 'rarity_birthday';
     const star2 = isBd2 ? '𐙚' : '★'.repeat(r.tier);
     c.font = `900 48px ${F}`;
     c.fillStyle = r.tier >= 4 ? '#ffd0f8' : (RAR_COL[r.tier] || '#9fdcff');
     c.shadowColor = c.fillStyle; c.shadowBlur = 20;
-    c.fillText(star2, x, 520);
+    c.fillText(star2, x, 470);
     c.shadowBlur = 0;
     // 分隔线
     c.fillStyle = 'rgba(120,180,255,.22)';
-    c.fillRect(x, 570, 830, 1);
+    c.fillRect(x, 560, 830, 1);
     // 卡池与日期
     const poolLine = (_gdPool && _gdPool.name) || '';
     c.font = `22px ${F}`;
     c.fillStyle = 'rgba(160,195,230,.9)';
-    wrapCJK(c, poolLine, 830, 1).forEach(ln => c.fillText(ln, x, 618));
+    wrapCJK(c, poolLine, 830, 1).forEach(ln => c.fillText(ln, x, 612));
     const d = new Date();
     const ds = `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
     c.font = `20px ${F}`;
     c.fillStyle = 'rgba(120,155,190,.8)';
-    c.fillText(ds, x, 662);
+    c.fillText(ds, x, 656);
   }
 
   // 底栏
