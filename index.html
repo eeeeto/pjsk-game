@@ -276,6 +276,19 @@
 
   /* ---------- 设置 ---------- */
   #screen-settings .page-head{position:relative;z-index:2;}
+  /* 图片保存兜底预览层（iOS / 微信长按保存） */
+  #img-sheet{position:fixed;inset:0;z-index:9000;background:rgba(3,6,14,.9);
+    display:flex;align-items:center;justify-content:center;padding:16px;
+    -webkit-overflow-scrolling:touch;animation:isIn .18s ease;}
+  @keyframes isIn{from{opacity:0}to{opacity:1}}
+  #img-sheet .is-box{display:flex;flex-direction:column;align-items:center;gap:12px;max-height:100%;}
+  #img-sheet img{max-width:min(96vw,1100px);max-height:72vh;border-radius:12px;
+    box-shadow:0 18px 50px rgba(0,0,0,.6);background:#0b1220;-webkit-touch-callout:default;
+    touch-action:manipulation;}
+  #img-sheet .is-tip{font-size:13px;color:#cfe4ff;text-align:center;line-height:1.5;}
+  #img-sheet .is-acts{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;}
+  #img-sheet .is-acts .btn{min-width:112px;text-decoration:none;}
+
   /* 新曲速递 */
   .logo-new{display:inline-block;margin-top:clamp(8px,1.4vh,14px);font-family:inherit;
     font-size:clamp(10.5px,1.5vh,12.5px);font-weight:800;letter-spacing:.06em;color:#8fe6ff;
@@ -5994,22 +6007,63 @@ function downloadBlob(blob, filename) {
   setTimeout(() => URL.revokeObjectURL(url), 8000);
   showToast('图片已保存到下载', 2600);
 }
-async function shareCanvas(canvas, filename, title) {
-  const blob = await canvasToBlobAsync(canvas, 'image/png');
-  const file = new File([blob], filename, { type: 'image/png' });
-  let canShare = false;
-  try { canShare = !!(navigator.canShare && navigator.share && navigator.canShare({ files: [file] })); } catch (e) { canShare = false; }
-  if (canShare) {
-    try {
-      await navigator.share({ files: [file], title });
-      return;
-    } catch (e) {
-      // 用户自己取消：什么都不做；其它情况（用户手势已过期 / 分享面板被拦）一律退回到下载
-      if (e && e.name === 'AbortError') return;
-      console.warn('[share fallback]', e);
+/* 设备能力判断：分享面板 / a[download] / 都不行时走全屏预览长按保存 */
+function supportsFileShare(file) {
+  try { return !!(navigator.canShare && navigator.share && navigator.canShare({ files: [file] })); } catch (e) { return false; }
+}
+function isIOSDevice() {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent)
+    || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+function anchorDownloadOK() {
+  try { if (!('download' in document.createElement('a'))) return false; } catch (e) { return false; }
+  // 微信 / QQ / 微博内置浏览器会吞掉 blob 下载，直接给预览层让用户长按保存
+  if (/MicroMessenger|QQ\/|Weibo|AlipayClient/i.test(navigator.userAgent)) return false;
+  // iOS 上 a[download] 不稳定（点开是新标签），统一走预览层
+  return !isIOSDevice();
+}
+/* 兜底预览层：图片铺在屏幕中间，长按可存相册（iOS / 微信唯一可行路径） */
+function showImageSheet(blob, filename) {
+  const old = document.getElementById('img-sheet');
+  if (old) { try { URL.revokeObjectURL(old.dataset.url || ''); } catch (e) {} old.remove(); }
+  const url = URL.createObjectURL(blob);
+  const wrap = document.createElement('div');
+  wrap.id = 'img-sheet';
+  wrap.dataset.url = url;
+  wrap.innerHTML = '<div class="is-box"><img alt="保存图片" src="' + url + '">'
+    + '<div class="is-tip">长按图片即可保存到相册</div>'
+    + '<div class="is-acts"><a class="btn pink" href="' + url + '" download="' + filename + '">直接下载</a>'
+    + '<button class="btn ghost" type="button">关 闭</button></div></div>';
+  wrap.addEventListener('click', e => {
+    if (e.target === wrap || e.target.closest('button')) {
+      try { URL.revokeObjectURL(url); } catch (err) {}
+      wrap.remove();
     }
+  });
+  document.body.appendChild(wrap);
+  showToast('长按图片可保存到相册', 3200);
+}
+/* 图片导出的统一出口：分享面板 → 浏览器下载 → 全屏预览长按保存，三级兜底 */
+async function shareCanvas(canvas, filename, title) {
+  let blob = await canvasToBlobAsync(canvas, 'image/png');
+  let name = filename;
+  // PNG 太大时转 JPEG（卡面是照片，PNG 体积虚高，微信/QQ 分享对大图也有限制）
+  if (blob && blob.size > 2.4 * 1024 * 1024) {
+    try {
+      const j = await canvasToBlobAsync(canvas, 'image/jpeg', 0.92);
+      if (j && j.size && j.size < blob.size) { blob = j; name = filename.replace(/\.png$/i, '.jpg'); }
+    } catch (e) {}
   }
-  downloadBlob(blob, filename);
+  let file = null;
+  try { file = new File([blob], name, { type: blob.type || 'image/png' }); } catch (e) { file = null; }
+  // iOS 的 share 在异步生成后经常被判「非用户手势」而失败，直接跳过，给预览层更稳
+  if (file && !isIOSDevice() && supportsFileShare(file)) {
+    try { await navigator.share({ files: [file], title }); return 'share'; }
+    catch (e) { if (e && e.name === 'AbortError') return 'cancel'; }
+  }
+  if (anchorDownloadOK()) { downloadBlob(blob, name); return 'download'; }
+  showImageSheet(blob, name);
+  return 'sheet';
 }
 function roundRectPath(c, x, y, w, h, r) {
   c.beginPath();
@@ -7689,6 +7743,8 @@ async function renderGachaShareImage() {
   const list = _gdQueue.slice();
   const n = list.length;
   if (!n) throw new Error('没有招募结果');
+  // 等字体就绪：否则首屏可能用 fallback 字体，长名字会被测宽偏小导致溢出
+  try { if (document.fonts && document.fonts.ready) await Promise.race([document.fonts.ready, new Promise(r => setTimeout(r, 1200))]); } catch (e) {}
 
   // 背景：夜空渐变 + 两团柔光
   const bg = c.createLinearGradient(0, 0, W * 0.35, H);
@@ -7870,11 +7926,21 @@ $('#gs-share').addEventListener('click', async () => {
   const raw = btn.textContent;
   btn.textContent = '生成中…';
   showToast('正在生成招募结果图…', 1400);
+  // 生成失败自动重试一次（toBlob 偶发返回空）
+  let cv = null, lastErr = null;
+  for (let i = 0; i < 2 && !cv; i++) {
+    try { cv = await renderGachaShareImage(); }
+    catch (e) { lastErr = e; await new Promise(r => setTimeout(r, 240)); }
+  }
   try {
-    const cv = await renderGachaShareImage();
-    const stamp = String(Date.now()).slice(-6);
-    await shareCanvas(cv, `pjsk-gacha-${stamp}.png`, '「世界」的招募 · 我的招募结果');
-    showToast('招募结果已生成', 1800);
+    if (!cv) throw lastErr || new Error('渲染失败');
+    const d = new Date();
+    const stamp = String(d.getFullYear()) + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0')
+      + '-' + String(Date.now()).slice(-4);
+    const mode = await shareCanvas(cv, `pjsk-gacha-${stamp}.png`, '「世界」的招募 · 我的招募结果');
+    if (mode === 'share') showToast('已调起系统分享', 1800);
+    else if (mode === 'sheet') { /* 预览层里已有「长按保存」提示 */ }
+    else if (mode === 'cancel') { /* 自己取消分享，不打扰 */ }
   } catch (e) {
     console.warn('[gacha share]', e);
     showToast('生成图片失败，请再试一次', 2600);
