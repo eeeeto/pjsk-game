@@ -760,7 +760,7 @@ window.SONGS = [
   "cover": "assets/covers/vocaloid1.jpg",
  },
  {
-  "title": "星流浪夜",
+  "title": "极星流浪夜",
   "artist": "被遗忘者的哀伤北山薇",
   "credit": "",
   "unit": "vocaloid",
