@@ -897,8 +897,7 @@
     overflow-y:auto;align-content:start;}
   .member-grid .mb{position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;background:#0a1120;cursor:pointer;
     /* 只留一圈细边：大量白色发光阴影在 iPad 上滚动时每帧全量重绘，直接把页面卡死 */
-    box-shadow:0 0 0 2px rgba(255,255,255,.85);
-    content-visibility:auto;contain-intrinsic-size:auto 200px;}
+    box-shadow:0 0 0 2px rgba(255,255,255,.85);}
   .mb-swap{position:absolute;right:4px;bottom:4px;width:26px;height:26px;border-radius:8px;border:1px solid rgba(255,255,255,.5);
     background:rgba(6,12,26,.86);color:#cfe4ff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;
     z-index:2;cursor:pointer;transition:transform .12s;}
@@ -7483,12 +7482,12 @@ async function gachaCardThumb(cid, part) {
     // 缩图服务可能整体挂起：挂太久就放弃，退回原图（原图路径同样加超时兜底）
     blob = await Promise.race([
       fetchBlobProg([thumb]),
-      new Promise((_, no) => setTimeout(() => no(new Error('thumb timeout')), 15000)),
+      new Promise((_, no) => setTimeout(() => no(new Error('thumb timeout')), 8000)),
     ]);
   } catch (e) {
     blob = await Promise.race([
       fetchBlobProg([direct]),
-      new Promise((_, no) => setTimeout(() => no(new Error('img timeout')), 25000)),
+      new Promise((_, no) => setTimeout(() => no(new Error('img timeout')), 15000)),
     ]);
   }
   await idbPut(key, blob);
@@ -8157,7 +8156,7 @@ function memberImgPart(m) { return (m.r === 'rarity_4' && m.af) ? 'after' : 'nor
 function memberTier(m) { return m.r === 'rarity_birthday' ? 4 : tierOf(m.r); }
 
 /* 成员卡图加载：滚动到可见才请求，且同时最多 3 张（成员一多，一次性请求上百张会让手机内存爆掉，页面直接闪退） */
-const MEMBER_IMG_CONCURRENCY = 3;
+const MEMBER_IMG_CONCURRENCY = 6;
 let _mbQueue = [], _mbActive = 0;
 function pumpMemberImg() {
   while (_mbActive < MEMBER_IMG_CONCURRENCY && _mbQueue.length) {
@@ -8198,13 +8197,28 @@ function lazyMemberImg(cell, cid, part) {
           if (im) im.removeAttribute('src');
         }
       }
-    }, { rootMargin: '320px 0px', threshold: 0.01 });
+    }, { rootMargin: '560px 0px', threshold: 0.01 });
   }
   memberImgIO.observe(cell);
 }
 /* 成员格分页渲染：一次只挂 48 个，滚到接近底部再追加，
    几百个格子一次性建出来在 iPad 上光是样式计算就会卡死 */
 const MB_PAGE = 48;
+/* 行高显式锁定为列宽：部分引擎（含桌面 Chrome 无头版实测）aspect-ratio 不参与行轨道
+   尺寸计算，行高被压得比格子的正方形高度小，导致行与行纵向重叠、卡牌堆在一起。
+   直接把 grid-auto-rows 设成与列宽一致的像素值，所有引擎表现一致 */
+(function () {
+  const grid = document.getElementById('member-grid');
+  if (!grid || typeof ResizeObserver === 'undefined') return;
+  const fit = () => {
+    const cs = getComputedStyle(grid);
+    const w = grid.clientWidth - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
+    const cols = (cs.gridTemplateColumns || '').trim().split(/\s+/).length || 8;
+    const gap = parseFloat(cs.columnGap) || 0;
+    if (w > 0 && cols > 0) grid.style.gridAutoRows = Math.max(40, (w - (cols - 1) * gap) / cols) + 'px';
+  };
+  new ResizeObserver(fit).observe(grid);
+})();
 let _mbList = [], _mbShown = 0;
 function renderMembers() {
   try { renderMembersInner(); }
