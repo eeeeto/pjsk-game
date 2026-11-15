@@ -817,6 +817,11 @@
   .gs-cell .gs-r{position:absolute;bottom:3px;left:6px;font-size:13px;font-weight:800;color:#fff;letter-spacing:-0.5px;
     text-shadow:0 1px 4px #0d2a52;}
   .gs-actions{position:absolute;right:26px;bottom:20px;display:flex;gap:12px;}
+  /* 二星/三星结算格：只显示星数文字 */
+  .gs-cell.gs-noimg{display:flex;align-items:center;justify-content:center;background:rgba(14,24,44,.8);}
+  .gs-cell.gs-noimg .gs-r-big{position:static;font-size:clamp(22px,4vh,34px);letter-spacing:1px;}
+  /* 抽卡确认弹窗需要盖住抽卡演出浮层 */
+  #modal-mk-confirm{z-index:300;}
 
   /* ---------- 成员 ---------- */
   .member-grid{flex:1;display:grid;grid-template-columns:repeat(8,1fr);gap:10px;width:100%;padding:10px 26px 16px;
@@ -7323,9 +7328,17 @@ function gdShowSummary() {
     const cell = document.createElement('div');
     cell.className = 'gs-cell';
     cell.style.animationDelay = (i * 0.05) + 's';
-    const star = ent[1] === 'rarity_birthday' ? '𐙚' : '★'.repeat(r.tier);
-    cell.innerHTML = `<img alt=""><span class="gs-r" style="${r.tier >= 4 ? 'color:#ffd0f8' : ''}">${star}</span>`;
-    gachaCardImg(r.cid, 'normal').then(u => { cell.querySelector('img').src = u; }).catch(() => {});
+    const isBd = ent[1] === 'rarity_birthday';
+    const star = isBd ? '𐙚' : '★'.repeat(r.tier);
+    if (r.tier >= 4) {
+      // 只有四星（含生日卡）显示卡面
+      cell.innerHTML = `<img alt=""><span class="gs-r" style="color:#ffd0f8">${star}</span>`;
+      gachaCardImg(r.cid, 'normal').then(u => { cell.querySelector('img').src = u; }).catch(() => {});
+    } else {
+      // 二星 / 三星：格子里只显示星数文字
+      cell.classList.add('gs-noimg');
+      cell.innerHTML = `<span class="gs-r gs-r-big" style="${r.tier === 3 ? 'color:#ffe27a' : 'color:#9fdcff'}">${star}</span>`;
+    }
     grid.appendChild(cell);
   });
   const sum = $('#gd-summary');
@@ -7337,11 +7350,13 @@ $('#gacha-draw').addEventListener('pointerdown', e => {
   if ($('#gacha-draw').dataset.phase !== 'summary') gdAdvance();
 });
 $('#gs-again').addEventListener('click', () => {
-  // 结算页的「再招募」直接从发光球阶段重新开始（不返回卡池列表）
-  $('#gd-summary').style.display = 'none';
-  $('#gacha-draw').dataset.phase = 'orbs';
-  _gachaDrawing = false;
-  startGachaDraw(_gdPool, _gdN);
+  // 结算页的「再招募」先确认，再直接从发光球阶段重新开始
+  mkConfirm('确认招募', `是否要招募${_gdN === 1 ? '一' : '十'}次？`, () => {
+    $('#gd-summary').style.display = 'none';
+    $('#gacha-draw').dataset.phase = 'orbs';
+    _gachaDrawing = false;
+    startGachaDraw(_gdPool, _gdN);
+  });
 });
 $('#gs-back').addEventListener('click', () => {
   $('#gacha-draw').classList.remove('on');
@@ -7458,14 +7473,12 @@ $('#gacha-back').addEventListener('click', goTitle);
 $('#gacha-pull1').addEventListener('click', () => {
   const pool = settings.gachaPools.find(p => p.id === _selPool);
   if (!pool) { showToast('先在左侧选择一个卡池', 2200); return; }
-  _gachaDrawing = false;
-  startGachaDraw(pool, 1);
+  mkConfirm('确认招募', `是否要招募一次？`, () => { _gachaDrawing = false; startGachaDraw(pool, 1); });
 });
 $('#gacha-pull10').addEventListener('click', () => {
   const pool = settings.gachaPools.find(p => p.id === _selPool);
   if (!pool) { showToast('先在左侧选择一个卡池', 2200); return; }
-  _gachaDrawing = false;
-  startGachaDraw(pool, 10);
+  mkConfirm('确认招募', '是否要招募十次？', () => { _gachaDrawing = false; startGachaDraw(pool, 10); });
 });
 $('#btn-members').addEventListener('click', async () => {
   show('members'); applyBackground();
