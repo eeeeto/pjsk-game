@@ -761,6 +761,9 @@
   .gacha-hero::after{content:"";position:absolute;inset:0;pointer-events:none;
     background:linear-gradient(90deg,rgba(4,8,18,.72) 0%,rgba(4,8,18,.28) 30%,rgba(4,8,18,.05) 55%,rgba(4,8,18,.15) 100%),
       linear-gradient(180deg,rgba(4,8,18,.6) 0%,rgba(4,8,18,.05) 26%,rgba(4,8,18,0) 55%,rgba(4,8,18,.78) 100%);}
+  .gacha-hero .gh-count{position:absolute;top:14px;right:16px;font-size:12px;font-weight:800;color:#9db4d4;
+    background:rgba(6,12,26,.55);border:1px solid rgba(140,200,255,.3);border-radius:999px;padding:4px 12px;z-index:3;
+    letter-spacing:.08em;backdrop-filter:blur(6px);}
   .gacha-hero .gh-stars{position:absolute;right:26px;top:96px;font-size:26px;font-weight:800;color:#ffe27a;letter-spacing:1px;
     text-shadow:0 2px 10px rgba(0,0,0,.85);z-index:2;}
   .gacha-hero .gh-stars.bd{color:#ffd0f8;}
@@ -1071,7 +1074,7 @@
   <!-- ================= 世界的招募 ================= -->
   <section id="screen-gacha" class="screen">
     <!-- 整屏铺满的当期卡面（在卡池列表下层） -->
-    <div class="gacha-hero" id="gacha-hero" style="display:none"><img id="gacha-hero-img" alt=""><span class="gh-stars" id="gacha-hero-stars"></span></div>
+    <div class="gacha-hero" id="gacha-hero" style="display:none"><img id="gacha-hero-img" alt=""><span class="gh-count" id="gacha-hero-count"></span><span class="gh-stars" id="gacha-hero-stars"></span></div>
     <div class="page-head">
       <h2>世界的<em>招募</em></h2>
       <div class="tip">左侧选择卡池 · 右侧预览当期卡牌<br>点加号输入编号添加卡池</div>
@@ -6909,6 +6912,7 @@ const GACHA_DB_REMOTE = [
 let _gachaIdx = null, _gachaIdxLoading = null;
 let _poolRosterCache = {};      // poolId -> [cardId]
 let _selPool = -1;              // 当前选中的卡池 id
+let _heroList = [], _heroIdx = 0;   // 主视觉四星卡列表与当前索引
 let _gachaDrawing = false;      // 抽卡演出进行中
 
 async function loadGachaIdx() {
@@ -7078,25 +7082,35 @@ function renderGachaPreview() {
   const typeTxt = { ceil: '限定', normal: '常驻', gift: '赠送', beginner: '新手' }[pool.type] || pool.type;
   $('#gi-meta').textContent = `${typeTxt} · ${gachaFmtDate(pool.s)} ~ ${gachaFmtDate(pool.e)} · 四星概率 ${gachaRateParts().r4}%`;
   now.textContent = pool.name;
-  // 右侧：卡池第一张卡（特训后）放大铺满整个屏幕
-  const roster = gachaPoolRoster(pool).slice().sort((a, b) => a - b);
-  const featured = roster[0];
+  // 右侧：只展示该池四星卡的特训后卡面，点击循环切换下一张
+  const roster4 = gachaPoolRoster(pool).filter(cid => _gachaIdx.cards[cid] && _gachaIdx.cards[cid][1] === 'rarity_4');
+  _heroList = roster4; _heroIdx = 0;
   const stars = $('#gacha-hero-stars');
   heroImg.removeAttribute('src');
   heroImg.style.visibility = 'hidden';
   stars.textContent = ''; stars.classList.remove('bd');
-  if (!featured || !_gachaIdx.cards[featured]) return;
-  const ent = _gachaIdx.cards[featured];
-  const t = tierOf(ent[1]);
-  stars.textContent = ent[1] === 'rarity_birthday' ? '𐙚' : '★'.repeat(t);
-  if (ent[1] === 'rarity_birthday') stars.classList.add('bd');
-  const wantId = _selPool;
-  // 特训后优先；没有特训后图的卡（二星 / 生日卡）自动退回特训前
-  gachaCardImg(featured, 'after').catch(() => gachaCardImg(featured, 'normal')).then(url => {
-    if (_selPool !== wantId) return;      // 期间切了卡池，丢弃
+  if (!roster4.length) return;          // 没有四星则不显示卡面
+  loadGachaHero();
+}
+function loadGachaHero() {
+  if (!_heroList || !_heroList.length) return;
+  const poolId = _selPool;
+  const cid = _heroList[_heroIdx % _heroList.length];
+  const heroImg = $('#gacha-hero-img'), stars = $('#gacha-hero-stars');
+  stars.textContent = '★★★★';
+  $('#gacha-hero-count').textContent = `${_heroIdx + 1} / ${_heroList.length} · 点击切换`;
+  const wantId = poolId, wantIdx = _heroIdx;
+  heroImg.style.visibility = 'hidden';
+  gachaCardImg(cid, 'after').then(url => {
+    if (_selPool !== wantId || _heroIdx !== wantIdx) return;   // 期间切换了卡池/卡面，丢弃
     heroImg.src = url; heroImg.style.visibility = '';
   }).catch(() => {});
 }
+$('#gacha-preview').addEventListener('click', () => {
+  if (!_heroList || _heroList.length <= 1) return;
+  _heroIdx = (_heroIdx + 1) % _heroList.length;
+  loadGachaHero();
+});
 
 /* ---------- 添加卡池弹窗 ---------- */
 function openGachaAddDialog() {
