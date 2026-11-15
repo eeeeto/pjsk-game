@@ -2,3 +2,4 @@
 __MACOSX/
 *.zip
 *.log
+node_modules/

@@ -5119,6 +5119,20 @@ const CARD_DB_REMOTE = [
   'https://raw.githubusercontent.com/Sekai-World/sekai-master-db-diff/main/cards.json'
 ];
 const CARD_ASSET_BASE = 'https://storage.sekai.best/sekai-jp-assets/character/member/';
+/* 本地内置卡面库（assets/cardimg，tools/update-cards.mjs 自动跟进新卡）：
+   同源加载——网站能打开图就能打开，不再强依赖 sekai.best / wsrv（无 VPN 也能全部加载） */
+function cardImgSet(abn, part) {
+  const after = part === 'after' || part === 'after_training';
+  const rel = `${abn}/${after ? 'card_after_training' : 'card_normal'}.webp`;
+  const direct = CARD_ASSET_BASE + rel;
+  return {
+    full: res('assets/cardimg/full/' + rel),
+    thumb: res('assets/cardimg/thumb/' + rel),
+    cutout: res('assets/cardimg/cutout/' + abn + '/' + (after ? 'after_training' : 'normal') + '.webp'),
+    direct,
+    proxy: `https://wsrv.nl/?url=${encodeURIComponent(direct)}&output=webp`,
+  };
+}
 let _cardMap = null, _cardMapFromIndex = false;
 
 async function fetchTextProg(url, onProg) {
@@ -5240,10 +5254,9 @@ async function downloadCardById(rawId) {
     let done = 0;
     for (const part of parts) {
       const key = `card${cid}_${part}`;
-      const rel = `${abn}/${part === 'normal' ? 'card_normal' : 'card_after_training'}.webp`;
-      const direct = CARD_ASSET_BASE + rel;
-      // 官方资源站对第三方站点偶尔做跨域拦截 → 失败时走图片代理
-      const urls = [direct, `https://wsrv.nl/?url=${encodeURIComponent(direct)}&output=webp`];
+      const s = cardImgSet(abn, part);
+      // 本地内置 → 官方资源站（对第三方偶尔跨域拦截）→ 图片代理
+      const urls = [s.full, s.direct, s.proxy];
       cardDlUI(true, 0.37 + (done / parts.length) * 0.6, `正在下载${labelPart[part]}…`);
       const blob = await fetchBlobProg(urls, p => cardDlUI(true, 0.37 + ((done + p) / parts.length) * 0.6, `正在下载${labelPart[part]}… ${Math.round(p * 100)}%`));
       await idbPut(key, blob);
@@ -5404,9 +5417,8 @@ async function fetchCardImage(cid, part, onProg) {
   }
   if (!ent) throw new Error(`没有找到编号 ${cid} 的卡面`);
   const [abn] = ent;
-  const rel = `${abn}/${part === 'normal' ? 'card_normal' : 'card_after_training'}.webp`;
-  const direct = CARD_ASSET_BASE + rel;
-  const urls = [direct, `https://wsrv.nl/?url=${encodeURIComponent(direct)}&output=webp`];
+  const s = cardImgSet(abn, part);
+  const urls = [s.full, s.direct, s.proxy];
   return await fetchBlobProg(urls, p => onProg && onProg(0.37 + p * 0.6));
 }
 /* 进度条 UI（复用设置页卡面下载的样式，每个栏位独立一套 id） */
@@ -5460,9 +5472,8 @@ async function downloadResCard(rawId) {
     for (const part of parts) {
       const key = `res:${cid}_${part}`;
       dlUI('#res-card-dl', true, 0.37 + (done / parts.length) * 0.4, `正在下载${labelPart[part]}…`);
-      const rel = `${abn}/${part === 'normal' ? 'card_normal' : 'card_after_training'}.webp`;
-      const direct = CARD_ASSET_BASE + rel;
-      const urls = [direct, `https://wsrv.nl/?url=${encodeURIComponent(direct)}&output=webp`];
+      const s = cardImgSet(abn, part);
+      const urls = [s.full, s.direct, s.proxy];
       const blob = await fetchBlobProg(urls, p => dlUI('#res-card-dl', true, 0.37 + ((done + p) / parts.length) * 0.4, `正在下载${labelPart[part]}… ${Math.round(p * 100)}%`));
       dlUI('#res-card-dl', true, 0.77, `正在裁剪成 2:3 竖版…`);
       const cut = await cropRatio(blob, RES_RATIO, 600);
@@ -5475,12 +5486,14 @@ async function downloadResCard(rawId) {
       if (!settings.resCards.some(m => m.key === key)) {
         settings.resCards.push({ key, raw: key + '_raw', cid, label: `#${cid} · ${labelPart[part]}` });
       }
-      // 透明底角色图（官方 member_cutout_trm 素材，普通卡只有 normal）
+      // 透明底角色图（官方 member_cutout_trm 素材，普通卡只有 normal）：本地内置优先
       try {
-        const chrRel = `character/member_cutout_trm/${abn}/${part === 'normal' ? 'normal' : 'after_training'}.webp`;
-        const chrDirect = 'https://storage.sekai.best/sekai-jp-assets/' + chrRel;
+        const chrPart = part === 'normal' ? 'normal' : 'after_training';
+        const chrDirect = 'https://storage.sekai.best/sekai-jp-assets/character/member_cutout_trm/' +
+          abn + '/' + chrPart + '.webp';
+        const chrLocal = res('assets/cardimg/cutout/' + abn + '/' + chrPart + '.webp');
+        const chrBlob = await fetchBlobProg([chrLocal, chrDirect, `https://wsrv.nl/?url=${encodeURIComponent(chrDirect)}&output=webp`], () => {});
         dlUI('#res-card-dl', true, 0.8 + (done / parts.length) * 0.15, `正在下载${labelPart[part]}透明角色图…`);
-        const chrBlob = await fetchBlobProg([chrDirect, `https://wsrv.nl/?url=${encodeURIComponent(chrDirect)}&output=webp`], () => {});
         const key2 = `res:${cid}_${part}_chr`;
         await idbPut(key2, chrBlob);
         if (cardBlobs[key2]) URL.revokeObjectURL(cardBlobs[key2]);
@@ -5966,9 +5979,8 @@ async function downloadProfileCard(cidNum) {
     for (let i = 0; i < parts.length; i++) {
       const part = parts[i];
       dlUI('#pf-card-dl', true, 0.4 + (i / parts.length) * 0.55, `正在下载${labelPart[part]}卡面…`);
-      const rel = `${abn}/${part === 'normal' ? 'card_normal' : 'card_after_training'}.webp`;
-      const direct = CARD_ASSET_BASE + rel;
-      const urls = [direct, `https://wsrv.nl/?url=${encodeURIComponent(direct)}&output=webp`];
+      const s = cardImgSet(abn, part);
+      const urls = [s.full, s.direct, s.proxy];
       const blob = await fetchBlobProg(urls, p => dlUI('#pf-card-dl', true, 0.4 + ((i + p) / parts.length) * 0.55, `正在下载${labelPart[part]}卡面… ${Math.round(p * 100)}%`));
       const key = baseKey + (parts.length > 1 ? (part === 'normal' ? ':n' : ':a') : '');
       await idbPut(key, blob);
@@ -7425,14 +7437,9 @@ async function gachaCardImg(cid, part) {
   try { const b = await idbGet(key); if (b) { cardBlobs[key] = URL.createObjectURL(b); return cardBlobs[key]; } } catch (e) {}
   const ent = _gachaIdx.cards[cid];
   if (!ent) throw new Error('no card ' + cid);
-  const rel = `${ent[0]}/${part === 'after' ? 'card_after_training' : 'card_normal'}.webp`;
-  const direct = CARD_ASSET_BASE + rel;
-  // 三个候选源：官方资源站 → wsrv 图片代理 → 官方源加随机参数重试（绕开中间层缓存的坏响应）
-  const urls = [
-    direct,
-    `https://wsrv.nl/?url=${encodeURIComponent(direct)}&output=webp&q=90`,
-    direct + '?r=' + Date.now(),
-  ];
+  // 候选源：本地内置 → 官方资源站 → wsrv 图片代理 → 官方源加随机参数重试（绕开中间层缓存的坏响应）
+  const s = cardImgSet(ent[0], part);
+  const urls = [s.full, s.direct, s.proxy, s.direct + '?r=' + Date.now()];
   let blob = null, lastErr = null;
   for (let round = 0; round < 2 && !blob; round++) {
     for (const u of urls) {
@@ -7533,22 +7540,21 @@ async function gachaCardThumb(cid, part) {
   try { const b = await idbGet(key); if (b) { cardBlobs[key] = URL.createObjectURL(b); return cardBlobs[key]; } } catch (e) {}
   const ent = _gachaIdx && _gachaIdx.cards[cid];
   if (!ent) throw new Error('no card ' + cid);
-  const rel = `${ent[0]}/${part === 'after' ? 'card_after_training' : 'card_normal'}.webp`;
-  const direct = CARD_ASSET_BASE + rel;
-  const thumb = `https://wsrv.nl/?url=${encodeURIComponent(direct)}&w=480&output=webp&q=82`;
-  let blob;
-  try {
-    // 缩图服务可能整体挂起：挂太久就放弃，退回原图（原图路径同样加超时兜底）
-    blob = await Promise.race([
-      fetchBlobProg([thumb]),
-      new Promise((_, no) => setTimeout(() => no(new Error('thumb timeout')), 8000)),
-    ]);
-  } catch (e) {
-    blob = await Promise.race([
-      fetchBlobProg([direct]),
-      new Promise((_, no) => setTimeout(() => no(new Error('img timeout')), 15000)),
-    ]);
+  const s = cardImgSet(ent[0], part);
+  const thumbRemote = `https://wsrv.nl/?url=${encodeURIComponent(s.direct)}&w=480&output=webp&q=82`;
+  let blob = null;
+  // 候选源：本地缩略图（同源，最快）→ wsrv 缩图 → 官方原图，各自超时慢源不干等
+  for (const [u, t] of [[s.thumb, 6000], [thumbRemote, 8000], [s.direct, 15000]]) {
+    try {
+      blob = await Promise.race([
+        fetchBlobProg([u]),
+        new Promise((_, no) => setTimeout(() => no(new Error('thumb timeout')), t)),
+      ]);
+      if (blob && blob.size > 300) break;
+      blob = null;
+    } catch (e) {}
   }
+  if (!blob) throw new Error('缩略图加载失败');
   await idbPut(key, blob);
   cardBlobs[key] = URL.createObjectURL(blob);
   return cardBlobs[key];
@@ -8661,9 +8667,8 @@ async function mkDownloadCard(cid) {
       const rawKey = `res:${cid}_${part}_raw`;
       if (!cardBlobs[rawKey]) {
         dlUI('#mk-cid-dl', true, 0.35 + done * 0.25, `正在下载${partLbl[part]}卡面…`);
-        const rel = `${abn}/${part === 'normal' ? 'card_normal' : 'card_after_training'}.webp`;
-        const direct = CARD_ASSET_BASE + rel;
-        const blob = await fetchBlobProg([direct, `https://wsrv.nl/?url=${encodeURIComponent(direct)}&output=webp`],
+        const s = cardImgSet(abn, part);
+        const blob = await fetchBlobProg([s.full, s.direct, s.proxy],
           p => dlUI('#mk-cid-dl', true, 0.35 + (done + p) * 0.2, `正在下载${partLbl[part]}卡面… ${Math.round(p * 100)}%`));
         await idbPut(rawKey, blob);
         cardBlobs[rawKey] = URL.createObjectURL(blob);
@@ -8673,10 +8678,11 @@ async function mkDownloadCard(cid) {
       const chrKey = `res:${cid}_${part}_chr`;
       if (!cardBlobs[chrKey]) {
         try {
+          const chrPart = part === 'normal' ? 'normal' : 'after_training';
           const chrDirect = 'https://storage.sekai.best/sekai-jp-assets/character/member_cutout_trm/' +
-            abn + '/' + (part === 'normal' ? 'normal' : 'after_training') + '.webp';
+            abn + '/' + chrPart + '.webp';
           dlUI('#mk-cid-dl', true, 0.55 + done * 0.2, `正在下载${partLbl[part]}透明角色图…`);
-          const cb = await fetchBlobProg([chrDirect, `https://wsrv.nl/?url=${encodeURIComponent(chrDirect)}&output=webp`], () => {});
+          const cb = await fetchBlobProg([res('assets/cardimg/cutout/' + abn + '/' + chrPart + '.webp'), chrDirect, `https://wsrv.nl/?url=${encodeURIComponent(chrDirect)}&output=webp`], () => {});
           await idbPut(chrKey, cb);
           cardBlobs[chrKey] = URL.createObjectURL(cb);
           added++;
