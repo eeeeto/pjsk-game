@@ -79,8 +79,24 @@
   .logo small{display:block;font-size:.34em;letter-spacing:.24em;font-weight:800;color:#9fdcff;
     -webkit-text-fill-color:#9fdcff;margin-top:.5em;letter-spacing:.3em;}
   .logo-sub{margin-top:clamp(8px,1.6vh,16px);color:#9db4d4;font-size:clamp(11px,1.8vh,15px);letter-spacing:.16em;}
-  .title-actions{display:flex;flex-direction:column;gap:clamp(10px,1.8vh,16px);margin-top:clamp(22px,4.6vh,44px);width:min(340px,64vw);}
-  .title-actions .btn{width:100%;height:clamp(48px,9vh,62px);font-size:clamp(15px,2.3vh,19px);}
+  .title-actions{display:flex;flex-direction:column;gap:clamp(6px,1.3vh,14px);margin-top:clamp(12px,2.8vh,38px);width:min(340px,64vw);}
+  .title-actions .btn{width:100%;height:clamp(34px,7.2vh,54px);font-size:clamp(12.5px,1.95vh,18px);padding:0 clamp(16px,2.6vw,30px);}
+  /* 矮屏（手机横屏）进一步压缩，保证整列按钮不出屏 */
+  @media (max-height:460px){
+    .logo{font-size:clamp(26px,7.2vh,40px);}
+    .logo-kicker{font-size:10px;letter-spacing:.3em;margin-bottom:2px;}
+    .logo-sub{margin-top:3px;font-size:10px;}
+    .title-actions{gap:5px;margin-top:8px;width:min(300px,52vw);}
+    .title-actions .btn{height:31px;font-size:12px;letter-spacing:.04em;}
+    .title-foot{font-size:9px;bottom:6px;}
+  }
+  @media (max-height:375px){
+    .logo{font-size:24px;}
+    .logo-kicker,.logo-sub{display:none;}
+    .title-actions{gap:4px;margin-top:6px;}
+    .title-actions .btn{height:28px;font-size:11.5px;}
+    .title-foot{display:none;}
+  }
   .title-foot{position:absolute;left:clamp(24px,6vw,90px);bottom:max(14px,env(safe-area-inset-bottom));font-size:11px;color:#5b6d88;letter-spacing:.1em;}
 
   /* ---------- 选曲界面 ---------- */
@@ -623,6 +639,8 @@
     box-shadow:0 2px 10px rgba(0,0,0,.45);z-index:60;touch-action:none;}
   .mk-h-rot{cursor:grab;}
   .mk-h-scale{cursor:nwse-resize;}
+  .mk-h-w{cursor:ew-resize;}
+  .mk-h-h{cursor:ns-resize;}
   #mk-ink{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:200;}
   #mk-ink.drawing{pointer-events:auto;cursor:crosshair;}
   .pfe-side{width:clamp(150px,19vw,230px);display:flex;flex-direction:column;background:rgba(18,27,48,.92);
@@ -755,8 +773,14 @@
   /* 抽卡演出浮层 */
   #gacha-draw{position:fixed;inset:0;z-index:260;display:none;background:#060a16;overflow:hidden;}
   #gacha-draw.on{display:block;}
-  .gd-orbs{position:absolute;inset:0;}
-  .gd-orb{position:absolute;width:64px;height:64px;border-radius:50%;animation:orbFloat 2.8s ease-in-out infinite;}
+  .gd-orbs{position:absolute;inset:0;pointer-events:none;}
+  .gd-orb-pos{position:absolute;transform:translate(-50%,-50%);}
+  .gd-orb{position:relative;display:block;width:clamp(40px,8.2vh,70px);height:clamp(40px,8.2vh,70px);border-radius:50%;
+    animation:orbFloat 2.8s ease-in-out infinite;}
+  .gd-orb.gd-orb-c{width:clamp(66px,13.5vh,112px);height:clamp(66px,13.5vh,112px);z-index:2;}
+  .gd-orb.gd-orb-c::after{content:"";position:absolute;inset:-22%;border-radius:50%;
+    border:1px solid rgba(255,255,255,.22);animation:orbHalo 2.6s ease-out infinite;}
+  @keyframes orbHalo{0%{transform:scale(.8);opacity:.9}100%{transform:scale(1.35);opacity:0}}
   .gd-orb.c2{background:radial-gradient(circle at 38% 32%,#d6faff,#2ec8ff 55%,#0b7fb8);box-shadow:0 0 34px 6px rgba(46,200,255,.55);}
   .gd-orb.c3{background:radial-gradient(circle at 38% 32%,#fff6cf,#ffd84d 55%,#c98a00);box-shadow:0 0 34px 6px rgba(255,216,77,.55);}
   .gd-orb.c4{background:radial-gradient(circle at 38% 32%,#ffd7f4,#e070ff 48%,#7a3cff);box-shadow:0 0 40px 8px rgba(214,102,255,.6);}
@@ -771,10 +795,18 @@
     box-shadow:0 18px 70px rgba(0,0,0,.75);animation:cardIn .4s ease-out;}
   .gd-card-stage img.gd-full{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 10%;animation:cardIn .5s ease-out;}
   @keyframes cardIn{from{opacity:0;transform:scale(.86)}to{opacity:1;transform:scale(1)}}
-  .gd-cap{position:absolute;bottom:5vh;right:4vw;text-align:right;z-index:3;animation:cardIn .45s ease-out;}
-  .gd-cap .gd-stars{font-size:26px;font-weight:800;letter-spacing:2px;color:#fff;text-shadow:0 2px 8px #0d2a52,0 0 18px rgba(255,222,120,.55);}
-  .gd-cap .gd-names{font-size:15px;font-weight:800;color:#fff;text-shadow:0 2px 8px #0d2a52,0 2px 6px #0d2a52;margin-top:4px;}
-  .gd-cap .gd-names small{display:block;font-size:12px;font-weight:700;opacity:.92;}
+  .gd-cap{position:absolute;bottom:5vh;right:4vw;text-align:right;z-index:3;animation:cardIn .45s ease-out;max-width:92vw;}
+  .gd-cap .gd-stars{font-size:clamp(30px,5.8vh,48px);font-weight:900;letter-spacing:2px;color:#fff;
+    text-shadow:0 2px 10px #0d2a52,0 0 22px rgba(255,222,120,.6);}
+  .gd-cap .gd-names{font-size:clamp(18px,3.2vh,27px);font-weight:900;color:#fff;
+    text-shadow:0 2px 10px #0d2a52,0 2px 6px #0d2a52;margin-top:6px;line-height:1.25;}
+  .gd-cap .gd-names small{display:block;font-size:clamp(15px,2.7vh,22px);font-weight:800;opacity:.95;}
+  /* 二星：无卡图，只有星数与角色名 */
+  .gd-cap.gd-cap-big{bottom:16vh;right:8vw;}
+  .gd-cap.gd-cap-big .gd-stars{font-size:clamp(56px,12vh,96px);letter-spacing:6px;
+    text-shadow:0 4px 16px #0d2a52,0 0 30px rgba(150,210,255,.5);}
+  .gd-cap.gd-cap-big .gd-names{font-size:clamp(20px,3.6vh,28px);margin-top:10px;}
+  .gd-cap.gd-cap-big .gd-names small{font-size:clamp(24px,4.6vh,36px);}
   .gd-skip-tip{position:absolute;top:12px;right:16px;font-size:11px;color:#7f97b8;letter-spacing:.15em;z-index:4;}
   .gd-summary{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;
     background:rgba(6,10,22,.92);z-index:5;}
@@ -1281,8 +1313,11 @@
     <div class="dlg-title">添加<span>图形</span></div>
     <div class="pills" id="mk-shape-kind">
       <div class="pill on" data-v="rect">矩形</div>
+      <div class="pill" data-v="rrect">圆角矩形</div>
       <div class="pill" data-v="circle">圆形</div>
       <div class="pill" data-v="tri">三角形</div>
+      <div class="pill" data-v="heart">心形</div>
+      <div class="pill" data-v="star">星形</div>
     </div>
     <div class="mk-field">
       <div class="sub-lbl">描边颜色</div>
@@ -6424,6 +6459,14 @@ async function mkDrawLayer(c, l) {
       c.lineWidth = l.strokeW || 4; c.strokeStyle = l.stroke || '#12b7d3'; c.lineJoin = 'round';
       if (s.dist > 0) { c.shadowColor = s.color || 'rgba(0,0,0,.45)'; c.shadowOffsetX = dx; c.shadowOffsetY = dy; }
       const half = (l.strokeW || 4) / 2 + 1, w = l.w, h = l.h;
+      if (l.shape === 'heart' || l.shape === 'star' || l.shape === 'rrect') {
+        c.translate(-w / 2, -h / 2);
+        const p2 = new Path2D(mkShapePathD(l.shape, w, h, half));
+        if (l.fillOn) { c.fillStyle = l.fill || '#12b7d3'; c.fill(p2); }
+        c.stroke(p2);
+        c.restore();
+        return;
+      }
       c.beginPath();
       if (l.shape === 'circle') c.ellipse(0, 0, Math.max(1, w / 2 - half), Math.max(1, h / 2 - half), 0, 0, Math.PI * 2);
       else if (l.shape === 'tri') { c.moveTo(0, -h / 2 + half); c.lineTo(w / 2 - half, h / 2 - half); c.lineTo(-w / 2 + half, h / 2 - half); c.closePath(); }
@@ -6601,6 +6644,38 @@ function mkStyleLayer(el, l) {
   el.style.height = (l.h * k) + 'px';
   el.style.transform = `translate(${l.x * k}px,${l.y * k}px) translate(-50%,-50%) rotate(${l.rot || 0}deg)`;
 }
+/* 心形 / 星形 / 圆角矩形的路径（局部坐标 0..w × 0..h，已按描边内缩 half）
+   预览用 SVG、导出用 Canvas Path2D —— 两边共用同一条 d，保证所见即所得 */
+function mkShapePathD(shape, w, h, half) {
+  const iw = Math.max(1, w - half * 2), ih = Math.max(1, h - half * 2);
+  const X = u => +(half + u * iw).toFixed(2);
+  const Y = v => +(half + v * ih).toFixed(2);
+  if (shape === 'heart') {
+    return `M ${X(0.5)} ${Y(0.94)} C ${X(0.28)} ${Y(0.73)} ${X(0.03)} ${Y(0.55)} ${X(0.03)} ${Y(0.32)} `
+      + `C ${X(0.03)} ${Y(0.13)} ${X(0.17)} ${Y(0.03)} ${X(0.31)} ${Y(0.03)} `
+      + `C ${X(0.39)} ${Y(0.03)} ${X(0.46)} ${Y(0.08)} ${X(0.5)} ${Y(0.16)} `
+      + `C ${X(0.54)} ${Y(0.08)} ${X(0.61)} ${Y(0.03)} ${X(0.69)} ${Y(0.03)} `
+      + `C ${X(0.83)} ${Y(0.03)} ${X(0.97)} ${Y(0.13)} ${X(0.97)} ${Y(0.32)} `
+      + `C ${X(0.97)} ${Y(0.55)} ${X(0.72)} ${Y(0.73)} ${X(0.5)} ${Y(0.94)} Z`;
+  }
+  if (shape === 'star') {
+    const pts = [];
+    for (let i = 0; i < 10; i++) {
+      const a = -Math.PI / 2 + i * Math.PI / 5;
+      const r = i % 2 === 0 ? 0.5 : 0.21;
+      pts.push(`${X(0.5 + Math.cos(a) * r)} ${Y(0.52 + Math.sin(a) * r)}`);
+    }
+    return 'M ' + pts.join(' L ') + ' Z';
+  }
+  if (shape === 'rrect') {
+    const r = Math.min(iw, ih) * 0.18;
+    const x0 = half, y0 = half, x1 = half + iw, y1 = half + ih;
+    return `M ${x0 + r} ${y0} H ${x1 - r} A ${r} ${r} 0 0 1 ${x1} ${y0 + r} V ${y1 - r} `
+      + `A ${r} ${r} 0 0 1 ${x1 - r} ${y1} H ${x0 + r} A ${r} ${r} 0 0 1 ${x0} ${y1 - r} `
+      + `V ${y0 + r} A ${r} ${r} 0 0 1 ${x0 + r} ${y0} Z`;
+  }
+  return '';
+}
 function mkLayerInner(l, k) {
   k = k || mkScaleK();
   if (l.type === 'card' || l.type === 'image' || l.type === 'sticker') {
@@ -6616,6 +6691,7 @@ function mkLayerInner(l, k) {
     let shp = '';
     if (l.shape === 'circle') shp = `<ellipse cx="${w / 2}" cy="${h / 2}" rx="${Math.max(1, w / 2 - half)}" ry="${Math.max(1, h / 2 - half)}"/>`;
     else if (l.shape === 'tri') shp = `<polygon points="${w / 2},${half} ${w - half},${h - half} ${half},${h - half}"/>`;
+    else if (l.shape === 'heart' || l.shape === 'star' || l.shape === 'rrect') shp = `<path d="${mkShapePathD(l.shape, w, h, half)}"/>`;
     else shp = `<rect x="${half}" y="${half}" width="${Math.max(1, w - half * 2)}" height="${Math.max(1, h - half * 2)}"/>`;
     return `<svg width="${w * k}" height="${h * k}" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" style="display:block;pointer-events:none;${filt}">
       <g fill="${l.fillOn ? (l.fill || '#12b7d3') : 'none'}" stroke="${l.stroke || '#12b7d3'}" stroke-width="${sw}" stroke-linejoin="round">${shp}</g></svg>`;
@@ -6629,7 +6705,7 @@ function mkLayerName(l) {
   if (l.type === 'card') return `卡图 ${l.label || (l.cid ? '#' + l.cid : '')}`;
   if (l.type === 'image') return '图片';
   if (l.type === 'sticker') return `贴纸 ${l.sid ? '#' + l.sid : ''}`;
-  if (l.type === 'shape') return { rect: '矩形', circle: '圆形', tri: '三角形' }[l.shape] || '图形';
+  if (l.type === 'shape') return { rect: '矩形', rrect: '圆角矩形', circle: '圆形', tri: '三角形', heart: '心形', star: '星形' }[l.shape] || '图形';
   if (l.type === 'text') return `文字「${String(l.text || '').slice(0, 6)}」`;
   return '图层';
 }
@@ -6651,10 +6727,20 @@ function mkRenderLayersBox() {
       const sc = document.createElement('div');
       sc.className = 'mk-handle mk-h-scale';
       sc.style.cssText = 'right:-14px;bottom:-14px;';
-      sc.title = '拖动缩放';
-      el.appendChild(rot); el.appendChild(sc);
+      sc.title = '拖动缩放（宽高同时）';
+      const hw = document.createElement('div');
+      hw.className = 'mk-handle mk-h-w';
+      hw.style.cssText = 'right:-14px;top:50%;transform:translateY(-50%);';
+      hw.title = '拖动调整宽度';
+      const hh = document.createElement('div');
+      hh.className = 'mk-handle mk-h-h';
+      hh.style.cssText = 'bottom:-14px;left:50%;transform:translateX(-50%);';
+      hh.title = '拖动调整高度';
+      el.appendChild(rot); el.appendChild(sc); el.appendChild(hw); el.appendChild(hh);
       mkBindHandle(rot, l, 'rot');
-      mkBindHandle(sc, l, 'scale');
+      mkBindHandle(sc, l, 'free');
+      mkBindHandle(hw, l, 'w');
+      mkBindHandle(hh, l, 'h');
     }
   });
 }
@@ -6663,13 +6749,22 @@ function mkBindHandle(hd, l, kind) {
     e.stopPropagation(); e.preventDefault();
     hd.setPointerCapture(e.pointerId);
     const p0 = mkPt(e);
-    const st = { w: l.w, h: l.h, d0: Math.max(6, Math.hypot(p0.x - l.x, p0.y - l.y)) };
+    const st = { w: l.w, h: l.h, rot: l.rot || 0, d0: Math.max(6, Math.hypot(p0.x - l.x, p0.y - l.y)) };
     const move = ev => {
       const p = mkPt(ev);
       if (kind === 'rot') {
         let a = Math.atan2(p.y - l.y, p.x - l.x) * 180 / Math.PI + 90;
         a = ((a % 360) + 360) % 360; if (a > 180) a -= 360;
         l.rot = Math.round(a);
+      } else if (kind === 'free' || kind === 'w' || kind === 'h') {
+        // 按图层自身方向投影，旋转后拖边也是沿边方向伸缩（以中心为基准）
+        const rad = (st.rot || 0) * Math.PI / 180;
+        const ux = Math.cos(rad), uy = Math.sin(rad);      // 局部 x 轴
+        const vx = -Math.sin(rad), vy = Math.cos(rad);     // 局部 y 轴
+        const dx = p.x - p0.x, dy = p.y - p0.y;
+        const du = dx * ux + dy * uy, dv = dx * vx + dy * vy;
+        if (kind !== 'h') l.w = Math.round(clamp(st.w + du * 2, 12, MK_W * 4));
+        if (kind !== 'w') l.h = Math.round(clamp(st.h + dv * 2, 12, MK_H * 4));
       } else {
         const f = clamp(Math.hypot(p.x - l.x, p.y - l.y) / st.d0, 0.12, 8);
         l.w = Math.round(st.w * f); l.h = Math.round(st.h * f);
@@ -7110,18 +7205,28 @@ async function startGachaDraw(pool, n) {
   $('#gd-stage').innerHTML = '';
   $('#gd-summary').style.display = 'none';
   $('#gd-flash').classList.remove('on');
-  // 最高星数对应的发光球，飘动
-  const maxTier = Math.max(...results.map(r => r.tier));
+  // 每张卡各对应一个发光球（颜色 = 该卡星数），星数最高的一颗置于正中央 C 位
   const orbs = $('#gd-orbs');
   orbs.innerHTML = '';
-  for (let i = 0; i < n; i++) {
+  const order = results.map((r, i) => i).sort((a, b) => results[b].tier - results[a].tier);
+  const restN = Math.max(1, order.length - 1);
+  for (let k = 0; k < order.length; k++) {
+    const r = results[order[k]];
+    const pos = document.createElement('div');
+    pos.className = 'gd-orb-pos';
     const o = document.createElement('div');
-    o.className = `gd-orb c${maxTier}`;
-    o.style.left = (12 + Math.random() * 74) + '%';
-    o.style.top = (14 + Math.random() * 62) + '%';
-    o.style.animationDelay = (Math.random() * 2) + 's,' + (Math.random() * 2) + 's';
-    o.style.animationDuration = (2.4 + Math.random() * 1.4) + 's';
-    orbs.appendChild(o);
+    o.className = `gd-orb c${r.tier}` + (k === 0 ? ' gd-orb-c' : '');
+    if (k === 0) {
+      pos.style.left = '50%'; pos.style.top = '50%';
+    } else {
+      const a = ((k - 1) / restN) * Math.PI * 2 - Math.PI / 2;
+      pos.style.left = (50 + 27 * Math.cos(a)).toFixed(2) + '%';
+      pos.style.top = (50 + 28 * Math.sin(a)).toFixed(2) + '%';
+    }
+    o.style.animationDelay = (Math.random() * 1.6).toFixed(2) + 's';
+    o.style.animationDuration = (2.4 + Math.random() * 1.4).toFixed(2) + 's';
+    pos.appendChild(o);
+    orbs.appendChild(pos);
   }
   $('#gd-tap-hint').style.display = '';
   draw.dataset.phase = 'orbs';
@@ -7140,17 +7245,28 @@ function gdShowCard(i) {
   const stage = $('#gd-stage');
   stage.innerHTML = '';
   const isBirthday = ent[1] === 'rarity_birthday';
-  const part = (r.tier >= 4 && !isBirthday) ? 'after' : 'normal';
-  const img = document.createElement('img');
-  img.className = r.tier >= 4 ? 'gd-full' : 'gd-portrait';
-  stage.appendChild(img);
-  gachaCardImg(r.cid, part).then(u => { img.src = u; }).catch(() => {});
   const cap = document.createElement('div');
   cap.className = 'gd-cap';
+  const charName = escapeHTML((_gachaIdx.chars || {})[ent[2]] || '');
   if (r.tier >= 4) {
+    // 四星：特训前卡面铺满全屏 + 卡名 / 角色名
+    const img = document.createElement('img');
+    img.className = 'gd-full';
+    stage.appendChild(img);
+    gachaCardImg(r.cid, 'normal').then(u => { img.src = u; }).catch(() => {});
     cap.innerHTML = `<div class="gd-stars" style="color:#ffd0f8">${gdStars(ent)}</div>
-      <div class="gd-names">${escapeHTML(ent[4] || '')}<small>${escapeHTML((_gachaIdx.chars || {})[ent[2]] || '')}</small></div>`;
+      <div class="gd-names">${escapeHTML(ent[4] || '')}<small>${charName}</small></div>`;
+  } else if (r.tier === 3) {
+    // 三星：特训前卡图居中 + 星数 / 角色名
+    const img = document.createElement('img');
+    img.className = 'gd-portrait';
+    stage.appendChild(img);
+    gachaCardImg(r.cid, 'normal').then(u => { img.src = u; }).catch(() => {});
+    cap.innerHTML = `<div class="gd-stars">${gdStars(ent)}</div>
+      <div class="gd-names"><small>${escapeHTML(gdRandomChar())}</small></div>`;
   } else {
+    // 二星：不显示卡图，只显示星数与角色名
+    cap.classList.add('gd-cap-big');
     cap.innerHTML = `<div class="gd-stars">${gdStars(ent)}</div>
       <div class="gd-names"><small>${escapeHTML(gdRandomChar())}</small></div>`;
   }
@@ -7207,7 +7323,10 @@ $('#gacha-draw').addEventListener('pointerdown', e => {
   if ($('#gacha-draw').dataset.phase !== 'summary') gdAdvance();
 });
 $('#gs-again').addEventListener('click', () => {
+  // 结算页的「再招募」直接从发光球阶段重新开始（不返回卡池列表）
   $('#gd-summary').style.display = 'none';
+  $('#gacha-draw').dataset.phase = 'orbs';
+  _gachaDrawing = false;
   startGachaDraw(_gdPool, _gdN);
 });
 $('#gs-back').addEventListener('click', () => {
@@ -7262,11 +7381,13 @@ $('#gacha-back').addEventListener('click', goTitle);
 $('#gacha-pull1').addEventListener('click', () => {
   const pool = settings.gachaPools.find(p => p.id === _selPool);
   if (!pool) { showToast('先在左侧选择一个卡池', 2200); return; }
+  _gachaDrawing = false;
   startGachaDraw(pool, 1);
 });
 $('#gacha-pull10').addEventListener('click', () => {
   const pool = settings.gachaPools.find(p => p.id === _selPool);
   if (!pool) { showToast('先在左侧选择一个卡池', 2200); return; }
+  _gachaDrawing = false;
   startGachaDraw(pool, 10);
 });
 $('#btn-members').addEventListener('click', async () => {
@@ -7512,7 +7633,8 @@ $$('#mk-shape-kind .pill').forEach(p => p.addEventListener('click', () => {
 }));
 $('#mk-shape-ok').addEventListener('click', () => {
   const kind = ($('#mk-shape-kind .pill.on') || {}).dataset?.v || 'rect';
-  const dim = kind === 'circle' ? { w: 220, h: 220 } : kind === 'tri' ? { w: 260, h: 230 } : { w: 320, h: 210 };
+  const dim = { circle: { w: 220, h: 220 }, tri: { w: 260, h: 230 }, heart: { w: 240, h: 220 },
+    star: { w: 240, h: 230 }, rrect: { w: 320, h: 220 } }[kind] || { w: 320, h: 210 };
   mkAddLayer({
     type: 'shape', shape: kind,
     stroke: $('#mk-shape-stroke').value, strokeW: +$('#mk-shape-sw').value,
