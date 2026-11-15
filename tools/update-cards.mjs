@@ -45,7 +45,7 @@ function dl(url, dest, tries = 3) {
         settled = true;
         try { file.close(); } catch (e) {}
         if (ok === true && fs.existsSync(tmp)) { fs.renameSync(tmp, dest); return resolve(true); }
-        if (ok === 'skip') return resolve('skip');
+        if (ok === 'skip') { try { fs.unlinkSync(tmp); } catch (e) {} return resolve('skip'); }
         try { fs.unlinkSync(tmp); } catch (e) {}
         if (n < tries) return attempt(n + 1);
         resolve(false);
