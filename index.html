@@ -1896,16 +1896,16 @@ function applyBackground() {
 /* ---------- 全局背景音乐 ----------
    首页 / 个人主页（含名片编辑）/ 世界招募 / 设置 播放同一首 BGM，其余页面自动淡出暂停。
    浏览器限制自动播放：首次点击/按键后补播一次；音量由设置里的「BGM 音量」控制。 */
-const BGM_PAGES = { title: 1, profile: 1, pfcards: 1, pfeditor: 1, gacha: 1, settings: 1 };
+const BGM_PAGES = { title: 1, profile: 1, pfcards: 1, pfeditor: 1, gacha: 1, settings: 1, members: 1 };
 const BGM_SRC = res('assets/bgm/always-together.mp3');
-let bgmAudio = null, bgmFadeTimer = 0, bgmBlocked = false;
+let bgmAudio = null, bgmFadeTimer = 0, bgmBlocked = false, bgmSuppressed = false;
 
 function bgmVolume() {
   const v = Number(settings.bgmVolume);
   return Number.isFinite(v) ? clamp(v, 0, 1) : 0.45;
 }
 function bgmShouldPlay() {
-  return !!BGM_PAGES[screen] && document.visibilityState !== 'hidden' && bgmVolume() > 0.001;
+  return !bgmSuppressed && !!BGM_PAGES[screen] && document.visibilityState !== 'hidden' && bgmVolume() > 0.001;
 }
 function bgmEnsure() {
   if (bgmAudio) return bgmAudio;
@@ -1957,6 +1957,11 @@ function bgmSync() {
     bgmFadeTo(0, 420, () => { if (!bgmShouldPlay()) { try { a.pause(); } catch (e) {} } });
   }
 }
+/* 演出期间临时静音（抽卡揭示阶段用），结束后恢复 */
+function bgmSuppress(on) {
+  bgmSuppressed = !!on;
+  try { bgmSync(); } catch (e) {}
+}
 function bgmUnlock() {
   window.removeEventListener('pointerdown', bgmUnlock, true);
   window.removeEventListener('keydown', bgmUnlock, true);
@@ -1977,6 +1982,7 @@ function show(name) {
   const el = $('#screen-' + name);
   if (el) el.classList.add('active');
   document.body.dataset.view = name === 'songs' ? 'songs' : (name === 'settings' ? 'settings' : (name === 'game' ? 'game' : 'title'));
+  if (name !== 'gacha') bgmSuppressed = false;   // 离开招募页时清掉演出静音
   try { bgmSync(); } catch (e) {}
   try { scheduleFitApp(); } catch (e) {}          // 进/出游戏页时重新贴合可见区域
 }
@@ -7330,6 +7336,7 @@ async function startGachaDraw(pool, n) {
   _gachaDrawing = true; _gdPool = pool; _gdN = n;
   gachaAddMembers(results);
   _gdQueue = results; _gdIdx = -1;
+  bgmSuppress(true);          // 揭示阶段（发光球 → 逐张展示）停 BGM，进结算再响
 
   const draw = $('#gacha-draw');
   draw.classList.add('on');
@@ -7434,6 +7441,7 @@ $('#gd-skip').addEventListener('click', e => {
 function gdShowSummary() {
   const draw = $('#gacha-draw');
   draw.dataset.phase = 'summary';
+  bgmSuppress(false);          // 结算页恢复 BGM
   $('#gd-skip').style.display = 'none';
   $('#gd-stage').innerHTML = '';
   const grid = $('#gs-grid');
@@ -7478,6 +7486,7 @@ $('#gs-back').addEventListener('click', () => {
   $('#gd-summary').style.display = 'none';
   $('#gd-stage').innerHTML = '';
   _gachaDrawing = false;
+  bgmSuppress(false);
   renderGachaPreview();
 });
 
