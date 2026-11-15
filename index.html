@@ -2163,10 +2163,18 @@ function durationText(sec) {
 /* 曲目唯一键：以 kid（若配置）为准，便于改歌名后仍能接住旧成绩/星标/收藏 */
 function songKey(s) { return (s.kid || s.title) + (s.full ? '|F' : '|S'); }
 /* 显示用标题：把歌名里的「(Short…)」括号剥出来，统一成与【full】相同的标记样式 */
+/* short 判定：歌名带 (short…) 或时长 ≤ 2 分 30 秒 */
+const SHORT_MAX_SEC = 150;
+function songIsShort(s) {
+  if (/short/i.test(s.title || '')) return true;
+  const d = Number(s.duration) || 0;
+  return d > 0 && d <= SHORT_MAX_SEC;
+}
 function songDisp(s) {
-  let title = s.title, tag = s.full ? 'full' : '';
+  let title = s.title, tag;
   const m = title.match(/\s*[（(]\s*(short[^）)]*)\s*[）)]\s*/i);
   if (m) { title = title.replace(m[0], '').trim(); tag = m[1].toLowerCase(); }
+  else tag = songIsShort(s) ? 'short' : (s.full ? 'full' : '');
   return { title, tag };
 }
 function songMarks(s) {
@@ -2195,8 +2203,8 @@ function songFilterState() {
 }
 function songPassFilter(s) {
   const f = songFilterState();
-  if (f.dur === 'full' && !s.full) return false;
-  if (f.dur === 'short' && s.full) return false;
+  if (f.dur === 'full' && songIsShort(s)) return false;
+  if (f.dur === 'short' && !songIsShort(s)) return false;
   const m = songMarks(s);
   if (f.fc === 'yes' && !m[1]) return false;
   if (f.fc === 'no' && m[1]) return false;
