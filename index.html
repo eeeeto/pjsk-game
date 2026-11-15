@@ -883,8 +883,8 @@
   .member-grid .mb{position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;background:#0a1120;cursor:pointer;
     box-shadow:0 0 0 2px rgba(255,255,255,.85),0 0 14px rgba(255,255,255,.4);transition:transform .15s;}
   .mb-swap{position:absolute;right:4px;bottom:4px;width:26px;height:26px;border-radius:8px;border:1px solid rgba(255,255,255,.5);
-    background:rgba(6,12,26,.72);color:#cfe4ff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;
-    z-index:2;cursor:pointer;backdrop-filter:blur(4px);transition:transform .12s;}
+    background:rgba(6,12,26,.86);color:#cfe4ff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;
+    z-index:2;cursor:pointer;transition:transform .12s;}
   .mb-swap:active{transform:scale(.9);}
   .mb-swap.on{background:rgba(111,215,255,.35);color:#fff;border-color:rgba(111,215,255,.8);}
   #member-filter{position:fixed;right:clamp(12px,3vw,32px);bottom:calc(64px + max(10px,env(safe-area-inset-bottom)));
@@ -7955,11 +7955,54 @@ const UNIT_NAMES = { light_sound: 'Leo/need', idol: 'MORE MORE JUMP!', street: '
   theme_park: 'Wonderlands×Showtime', school_refusal: '25時、ナイトコードで。', piapro: '虚拟歌手' };
 function memberImgPart(m) { return (m.r === 'rarity_4' && m.af) ? 'after' : 'normal'; }   // 默认特训前，转换后特训后
 function memberTier(m) { return m.r === 'rarity_birthday' ? 4 : tierOf(m.r); }
+
+/* 成员卡图加载：滚动到可见才请求，且同时最多 3 张（成员一多，一次性请求上百张会让手机内存爆掉，页面直接闪退） */
+const MEMBER_IMG_CONCURRENCY = 3;
+let _mbQueue = [], _mbActive = 0;
+function pumpMemberImg() {
+  while (_mbActive < MEMBER_IMG_CONCURRENCY && _mbQueue.length) {
+    const job = _mbQueue.shift();
+    _mbActive++;
+    Promise.resolve()
+      .then(() => gachaCardImg(job.cid, job.part))
+      .then(u => { const im = job.cell && job.cell.querySelector('img'); if (im && job.cell.isConnected) im.src = u; })
+      .catch(() => {})
+      .then(() => { _mbActive--; pumpMemberImg(); });
+  }
+}
+function queueMemberImg(cell, cid, part) {
+  if (!cell || !cid) return;
+  cell.dataset.cid = cid; cell.dataset.part = part;
+  _mbQueue.push({ cell, cid, part });
+  pumpMemberImg();
+}
+let memberImgIO = null;
+function lazyMemberImg(cell, cid, part) {
+  cell.dataset.cid = cid; cell.dataset.part = part;
+  if (!('IntersectionObserver' in window)) { queueMemberImg(cell, cid, part); return; }
+  if (!memberImgIO) {
+    memberImgIO = new IntersectionObserver(es => {
+      for (const en of es) {
+        if (!en.isIntersecting) continue;
+        memberImgIO.unobserve(en.target);
+        const c = en.target;
+        queueMemberImg(c, c.dataset.cid, c.dataset.part || 'normal');
+      }
+    }, { rootMargin: '280px 0px', threshold: 0.01 });
+  }
+  memberImgIO.observe(cell);
+}
 function renderMembers() {
+  try { renderMembersInner(); }
+  catch (e) { console.warn('[members]', e); showToast('成员页加载出错，已跳过异常数据', 2800); }
+}
+function renderMembersInner() {
   const grid = $('#member-grid');
   grid.innerHTML = '';
-  const f = settings.memberFilter;
-  const all = settings.members.slice().reverse();    // 新招的排前面
+  _mbQueue = [];                                   // 重新渲染时丢弃上一轮未开始的加载任务
+  const f = settings.memberFilter || { star: 'all', unit: 'all' };
+  const stored = Array.isArray(settings.members) ? settings.members : [];
+  const all = stored.slice().reverse();    // 新招的排前面
   const list = all.filter(m => {
     if (f.star === 'bd') return m.r === 'rarity_birthday';
     if (f.star && f.star !== 'all') return memberTier(m) === Number(f.star);
@@ -7971,15 +8014,15 @@ function renderMembers() {
     }
     return true;
   });
-  $('#member-count').textContent = (f.star === 'all' && f.unit === 'all') ? `共 ${all.length} 人` : `${list.length} / ${all.length} 人`;
+  const cntEl = $('#member-count');
+  if (cntEl) cntEl.textContent = (f.star === 'all' && f.unit === 'all') ? `共 ${all.length} 人` : `${list.length} / ${all.length} 人`;
   for (const m of list) {
-    const ent = _gachaIdx ? _gachaIdx.cards[m.cid] : null;
     const isBd = m.r === 'rarity_birthday';
     const t = memberTier(m);
     const star = isBd ? '𐙚' : '★'.repeat(t);
     const cell = document.createElement('div');
     cell.className = 'mb';
-    cell.innerHTML = `<img alt=""><span class="mb-r" style="${t >= 4 ? 'color:#ffd0f8' : ''}">${star}</span>`;
+    cell.innerHTML = `<img alt="" loading="lazy" decoding="async"><span class="mb-r" style="${t >= 4 ? 'color:#ffd0f8' : ''}">${star}</span>`;
     // 三星 / 四星（非生日卡）：右下角特训前/后转换按钮
     if (!isBd && t >= 3) {
       const sw = document.createElement('div');
@@ -7991,19 +8034,22 @@ function renderMembers() {
         m.af = !m.af; saveSettings();
         sw.classList.toggle('on', m.af);
         sw.textContent = m.af ? '后' : '前';
-        gachaCardImg(m.cid, memberImgPart(m)).then(u => { cell.querySelector('img').src = u; }).catch(() => {});
+        queueMemberImg(cell, m.cid, memberImgPart(m));
       });
       cell.appendChild(sw);
     }
-    gachaCardImg(m.cid, memberImgPart(m)).then(u => { cell.querySelector('img').src = u; }).catch(() => {});
+    lazyMemberImg(cell, m.cid, memberImgPart(m));
     cell.addEventListener('click', async () => {
       const big = $('#member-big'), img = $('#member-big-img');
       img.style.visibility = 'hidden';
       try {
         const u = await gachaCardImg(m.cid, memberImgPart(m));
         img.src = u; img.style.visibility = '';
-      } catch (e) {}
-      big.style.display = 'flex';
+        big.style.display = 'flex';
+      } catch (e) {
+        big.style.display = 'none';                 // 加载失败别留一张全屏黑，看起来就像闪退
+        showToast('卡图加载失败，请检查网络后再试', 2400);
+      }
     });
     grid.appendChild(cell);
   }
@@ -8066,7 +8112,7 @@ $('#gacha-pull10').addEventListener('click', () => {
 });
 $('#btn-members').addEventListener('click', async () => {
   show('members'); applyBackground();
-  await loadGachaIdx();
+  try { await loadGachaIdx(); } catch (e) { console.warn('[members idx]', e); }
   renderMembers();
 });
 $('#members-back').addEventListener('click', goTitle);
