@@ -7795,10 +7795,16 @@ function gachaPull(pool, n) {
     const ent = _gachaIdx.cards[cid];
     if (ent) byTier[tierOf(ent[1])].push(cid);
   }
-  // 生日池：二星 / 三星只出寿星本人的卡（真实卡池里也只有该角色，不再随机到别人）
+  // 生日池：整个池子只出寿星本人的卡——四星只有寿星的生日卡（卡池里有的），二三星也只有寿星
   const bdChar = gachaBirthdayChar(pool);
   if (bdChar) {
-    const own = { 2: [], 3: [] };
+    const own = { 2: [], 3: [] }, ownBd = [], own4 = [];
+    for (const cid of roster) {
+      const ent = _gachaIdx.cards[cid];
+      if (!ent || String(ent[2]) !== bdChar) continue;
+      if (ent[1] === 'rarity_birthday') ownBd.push(cid);
+      else if (ent[1] === 'rarity_4') own4.push(cid);
+    }
     for (const cid of Object.keys(_gachaIdx.cards)) {
       const ent = _gachaIdx.cards[cid];
       if (!ent || String(ent[2]) !== bdChar) continue;
@@ -7807,6 +7813,10 @@ function gachaPull(pool, n) {
     }
     if (own[2].length) byTier[2] = own[2];
     if (own[3].length) byTier[3] = own[3];
+    // 四星：优先寿星生日卡（卡池里有的）；万一该池没有生日卡，退回寿星本人的四星，绝不混入其他角色
+    if (ownBd.length) byTier[4] = ownBd;
+    else if (own4.length) byTier[4] = own4;
+    byTier[1] = [];
   }
   const pick = tier => {
     const arr = byTier[tier].length ? byTier[tier] : byTier[3].length ? byTier[3] : byTier[4].length ? byTier[4] : byTier[2];
@@ -7839,10 +7849,6 @@ function gachaAddMembers(results) {
 /* 抽卡演出 */
 let _gdQueue = [], _gdIdx = 0, _gdPool = null, _gdN = 1;
 function gdStars(ent) { return ent[1] === 'rarity_birthday' ? '𐙚' : '★'.repeat(tierOf(ent[1])); }
-function gdRandomChar() {
-  const cs = Object.values(_gachaIdx.chars || {});
-  return cs.length ? cs[Math.floor(Math.random() * cs.length)] : '';
-}
 async function startGachaDraw(pool, n) {
   if (_gachaDrawing) return;
   const results = gachaPull(pool, n);
@@ -7928,10 +7934,10 @@ function gdShowCard(i) {
     cap.innerHTML = `<div class="gd-stars" style="color:#ffd0f8">${gdStars(ent)}</div>
       <div class="gd-names">${escapeHTML(ent[4] || '')}<small>${charName}</small></div>`;
   } else {
-    // 二星 / 三星：不显示卡图，只显示星数与角色名
+    // 二星 / 三星：不显示卡图，只显示星数与「这张卡」的角色名（此前用的是随机角色名）
     cap.classList.add('gd-cap-big');
     cap.innerHTML = `<div class="gd-stars">${gdStars(ent)}</div>
-      <div class="gd-names"><small>${escapeHTML(gdRandomChar())}</small></div>`;
+      <div class="gd-names"><small>${charName}</small></div>`;
   }
   stage.appendChild(cap);
 }
