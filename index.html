@@ -124,15 +124,21 @@
   .unit-head.collapsed .arrow{transform:rotate(-90deg);}
   .song-item.hidden,.unit-head.hidden{display:none;}
   .song-item .stars{display:flex;gap:3px;flex:0 0 auto;margin-left:2px;}
-  .song-item .fav{flex:0 0 auto;font-size:clamp(15px,2.6vh,21px);line-height:1;color:#394963;cursor:pointer;
-    padding:4px 1px;transition:color .15s,text-shadow .15s,transform .1s;user-select:none;}
+  /* 爱心改用 SVG 描边/实心两态：♥ 字符在 iPad/部分安卓上会被系统渲染成彩色 emoji，
+     未收藏也显示成粉色，看起来像「全部已收藏」 */
+  .song-item .fav{flex:0 0 auto;width:clamp(16px,2.7vh,22px);height:clamp(16px,2.7vh,22px);
+    display:flex;align-items:center;justify-content:center;color:#394963;cursor:pointer;
+    padding:3px 1px;box-sizing:content-box;transition:color .15s,filter .15s,transform .1s;user-select:none;}
+  .song-item .fav svg{width:100%;height:100%;display:block;fill:none;stroke:currentColor;
+    stroke-width:2;stroke-linejoin:round;stroke-linecap:round;}
   /* 移动端点按后 :hover 会一直粘住，让取消收藏后爱心看起来还是亮的，
      所以悬停变色只在真正支持 hover 的设备（鼠标）上启用 */
   @media (hover: hover) {
     .song-item .fav:hover{color:#ff7ba0;}
   }
   .song-item .fav:active{transform:scale(.85);}
-  .song-item .fav.on{color:#ff5e8a;text-shadow:0 0 10px rgba(255,94,138,.75);}
+  .song-item .fav.on{color:#ff5e8a;filter:drop-shadow(0 0 6px rgba(255,94,138,.75));}
+  .song-item .fav.on svg{fill:currentColor;}
   .song-item .star{font-size:clamp(11px,1.8vh,15px);line-height:1;color:#3d4d66;cursor:default;
     transition:color .15s,text-shadow .15s;padding:2px 1px;}
   .song-item .star.on{color:var(--gold);text-shadow:0 0 8px rgba(255,214,107,.75);}
@@ -2295,7 +2301,7 @@ function buildSongList() {
       const starTips = ['通关时 HP ≥ 200', 'FULL COMBO 通关', 'ALL PERFECT 通关'];
       const dsp = songDisp(s);
       el.innerHTML = `
-        <div class="fav${isFav(s) ? ' on' : ''}" title="收藏">♥</div>
+        <div class="fav${isFav(s) ? ' on' : ''}" title="收藏"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.3l-1.5-1.4C5.4 14.4 2 11.3 2 7.5 2 4.4 4.4 2 7.5 2c1.7 0 3.4.8 4.5 2.1C13.1 2.8 14.8 2 16.5 2 19.6 2 22 4.4 22 7.5c0 3.8-3.4 6.9-8.5 11.4L12 20.3z"/></svg></div>
         <div class="cover" data-cover="${s.cover || res('assets/covers/other1.jpg')}"></div>
         <div class="meta">
           <div class="name">${escapeHTML(dsp.title)}${dsp.tag ? `<span class="full">【${dsp.tag}】</span>` : ''}</div>
