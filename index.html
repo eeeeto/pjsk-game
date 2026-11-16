@@ -7628,15 +7628,15 @@ function renderGachaPreview() {
   const typeTxt = { ceil: '限定', normal: '常驻', gift: '赠送', beginner: '新手' }[pool.type] || pool.type;
   $('#gi-meta').textContent = `${typeTxt} · ${gachaFmtDate(pool.s)} ~ ${gachaFmtDate(pool.e)} · 四星概率 ${gachaRateParts().r4}%`;
   now.textContent = pool.name;
-  // 右侧卡面轮播：生日池只轮「卡池里寿星本人的生日卡」；普通池展示该池四星卡的特训后卡面
+  // 右侧卡面轮播：生日池轮播寿星历年生日卡（新→旧）；普通池展示该池四星卡的特训后卡面
   const bdChar = gachaBirthdayChar(pool);
   const roster = gachaPoolRoster(pool);
   let heroList = [];
   if (bdChar) {
-    heroList = roster.filter(cid => {
+    heroList = Object.keys(_gachaIdx.cards).map(Number).filter(cid => {
       const ent = _gachaIdx.cards[cid];
       return ent && ent[1] === 'rarity_birthday' && String(ent[2]) === bdChar;
-    });
+    }).sort((a, b) => _gachaIdx.cards[b][3] - _gachaIdx.cards[a][3]);
   }
   if (!heroList.length) heroList = roster.filter(cid => _gachaIdx.cards[cid] && _gachaIdx.cards[cid][1] === 'rarity_4');
   _heroList = heroList; _heroIdx = 0;
@@ -7795,26 +7795,26 @@ function gachaPull(pool, n) {
     const ent = _gachaIdx.cards[cid];
     if (ent) byTier[tierOf(ent[1])].push(cid);
   }
-  // 生日池：整个池子只出寿星本人的卡——四星只有寿星的生日卡（卡池里有的），二三星也只有寿星
+  // 生日池：整个池子只出寿星本人的卡——四星含历年生日卡（2021…今年），二三星也只有寿星
   const bdChar = gachaBirthdayChar(pool);
   if (bdChar) {
-    const own = { 2: [], 3: [] }, ownBd = [], own4 = [];
+    const own = { 2: [], 3: [] }, bdAll = [], own4 = [];
     for (const cid of roster) {
       const ent = _gachaIdx.cards[cid];
       if (!ent || String(ent[2]) !== bdChar) continue;
-      if (ent[1] === 'rarity_birthday') ownBd.push(cid);
-      else if (ent[1] === 'rarity_4') own4.push(cid);
+      if (ent[1] === 'rarity_4') own4.push(cid);
     }
     for (const cid of Object.keys(_gachaIdx.cards)) {
       const ent = _gachaIdx.cards[cid];
       if (!ent || String(ent[2]) !== bdChar) continue;
-      if (ent[1] === 'rarity_2') own[2].push(Number(cid));
+      if (ent[1] === 'rarity_birthday') bdAll.push(Number(cid));
+      else if (ent[1] === 'rarity_2') own[2].push(Number(cid));
       else if (ent[1] === 'rarity_3') own[3].push(Number(cid));
     }
     if (own[2].length) byTier[2] = own[2];
     if (own[3].length) byTier[3] = own[3];
-    // 四星：优先寿星生日卡（卡池里有的）；万一该池没有生日卡，退回寿星本人的四星，绝不混入其他角色
-    if (ownBd.length) byTier[4] = ownBd;
+    // 四星：寿星历年生日卡全部进池（新→旧）；万一没有生日卡，退回寿星本人的四星，绝不混入其他角色
+    if (bdAll.length) byTier[4] = bdAll.sort((a, b) => _gachaIdx.cards[b][3] - _gachaIdx.cards[a][3]);
     else if (own4.length) byTier[4] = own4;
     byTier[1] = [];
   }
