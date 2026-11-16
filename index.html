@@ -7537,8 +7537,14 @@ function gachaCardImgCached(cid, part) {
    触发内存回收甚至整个页面崩溃；列表里只加载 480px 缩略图（一张 <1MB），点开大图才取原图 */
 async function gachaCardThumb(cid, part) {
   const key = `gthumb${cid}_${part}`;
+  // 缓存里的坏数据（代理返回的错误页/截断文件）会让这张卡永远显示不出来 → 校验后丢弃重下
+  const okBlob = b => !!b && b.size > 300 && (!b.type || /^image\//i.test(b.type));
   if (cardBlobs[key]) return cardBlobs[key];
-  try { const b = await idbGet(key); if (b) { cardBlobs[key] = URL.createObjectURL(b); return cardBlobs[key]; } } catch (e) {}
+  try {
+    const b = await idbGet(key);
+    if (okBlob(b)) { cardBlobs[key] = URL.createObjectURL(b); return cardBlobs[key]; }
+    if (b) await idbDel(key);
+  } catch (e) {}
   const ent = _gachaIdx && _gachaIdx.cards[cid];
   if (!ent) throw new Error('no card ' + cid);
   const s = cardImgSet(ent[0], part);
@@ -7551,7 +7557,7 @@ async function gachaCardThumb(cid, part) {
         fetchBlobProg([u]),
         new Promise((_, no) => setTimeout(() => no(new Error('thumb timeout')), t)),
       ]);
-      if (blob && blob.size > 300) break;
+      if (okBlob(blob)) break;
       blob = null;
     } catch (e) {}
   }
@@ -8284,12 +8290,16 @@ $('#gs-share').addEventListener('click', async () => {
 /* ---------- 成员 ---------- */
 const UNIT_NAMES = { light_sound: 'Leo/need', idol: 'MORE MORE JUMP!', street: 'Vivid BAD SQUAD',
   theme_park: 'Wonderlands×Showtime', school_refusal: '25時、ナイトコードで。', piapro: '虚拟歌手' };
-function memberImgPart(m) { return (m.r === 'rarity_4' && m.af) ? 'after' : 'normal'; }   // 默认特训前，转换后特训后
+function memberImgPart(m) {
+  // 三星 / 四星都有特训后卡面（生日卡没有），一星 / 二星只有特训前
+  if (!m.af) return 'normal';
+  return (m.r === 'rarity_4' || m.r === 'rarity_3') ? 'after' : 'normal';
+}   // 默认特训前，转换后特训后
 function memberTier(m) { return m.r === 'rarity_birthday' ? 4 : tierOf(m.r); }
 
 /* 成员卡图加载：滚动到可见才请求，且同时最多 3 张（成员一多，一次性请求上百张会让手机内存爆掉，页面直接闪退） */
 const MEMBER_IMG_CONCURRENCY = 6;
-let _mbQueue = [], _mbActive = 0;
+let _mbQueue = [], _mbActive = 0, _mbSeq = 0;
 function pumpMemberImg() {
   while (_mbActive < MEMBER_IMG_CONCURRENCY && _mbQueue.length) {
     const job = _mbQueue.shift();
@@ -8297,9 +8307,13 @@ function pumpMemberImg() {
     Promise.resolve()
       .then(() => gachaCardThumb(job.cid, job.part))   // 列表只加载缩略图，防 iPad 内存崩溃
       .then(u => {
-        const im = job.cell && job.cell.querySelector('img');
-        // 下载期间已滚出视口的不再上屏，避免白占内存
-        if (im && job.cell.isConnected && job.cell.dataset.live !== '0') im.src = u;
+        const cell = job.cell;
+        const im = cell && cell.querySelector('img');
+        // 下载期间已滚出视口的不再上屏，避免白占内存；
+        // 期间用户又切了特训前/后（或换了图）的，丢弃这次结果，防止旧请求把新图覆盖回去
+        if (!im || !cell.isConnected || cell.dataset.live === '0') return;
+        if (String(cell.dataset.seq) !== String(job.seq)) return;
+        im.src = u;
       })
       .catch(() => {})
       .then(() => { _mbActive--; pumpMemberImg(); });
@@ -8308,7 +8322,9 @@ function pumpMemberImg() {
 function queueMemberImg(cell, cid, part) {
   if (!cell || !cid) return;
   cell.dataset.cid = cid; cell.dataset.part = part;
-  _mbQueue.push({ cell, cid, part });
+  const seq = ++_mbSeq;
+  cell.dataset.seq = seq;
+  _mbQueue.push({ cell, cid, part, seq });
   pumpMemberImg();
 }
 let memberImgIO = null;
