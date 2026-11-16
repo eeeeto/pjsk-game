@@ -7634,14 +7634,15 @@ function renderGachaPreview() {
   const typeTxt = { ceil: '限定', normal: '常驻', gift: '赠送', beginner: '新手' }[pool.type] || pool.type;
   $('#gi-meta').textContent = `${typeTxt} · ${gachaFmtDate(pool.s)} ~ ${gachaFmtDate(pool.e)} · 四星概率 ${gachaRateParts().r4}%`;
   now.textContent = pool.name;
-  // 右侧卡面轮播：生日池轮播寿星历年生日卡（新→旧）；普通池展示该池四星卡的特训后卡面
-  const bdChar = gachaBirthdayChar(pool);
+  // 右侧卡面轮播：生日池 / 周年池轮播该角色历年纪念卡（新→旧）；普通池展示该池四星卡的特训后卡面
+  const celeb = gachaCelebInfo(pool);
   const roster = gachaPoolRoster(pool);
   let heroList = [];
-  if (bdChar) {
+  if (celeb) {
     heroList = Object.keys(_gachaIdx.cards).map(Number).filter(cid => {
       const ent = _gachaIdx.cards[cid];
-      return ent && ent[1] === 'rarity_birthday' && String(ent[2]) === bdChar;
+      return ent && ent[1] === 'rarity_birthday'
+        && String(ent[2]) === celeb.cid && gachaCelebKind(ent) === celeb.kind;
     }).sort((a, b) => _gachaIdx.cards[b][3] - _gachaIdx.cards[a][3]);
   }
   if (!heroList.length) heroList = roster.filter(cid => _gachaIdx.cards[cid] && _gachaIdx.cards[cid][1] === 'rarity_4');
@@ -7779,20 +7780,37 @@ function gachaPickTier(pool) {
   if (roll < rates[4] + rates[3]) return 3;
   return 2;
 }
-/* 生日池识别：先看卡池名（"[角色名]HAPPY BIRTHDAY…"），名字里没角色名再用名单里的生日卡反查。
-   注意不能只看名单——普通池的名单里也会混入生日卡 */
-function gachaBirthdayChar(pool) {
-  if (!pool || !/HAPPY\s*BIRTHDAY/i.test(pool.name || '')) return null;
-  const m = /^[\[【](.+?)[\]】]/.exec(pool.name);
-  if (m) {
-    const hit = Object.entries(_gachaIdx.chars || {}).find(([, n]) => n === m[1]);
-    if (hit) return String(hit[0]);
+/* 特殊角色池识别：HAPPY BIRTHDAY（角色生日）与 HAPPY ANNIVERSARY（V家周年）。
+   这两类池子整个池只出被庆祝的那一个角色，四星槽位只放该角色的历年纪念卡。
+   注意不能只看名单——普通池的名单里也会混入生日卡/周年卡 */
+function gachaCelebKind(ent) {
+  const t = (ent && ent[4]) || '';
+  if (/Anniversary/i.test(t)) return 'anniversary';
+  if (/Birthday/i.test(t)) return 'birthday';
+  return '';
+}
+function gachaCelebInfo(pool) {
+  const name = (pool && pool.name) || '';
+  let kind = '';
+  if (/HAPPY\s*BIRTHDAY/i.test(name)) kind = 'birthday';
+  else if (/HAPPY\s*ANNIVERSARY/i.test(name)) kind = 'anniversary';
+  if (!kind) return null;
+  // 池名形如 [MEIKO]HAPPY ANNIVERSARYガチャ / [復刻][MEIKO]…：跳过 [復刻] 这类前缀再取角色名
+  const tags = (name.match(/[\[【](.+?)[\]】]/g) || [])
+    .map(s => s.slice(1, -1)).filter(t => !/復刻|限定/.test(t));
+  let cid = null;
+  for (const t of tags) {
+    const hit = Object.entries(_gachaIdx.chars || {}).find(([, n]) => n === t);
+    if (hit) { cid = String(hit[0]); break; }
   }
-  for (const cid of gachaPoolRoster(pool)) {
-    const ent = _gachaIdx.cards[cid];
-    if (ent && ent[1] === 'rarity_birthday') return String(ent[2]);
+  if (!cid) {
+    // 名字里认不出角色：用名单里的纪念卡反查（只认同类，别把生日池认成周年池）
+    for (const c of gachaPoolRoster(pool)) {
+      const ent = _gachaIdx.cards[c];
+      if (ent && ent[1] === 'rarity_birthday' && gachaCelebKind(ent) === kind) { cid = String(ent[2]); break; }
+    }
   }
-  return null;
+  return cid ? { cid, kind } : null;
 }
 function gachaPull(pool, n) {
   const roster = gachaPoolRoster(pool);
@@ -7801,26 +7819,30 @@ function gachaPull(pool, n) {
     const ent = _gachaIdx.cards[cid];
     if (ent) byTier[tierOf(ent[1])].push(cid);
   }
-  // 生日池：整个池子只出寿星本人的卡——四星含历年生日卡（2021…今年），二三星也只有寿星
-  const bdChar = gachaBirthdayChar(pool);
-  if (bdChar) {
-    const own = { 2: [], 3: [] }, bdAll = [], own4 = [];
+  // 生日池 / 周年池：整个池子只出被庆祝角色本人的卡——四星槽位放该角色历年纪念卡（2021…今年），
+  // 二三星也只有本人；一星（角色初始卡）不进池
+  const celeb = gachaCelebInfo(pool);
+  if (celeb) {
+    const own = { 2: [], 3: [] }, celebAll = [], own4 = [];
+    // 池内该角色本人的四星 / 纪念卡，作为「该角色一张纪念卡都没有」时的兜底
     for (const cid of roster) {
       const ent = _gachaIdx.cards[cid];
-      if (!ent || String(ent[2]) !== bdChar) continue;
+      if (!ent || String(ent[2]) !== celeb.cid) continue;
       if (ent[1] === 'rarity_4') own4.push(cid);
+      else if (ent[1] === 'rarity_birthday' && gachaCelebKind(ent) === celeb.kind) own4.push(cid);
     }
     for (const cid of Object.keys(_gachaIdx.cards)) {
       const ent = _gachaIdx.cards[cid];
-      if (!ent || String(ent[2]) !== bdChar) continue;
-      if (ent[1] === 'rarity_birthday') bdAll.push(Number(cid));
-      else if (ent[1] === 'rarity_2') own[2].push(Number(cid));
+      if (!ent || String(ent[2]) !== celeb.cid) continue;
+      if (ent[1] === 'rarity_birthday') {
+        if (gachaCelebKind(ent) === celeb.kind) celebAll.push(Number(cid));   // 只取同类纪念卡
+      } else if (ent[1] === 'rarity_2') own[2].push(Number(cid));
       else if (ent[1] === 'rarity_3') own[3].push(Number(cid));
     }
     if (own[2].length) byTier[2] = own[2];
     if (own[3].length) byTier[3] = own[3];
-    // 四星：寿星历年生日卡全部进池（新→旧）；万一没有生日卡，退回寿星本人的四星，绝不混入其他角色
-    if (bdAll.length) byTier[4] = bdAll.sort((a, b) => _gachaIdx.cards[b][3] - _gachaIdx.cards[a][3]);
+    // 四星：历年纪念卡全部进池（新→旧），绝不混入其他角色
+    if (celebAll.length) byTier[4] = celebAll.sort((a, b) => _gachaIdx.cards[b][3] - _gachaIdx.cards[a][3]);
     else if (own4.length) byTier[4] = own4;
     byTier[1] = [];
   }
