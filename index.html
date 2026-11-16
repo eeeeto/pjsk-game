@@ -1019,7 +1019,7 @@
     </div>
     <div class="settings-body">
       <div class="panel on" id="panel-skin">
-        <p class="hint">这里选择的是从屏幕上方落下的音符样式：默认为白色发光的圆角长方形，还可切换发光胶囊、经典蓝色长方形、冰冰冰冰块，或选择角色图案（短键会压扁小人，长键出现连续小人），也可以导入自己的图片（建议透明背景 PNG）。底部键盘固定为半透明按键。下方滑块可调整音符大小、判定松紧度、长条透明度与判定线上移，预览会实时反映效果。</p>
+        <p class="hint">这里选择的是从屏幕上方落下的音符样式：默认为白色发光的圆角长方形，还可切换发光胶囊、经典蓝色长方形、冰冰冰冰块，或选择角色图案（短键会压扁小人，长键出现连续小人），也可以导入自己的图片（建议透明背景 PNG）。底部键盘固定为半透明按键。下方滑块可调整音符大小、音符图标压扁程度、判定松紧度、长条透明度与判定线上移，预览会实时反映效果。</p>
         <div class="skin-grid" id="skin-grid"></div>
         <div class="field">
           <div class="lbl"><span>打歌画面预览</span><b>实时</b></div>
@@ -1028,6 +1028,11 @@
         <div class="field key-size-field">
           <div class="lbl"><span>音符大小</span><b id="keysize-val">100%</b></div>
           <input type="range" id="keysize-range" min="50" max="150" step="5" value="100">
+        </div>
+        <div class="field">
+          <div class="lbl"><span>音符图标压扁程度</span><b id="squash-val">60%</b></div>
+          <input type="range" id="squash-range" min="0" max="100" step="5" value="60">
+          <div class="sub">只对图片类音符图标（角色图案 / 冰冰冰 / 自定义图片）生效：0% 保持图片原始高度，100% 压到原高度的 1/5</div>
         </div>
         <div class="field">
           <div class="lbl"><span>判定松紧度</span><b id="judge-len-val">100%</b></div>
@@ -1939,7 +1944,7 @@ const CARDS = [
 /* ---------- 设置存储 ---------- */
 const DEF_SET = { skin:'lumirect', bgMode:'card', bgCover:res('assets/covers/leoneed1.jpg'),
   bgCard:res('assets/cards/88/card_normal.webp'), bgCardShade:0.45, customSkin:null, sfxVolume:0.5, bgmVolume:0.45, speed:7.0, diff:'normal',
-  keyScale:1.0, judgeLeniency:1.0, holdAlpha:0.5, judgeLift:0, judgeOffset:0, myCards:[], lastSong:0, sound:'tap',
+  keyScale:1.0, noteSquash:0.6, judgeLeniency:1.0, holdAlpha:0.5, judgeLift:0, judgeOffset:0, myCards:[], lastSong:0, sound:'tap',
   marks:{}, favs:{}, collapsedUnits:{}, teams:[], activeTeam:-1, songFilter:{ dur:'all', fc:'all', ap:'all', fav:'all' },
   gachaRate4:3, gachaPools:[], members:[] };
 let settings = Object.assign({}, DEF_SET);
@@ -4026,6 +4031,12 @@ function drawNoteLinks(c, g, vis, travel) {
   flush();
 }
 
+/* 音符图标压扁系数：设置里的「压扁程度」0 → 保持图片原始比例（1.0），1 → 压到原高度的 1/5（0.2） */
+function iconSquashK() {
+  const t = clamp(Number(settings.noteSquash), 0, 1);
+  return 1 - 0.8 * (Number.isFinite(t) ? t : 0.6);
+}
+
 function drawNote(c, g, n, p, travel, now = G.now, skinImg = G.skinImg) {
   /* 皮肤图健全性检查：解码异常/被系统回收的图 naturalWidth 可能为 0，
      height/width 会得到 Infinity → drawImage 拿到非法尺寸会静默不画（音符凭空消失）。
@@ -4096,7 +4107,7 @@ function drawNote(c, g, n, p, travel, now = G.now, skinImg = G.skinImg) {
         const k = (yy - yTail) / spanY;
         const xk = lerp(xTail, x, k);
         const wk = lerp(wTail, wHead, k) * 0.97;
-        const h = wk * (skinImg.height / skinImg.width) * 0.5;
+        const h = wk * (skinImg.height / skinImg.width) * iconSquashK();
         c.save();
         c.globalAlpha = 0.9;
         c.drawImage(skinImg, xk - wk / 2, yy - h * 0.7, wk, h);
@@ -4108,7 +4119,7 @@ function drawNote(c, g, n, p, travel, now = G.now, skinImg = G.skinImg) {
   if (!n.judged) {
     if (skinImg) {
       const w = size * 1.02;
-      const h = w * (skinImg.height / skinImg.width) * (n.type === 'tap' ? 0.5 : 0.55);
+      const h = w * (skinImg.height / skinImg.width) * iconSquashK();
       c.save();
       if (n.type === 'tap') {
         c.shadowColor = 'rgba(37,226,255,.7)';
@@ -4655,6 +4666,8 @@ function renderKeySize() {
     range.value = pct;
     if (val) val.textContent = pct + '%';
   }
+  const sr = $('#squash-range'), sv = $('#squash-val');
+  if (sr) { const v = Math.round(clamp(Number.isFinite(Number(settings.noteSquash)) ? Number(settings.noteSquash) : 0.6, 0, 1) * 100); sr.value = v; if (sv) sv.textContent = v + '%'; }
   const jr = $('#judge-len-range'), jv = $('#judge-len-val');
   if (jr) { const v = Math.round(clamp(Number(settings.judgeLeniency) || 1, 0.5, 1.5) * 100); jr.value = v; if (jv) jv.textContent = v + '%'; }
   const hr = $('#hold-alpha-range'), hv = $('#hold-alpha-val');
@@ -6817,6 +6830,12 @@ $('#shade-range').addEventListener('input', e => {
 $('#keysize-range').addEventListener('input', e => {
   settings.keyScale = clamp(Number(e.target.value) / 100, 0.5, 1.5);
   $('#keysize-val').textContent = e.target.value + '%';
+  renderKeySize();
+  saveSettings();
+});
+$('#squash-range').addEventListener('input', e => {
+  settings.noteSquash = clamp(Number(e.target.value) / 100, 0, 1);
+  $('#squash-val').textContent = e.target.value + '%';
   renderKeySize();
   saveSettings();
 });
