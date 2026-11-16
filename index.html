@@ -7760,12 +7760,40 @@ function gachaPickTier(pool) {
   if (roll < rates[4] + rates[3]) return 3;
   return 2;
 }
+/* 生日池识别：先看卡池名（"[角色名]HAPPY BIRTHDAY…"），名字里没角色名再用名单里的生日卡反查。
+   注意不能只看名单——普通池的名单里也会混入生日卡 */
+function gachaBirthdayChar(pool) {
+  if (!pool || !/HAPPY\s*BIRTHDAY/i.test(pool.name || '')) return null;
+  const m = /^[\[【](.+?)[\]】]/.exec(pool.name);
+  if (m) {
+    const hit = Object.entries(_gachaIdx.chars || {}).find(([, n]) => n === m[1]);
+    if (hit) return String(hit[0]);
+  }
+  for (const cid of gachaPoolRoster(pool)) {
+    const ent = _gachaIdx.cards[cid];
+    if (ent && ent[1] === 'rarity_birthday') return String(ent[2]);
+  }
+  return null;
+}
 function gachaPull(pool, n) {
   const roster = gachaPoolRoster(pool);
   const byTier = { 1: [], 2: [], 3: [], 4: [] };
   for (const cid of roster) {
     const ent = _gachaIdx.cards[cid];
     if (ent) byTier[tierOf(ent[1])].push(cid);
+  }
+  // 生日池：二星 / 三星只出寿星本人的卡（真实卡池里也只有该角色，不再随机到别人）
+  const bdChar = gachaBirthdayChar(pool);
+  if (bdChar) {
+    const own = { 2: [], 3: [] };
+    for (const cid of Object.keys(_gachaIdx.cards)) {
+      const ent = _gachaIdx.cards[cid];
+      if (!ent || String(ent[2]) !== bdChar) continue;
+      if (ent[1] === 'rarity_2') own[2].push(Number(cid));
+      else if (ent[1] === 'rarity_3') own[3].push(Number(cid));
+    }
+    if (own[2].length) byTier[2] = own[2];
+    if (own[3].length) byTier[3] = own[3];
   }
   const pick = tier => {
     const arr = byTier[tier].length ? byTier[tier] : byTier[3].length ? byTier[3] : byTier[4].length ? byTier[4] : byTier[2];
