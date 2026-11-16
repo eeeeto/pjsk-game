@@ -376,6 +376,8 @@
     justify-content:center;font-size:11px;line-height:1;background:rgba(255,80,110,.85);color:#fff;z-index:2;}
   .skin .imp-ph{font-size:clamp(13px,2.4vh,20px);font-weight:800;color:#6f9dc4;text-align:center;line-height:1.3;
     letter-spacing:.06em;}
+  .skin .txtprev{font-size:clamp(22px,4vh,34px);line-height:1;font-weight:800;text-align:center;
+    text-shadow:0 0 12px currentColor;pointer-events:none;}
   .skin.empty{border-style:dashed;border-color:rgba(120,190,255,.32);background:rgba(37,226,255,.04);}
   .skin.empty .lbl{color:#8fb3d9;}
   .sound-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;}
@@ -1019,7 +1021,7 @@
     </div>
     <div class="settings-body">
       <div class="panel on" id="panel-skin">
-        <p class="hint">这里选择的是从屏幕上方落下的音符样式：默认为白色发光的圆角长方形，还可切换发光胶囊、经典蓝色长方形、冰冰冰冰块，或选择角色图案（短键会压扁小人，长键出现连续小人），也可以导入自己的图片（建议透明背景 PNG）。底部键盘固定为半透明按键。下方滑块可调整音符大小、音符图标压扁程度、判定松紧度、长条透明度与判定线上移，预览会实时反映效果。</p>
+        <p class="hint">这里选择的是从屏幕上方落下的音符样式：默认为白色发光的圆角长方形，还可切换发光胶囊、经典蓝色长方形、冰冰冰冰块，或选择角色图案（短键会压扁小人，长键出现连续小人），也可以导入自己的图片（建议透明背景 PNG），或直接输入一个文字/符号/emoji 当音符（可调颜色）。底部键盘固定为半透明按键。下方滑块可调整音符大小、音符图标压扁程度、判定松紧度、长条透明度与判定线上移，预览会实时反映效果。</p>
         <div class="skin-grid" id="skin-grid"></div>
         <div class="field">
           <div class="lbl"><span>打歌画面预览</span><b>实时</b></div>
@@ -1032,7 +1034,7 @@
         <div class="field">
           <div class="lbl"><span>音符图标压扁程度</span><b id="squash-val">60%</b></div>
           <input type="range" id="squash-range" min="0" max="100" step="5" value="60">
-          <div class="sub">只对图片类音符图标（角色图案 / 冰冰冰 / 自定义图片）生效：0% 保持图片原始高度，100% 压到原高度的 1/5</div>
+          <div class="sub">对图片类音符图标（角色图案 / 冰冰冰 / 自定义图片 / 文字符号）生效：0% 保持图片原始高度，100% 压到原高度的 1/5</div>
         </div>
         <div class="field">
           <div class="lbl"><span>判定松紧度</span><b id="judge-len-val">100%</b></div>
@@ -1944,7 +1946,7 @@ const CARDS = [
 /* ---------- 设置存储 ---------- */
 const DEF_SET = { skin:'lumirect', bgMode:'card', bgCover:res('assets/covers/leoneed1.jpg'),
   bgCard:res('assets/cards/88/card_normal.webp'), bgCardShade:0.45, customSkin:null, sfxVolume:0.5, bgmVolume:0.45, speed:7.0, diff:'normal',
-  keyScale:1.0, noteSquash:0.6, judgeLeniency:1.0, holdAlpha:0.5, judgeLift:0, judgeOffset:0, myCards:[], lastSong:0, sound:'tap',
+  keyScale:1.0, noteSquash:0.6, skinText:'❄', skinTextColor:'#ffffff', judgeLeniency:1.0, holdAlpha:0.5, judgeLift:0, judgeOffset:0, myCards:[], lastSong:0, sound:'tap',
   marks:{}, favs:{}, collapsedUnits:{}, teams:[], activeTeam:-1, songFilter:{ dur:'all', fc:'all', ap:'all', fav:'all' },
   gachaRate4:3, gachaPools:[], members:[] };
 let settings = Object.assign({}, DEF_SET);
@@ -3332,6 +3334,7 @@ function playHitSoundOnce() {
 function loadSkinImage() {
   return new Promise(done => {
     if (settings.skin === 'rect' || settings.skin === 'pill' || settings.skin === 'lumirect') { G.skinImg = null; done(); return; }
+    if (settings.skin === 'text') { G.skinImg = skinTextCanvas(); done(); return; }
     if (settings.skin === 'custom' && !settings.customSkin) { G.skinImg = null; done(); return; }
     G.skinImg = null;
     const img = new Image();
@@ -4041,7 +4044,7 @@ function drawNote(c, g, n, p, travel, now = G.now, skinImg = G.skinImg) {
   /* 皮肤图健全性检查：解码异常/被系统回收的图 naturalWidth 可能为 0，
      height/width 会得到 Infinity → drawImage 拿到非法尺寸会静默不画（音符凭空消失）。
      这时退回内置音符皮肤，至少保证能看到音符 */
-  if (skinImg && !(skinImg.naturalWidth > 0 && skinImg.naturalHeight > 0)) skinImg = null;
+  if (skinImg && !((skinImg.naturalWidth || skinImg.width) > 0 && (skinImg.naturalHeight || skinImg.height) > 0)) skinImg = null;
   // p: 1 = 刚生成（最远）, 0 = 正落在判定线
   const t = 1 - clamp(p, 0, 1);              // 0 = 远 / 1 = 近
   // 下落速度与音符大小成正比（远处小→慢、近处大→快），消除"越靠近越慢"的透视错觉
@@ -4641,12 +4644,132 @@ function renderSkins() {
     settings.skin = 'custom'; saveSettings(); renderSkins();
   };
   grid.appendChild(cus);
+  // 最后一项：用文字 / 符号 / emoji 当按键图标
+  const txt = settings.skinText || '❄';
+  const txl = document.createElement('div');
+  txl.className = 'skin' + (settings.skin === 'text' ? ' on' : '');
+  txl.innerHTML = `<div class="txtprev" style="${isEmojiText(txt) ? '' : 'color:' + settings.skinTextColor}">${escapeHTML(txt)}</div><div class="lbl">文字/符号</div>`;
+  txl.onclick = () => openSkinTextDialog();
+  grid.appendChild(txl);
+}
+
+/* 判断是不是 emoji：彩色字形自带颜色，不需要（也无法）改色 */
+function isEmojiText(t) {
+  try { return /\p{Extended_Pictographic}/u.test(t || ''); } catch (e) { return false; }
+}
+
+/* 文字 / 符号 / emoji 音符：预渲染成一张紧贴字形的透明位图（带同色光晕），
+   drawNote 就把它当普通皮肤图用——压扁滑块、长键连续排列都能直接复用。
+   注意：Safari 在 DPR 画布上直接 fillText 加阴影会错位，烘焙成位图正好绕开这个问题 */
+const _skinTextCache = {};
+function skinTextCanvas() {
+  const txt = settings.skinText || '❄';
+  const col = settings.skinTextColor || '#ffffff';
+  const emoji = isEmojiText(txt);
+  const key = txt + '|' + (emoji ? 'e' : col);
+  if (_skinTextCache[key]) return _skinTextCache[key];
+  const FS = 220, PAD = FS * 0.3;
+  const font = `${FS}px "Apple Color Emoji","Noto Color Emoji","Segoe UI Emoji",-apple-system,"PingFang SC","Hiragino Sans","Noto Sans CJK SC",sans-serif`;
+  const mcv = document.createElement('canvas').getContext('2d');
+  mcv.font = font;
+  const m = mcv.measureText(txt);
+  const gw = Math.max(6, Math.min(FS * 1.6, (m.actualBoundingBoxLeft || 0) + (m.actualBoundingBoxRight || 0) || m.width));
+  const gh = Math.max(6, Math.min(FS * 1.6, (m.actualBoundingBoxAscent || 0) + (m.actualBoundingBoxDescent || 0) || FS * 0.9));
+  const cv = document.createElement('canvas');
+  cv.width = Math.ceil(gw + PAD * 2);
+  cv.height = Math.ceil(gh + PAD * 2);
+  const c = cv.getContext('2d');
+  c.font = font; c.textAlign = 'center'; c.textBaseline = 'middle';
+  if (!emoji) {
+    c.shadowColor = col; c.shadowBlur = PAD * 1.1;
+    c.fillStyle = col;
+  } else {
+    c.shadowColor = 'rgba(255,255,255,.55)'; c.shadowBlur = PAD * 0.6;
+  }
+  c.fillText(txt, cv.width / 2, cv.height / 2);
+  _skinTextCache[key] = cv;
+  return cv;
+}
+
+/* 文字音符设置弹窗：输入字符 + 选颜色（emoji 自动跳过颜色） */
+function openSkinTextDialog() {
+  const mk = document.createElement('div');
+  mk.style.cssText = 'position:fixed;inset:0;z-index:290;background:rgba(4,8,18,.72);display:flex;align-items:center;justify-content:center;';
+  mk.innerHTML = `<div style="width:min(430px,88vw);background:#0c1424;border:1px solid rgba(140,190,255,.25);border-radius:16px;padding:22px;box-shadow:0 18px 60px rgba(0,0,0,.7)">
+    <div style="font-size:16px;font-weight:800;color:#eaf4ff;margin-bottom:6px">文字 / 符号 / emoji 音符</div>
+    <div style="font-size:12px;color:#8ca3c6;margin-bottom:14px">输入一个字符即可（汉字、字母、符号、emoji 都行）。</div>
+    <div style="display:flex;gap:12px;align-items:center">
+      <input id="skintxt-input" maxlength="8" value="${escapeHTML(settings.skinText || '❄')}"
+        style="flex:1;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.14);border-radius:10px;color:#cfe6ff;padding:11px 13px;font-size:18px;font-weight:800;outline:none;box-sizing:border-box">
+      <div id="skintxt-prev" style="width:56px;height:56px;flex:none;border-radius:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;font-size:30px;line-height:1"></div>
+    </div>
+    <div id="skintxt-colorbox" style="margin-top:16px">
+      <div style="font-size:12px;color:#8ca3c6;margin-bottom:8px">颜色</div>
+      <div style="display:flex;gap:9px;align-items:center;flex-wrap:wrap" id="skintxt-colors"></div>
+    </div>
+    <div id="skintxt-emoji-tip" style="display:none;margin-top:16px;font-size:12px;color:#7ceaff">这是 emoji，使用它自带的颜色（无需选色）</div>
+    <div style="display:flex;gap:10px;margin-top:18px;justify-content:flex-end">
+      <button class="btn ghost" id="skintxt-cancel">取消</button>
+      <button class="btn pink" id="skintxt-ok">确定</button>
+    </div>
+  </div>`;
+  document.body.appendChild(mk);
+  const input = mk.querySelector('#skintxt-input');
+  const prev = mk.querySelector('#skintxt-prev');
+  const colorBox = mk.querySelector('#skintxt-colorbox');
+  const emojiTip = mk.querySelector('#skintxt-emoji-tip');
+  const colorRow = mk.querySelector('#skintxt-colors');
+  const close = () => mk.remove();
+  let curColor = settings.skinTextColor || '#ffffff';
+  const PRESET = ['#ffffff', '#9be8ff', '#ffd76e', '#ff9ad5', '#9dffc8', '#c9b6ff'];
+  const syncColorRow = () => {
+    colorRow.innerHTML = '';
+    PRESET.forEach(c => {
+      const on = c.toLowerCase() === String(curColor).toLowerCase();
+      const d = document.createElement('div');
+      d.style.cssText = `width:26px;height:26px;border-radius:50%;background:${c};cursor:pointer;box-sizing:border-box;border:2px solid ${on ? '#25e2ff' : 'rgba(255,255,255,.15)'};box-shadow:${on ? '0 0 12px rgba(37,226,255,.6)' : 'none'}`;
+      d.onclick = () => { curColor = c; update(); syncColorRow(); };
+      colorRow.appendChild(d);
+    });
+    const inp = document.createElement('input');
+    inp.type = 'color'; inp.value = curColor;
+    inp.title = '自定义颜色';
+    inp.style.cssText = 'width:36px;height:28px;padding:0;border:none;background:transparent;cursor:pointer';
+    inp.addEventListener('input', () => { curColor = inp.value; update(); });
+    inp.addEventListener('change', () => { syncColorRow(); });
+    colorRow.appendChild(inp);
+  };
+  const update = () => {
+    const v = input.value || '❄';
+    const emoji = isEmojiText(v);
+    prev.textContent = v;
+    prev.style.color = emoji ? '' : curColor;
+    prev.style.textShadow = emoji ? '0 0 10px rgba(255,255,255,.45)' : `0 0 18px ${curColor}`;
+    colorBox.style.display = emoji ? 'none' : '';
+    emojiTip.style.display = emoji ? '' : 'none';
+  };
+  syncColorRow(); update();
+  input.addEventListener('input', update);
+  mk.querySelector('#skintxt-cancel').addEventListener('click', close);
+  mk.addEventListener('click', e => { if (e.target === mk) close(); });
+  const doOk = () => {
+    const v = (input.value || '').trim() || '❄';
+    settings.skinText = v;
+    settings.skinTextColor = curColor;
+    settings.skin = 'text';
+    saveSettings(); renderSkins(); renderKeySize();
+    close();
+  };
+  mk.querySelector('#skintxt-ok').addEventListener('click', doOk);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') doOk(); });
+  setTimeout(() => { input.focus(); input.select && input.select(); }, 60);
 }
 
 /* 音符大小：滑块 + 实时预览（预览画的是下落的音符，不是底部键盘） */
 const _prevImgs = {};
 function previewSkinImg() {
   if (settings.skin === 'rect' || settings.skin === 'pill' || settings.skin === 'lumirect') return null;
+  if (settings.skin === 'text') return skinTextCanvas();
   const src = settings.skin === 'custom' ? settings.customSkin : res(`assets/keys/${settings.skin}.png`);
   if (!src) return null;
   let im = _prevImgs[src];
@@ -5726,6 +5849,7 @@ function skinDisplayName() {
   if (settings.skin === 'pill') return '发光胶囊';
   if (settings.skin === 'rect') return '蓝色长方形';
   if (settings.skin === 'ice') return '冰冰冰';
+  if (settings.skin === 'text') return `文字/符号「${settings.skinText || '❄'}」`;
   if (settings.skin === 'custom') return '自定义图片';
   const ch = CHARS.find(c => c[0] === settings.skin);
   return ch ? `${ch[1]}（角色小人）` : settings.skin;
