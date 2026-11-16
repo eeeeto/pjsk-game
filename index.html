@@ -1019,7 +1019,7 @@
     </div>
     <div class="settings-body">
       <div class="panel on" id="panel-skin">
-        <p class="hint">这里选择的是从屏幕上方落下的音符样式：默认为白色发光的圆角长方形，还可切换发光胶囊、经典蓝色长方形，或选择角色图案（短键会压扁小人，长键出现连续小人），也可以导入自己的图片（建议透明背景 PNG）。底部键盘固定为半透明按键。下方滑块可调整音符大小、判定松紧度、长条透明度与判定线上移，预览会实时反映效果。</p>
+        <p class="hint">这里选择的是从屏幕上方落下的音符样式：默认为白色发光的圆角长方形，还可切换发光胶囊、经典蓝色长方形、冰冰冰冰块，或选择角色图案（短键会压扁小人，长键出现连续小人），也可以导入自己的图片（建议透明背景 PNG）。底部键盘固定为半透明按键。下方滑块可调整音符大小、判定松紧度、长条透明度与判定线上移，预览会实时反映效果。</p>
         <div class="skin-grid" id="skin-grid"></div>
         <div class="field">
           <div class="lbl"><span>打歌画面预览</span><b>实时</b></div>
@@ -4598,6 +4598,12 @@ function renderSkins() {
   rect.innerHTML = `<div class="rectprev"></div><div class="lbl">蓝色长方形</div>`;
   rect.onclick = () => { settings.skin = 'rect'; saveSettings(); renderSkins(); };
   grid.appendChild(rect);
+  // 第四个选项：冰冰冰（冰块音符）
+  const ice = document.createElement('div');
+  ice.className = 'skin' + (settings.skin === 'ice' ? ' on' : '');
+  ice.innerHTML = `<img src="${res('assets/keys/ice.png')}" alt="冰冰冰" loading="lazy"><div class="lbl">冰冰冰</div>`;
+  ice.onclick = () => { settings.skin = 'ice'; saveSettings(); renderSkins(); };
+  grid.appendChild(ice);
   CHARS.forEach(([id, name]) => {
     const el = document.createElement('div');
     el.className = 'skin' + (settings.skin === id ? ' on' : '');
@@ -5706,6 +5712,7 @@ function skinDisplayName() {
   if (settings.skin === 'lumirect') return '发光长方形（默认）';
   if (settings.skin === 'pill') return '发光胶囊';
   if (settings.skin === 'rect') return '蓝色长方形';
+  if (settings.skin === 'ice') return '冰冰冰';
   if (settings.skin === 'custom') return '自定义图片';
   const ch = CHARS.find(c => c[0] === settings.skin);
   return ch ? `${ch[1]}（角色小人）` : settings.skin;
