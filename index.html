@@ -7628,14 +7628,23 @@ function renderGachaPreview() {
   const typeTxt = { ceil: '限定', normal: '常驻', gift: '赠送', beginner: '新手' }[pool.type] || pool.type;
   $('#gi-meta').textContent = `${typeTxt} · ${gachaFmtDate(pool.s)} ~ ${gachaFmtDate(pool.e)} · 四星概率 ${gachaRateParts().r4}%`;
   now.textContent = pool.name;
-  // 右侧：只展示该池四星卡的特训后卡面，点击循环切换下一张
-  const roster4 = gachaPoolRoster(pool).filter(cid => _gachaIdx.cards[cid] && _gachaIdx.cards[cid][1] === 'rarity_4');
-  _heroList = roster4; _heroIdx = 0;
+  // 右侧卡面轮播：生日池只轮「卡池里寿星本人的生日卡」；普通池展示该池四星卡的特训后卡面
+  const bdChar = gachaBirthdayChar(pool);
+  const roster = gachaPoolRoster(pool);
+  let heroList = [];
+  if (bdChar) {
+    heroList = roster.filter(cid => {
+      const ent = _gachaIdx.cards[cid];
+      return ent && ent[1] === 'rarity_birthday' && String(ent[2]) === bdChar;
+    });
+  }
+  if (!heroList.length) heroList = roster.filter(cid => _gachaIdx.cards[cid] && _gachaIdx.cards[cid][1] === 'rarity_4');
+  _heroList = heroList; _heroIdx = 0;
   const stars = $('#gacha-hero-stars');
   heroImg.removeAttribute('src');
   heroImg.style.visibility = 'hidden';
   stars.textContent = ''; stars.classList.remove('bd');
-  if (!roster4.length) { stopHeroTimer(); return; }          // 没有四星则不显示卡面
+  if (!heroList.length) { stopHeroTimer(); return; }          // 没有可展示的卡面
   loadGachaHero();
   startHeroTimer();
 }
@@ -7657,12 +7666,16 @@ function loadGachaHero() {
   if (!_heroList || !_heroList.length) return;
   const poolId = _selPool;
   const cid = _heroList[_heroIdx % _heroList.length];
+  const ent = _gachaIdx.cards[cid];
+  const isBd = !!(ent && ent[1] === 'rarity_birthday');
   const heroImg = $('#gacha-hero-img'), stars = $('#gacha-hero-stars');
-  stars.textContent = '★★★★';
+  stars.textContent = isBd ? '𐙚' : '★★★★';
+  stars.classList.toggle('bd', isBd);
   $('#gacha-hero-count').textContent = `${_heroIdx + 1} / ${_heroList.length} · 自动轮播 · 点击切换`;
   const wantId = poolId, wantIdx = _heroIdx;
   heroImg.style.visibility = 'hidden';
-  gachaCardImg(cid, 'after').then(url => {
+  // 生日卡只有特训前卡面（没有 card_after_training），必须走 normal
+  gachaCardImg(cid, isBd ? 'normal' : 'after').then(url => {
     if (_selPool !== wantId || _heroIdx !== wantIdx) return;   // 期间切换了卡池/卡面，丢弃
     heroImg.src = url; heroImg.style.visibility = '';
   }).catch(() => {});
