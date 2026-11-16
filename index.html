@@ -4653,9 +4653,16 @@ function renderSkins() {
   grid.appendChild(txl);
 }
 
-/* 判断是不是 emoji：彩色字形自带颜色，不需要（也无法）改色 */
+/* 判断是不是「彩色 emoji」：只有默认就彩色呈现的 emoji 才不能上色。
+   ♡ ◆ ☆ ○ ♞ ♠ ♢ 这类只是普通符号（Unicode 里默认文本呈现），必须允许选颜色 */
 function isEmojiText(t) {
-  try { return /\p{Extended_Pictographic}/u.test(t || ''); } catch (e) { return false; }
+  if (!t) return false;
+  if (t.includes('\uFE0E')) return false;            // 显式要求文本呈现（如 ❄︎）
+  if (t.includes('\uFE0F')) return true;             // 显式要求 emoji 呈现（如 ❄️）
+  try {
+    if (/\p{Regional_Indicator}/u.test(t)) return true;   // 国旗是双区域指示符
+    return /\p{Emoji_Presentation}/u.test(t);
+  } catch (e) { return false; }
 }
 
 /* 文字 / 符号 / emoji 音符：预渲染成一张紧贴字形的透明位图（带同色光晕），
@@ -4669,7 +4676,10 @@ function skinTextCanvas() {
   const key = txt + '|' + (emoji ? 'e' : col);
   if (_skinTextCache[key]) return _skinTextCache[key];
   const FS = 220, PAD = FS * 0.3;
-  const font = `${FS}px "Apple Color Emoji","Noto Color Emoji","Segoe UI Emoji",-apple-system,"PingFang SC","Hiragino Sans","Noto Sans CJK SC",sans-serif`;
+  // 符号（♡◆☆○♞♠♢）必须走文本字体，否则会被彩色 emoji 字体抢走字形成“彩色”导致上色无效
+  const font = emoji
+    ? `${FS}px "Apple Color Emoji","Noto Color Emoji","Segoe UI Emoji",sans-serif`
+    : `${FS}px -apple-system,"PingFang SC","Hiragino Sans","Noto Sans CJK SC","Segoe UI Symbol","Noto Sans Symbols 2",sans-serif`;
   const mcv = document.createElement('canvas').getContext('2d');
   mcv.font = font;
   const m = mcv.measureText(txt);
