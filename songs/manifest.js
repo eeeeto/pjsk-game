@@ -1375,4 +1375,27 @@ window.SONGS = [
   "full": true,
   "cover": "assets/covers/zijiang1.jpg",
  }
+,
+ {
+  "title": "潮起时",
+  "artist": "乐正绫",
+  "credit": "",
+  "unit": "vocaloid",
+  "game": true,
+  "duration": 226.02,
+  "file": "songs/s140.mp3",
+  "full": true,
+  "cover": "assets/covers/vocaloid1.jpg"
+ },
+ {
+  "title": "しゅわりん☆どり～みん (short)",
+  "artist": "Pastel*Palettes",
+  "credit": "",
+  "unit": "otherworld",
+  "game": true,
+  "duration": 102.49,
+  "file": "songs/s141.mp3",
+  "full": true,
+  "cover": "assets/covers/other2.jpg"
+ }
 ];
