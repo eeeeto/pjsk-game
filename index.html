@@ -8111,11 +8111,11 @@ function renderGachaPools() {
       if (e.target.classList.contains('gp-del')) {
         settings.gachaPools = settings.gachaPools.filter(x => x.id !== p.id);
         delete settings.gachaPulls[p.id];   // 删除卡池：抽取次数归零（重新添加后从 0 开始）
-        if (_selPool === p.id) { _selPool = -1; renderGachaPreview(); }
+        if (_selPool === p.id) { _selPool = -1; syncGachaPullButtons(); renderGachaPreview(); }
         saveSettings(); renderGachaPools();
         return;
       }
-      _selPool = p.id; renderGachaPools(); renderGachaPreview();
+      _selPool = p.id; syncGachaPullButtons(); renderGachaPools(); renderGachaPreview();
     });
     box.appendChild(el);
   }
@@ -8309,6 +8309,7 @@ function openGachaAddDialog() {
       }
       settings.gachaPools.push({ id: g.id, name: g.name, abn: g.abn || '', type: g.type, s: g.s, e: g.e, rates: g.rates || [] });
       _selPool = g.id;
+      syncGachaPullButtons();
       saveSettings(); renderGachaPools(); renderGachaPreview();
       hideLoad();
       close();
@@ -8492,11 +8493,11 @@ let _gdQueue = [], _gdIdx = 0, _gdPool = null, _gdN = 1;
 function gdStars(ent) { return ent[1] === 'rarity_birthday' ? '𐙚' : '★'.repeat(tierOf(ent[1])); }
 async function startGachaDraw(pool, n) {
   if (_gachaDrawing) return;
-  // 招募消耗水晶：单抽 300、十连 3000（余额不足直接拦截）
-  const cost = n * 300;
-  if (!spendCrystal(cost)) { showToast(`水晶不足：招募需要 ${cost} 水晶，可在休息室兑换或从公告获取`, 3200); return; }
+  // 招募消耗水晶：单抽 300、十连 3000（余额不足直接拦截）；无料卡池免费
+  const cost = isFreePool(pool) ? 0 : n * 300;
+  if (cost > 0 && !spendCrystal(cost)) { showToast(`水晶不足：招募需要 ${cost} 水晶，可在休息室兑换或从公告获取`, 3200); return; }
   const results = gachaPull(pool, n);
-  if (!results.length) { addCrystal(cost); showToast('这个卡池暂时没有可招募的卡牌', 2600); return; }
+  if (!results.length) { if (cost > 0) addCrystal(cost); showToast('这个卡池暂时没有可招募的卡牌', 2600); return; }
   _gachaDrawing = true; _gdPool = pool; _gdN = n;
   // 累计该卡池的抽取次数（十连算 10 抽），并刷新大框与 UP 收集度
   settings.gachaPulls[pool.id] = (settings.gachaPulls[pool.id] || 0) + n;
@@ -9262,19 +9263,30 @@ $('#btn-gacha').addEventListener('click', async () => {
   } catch (e) {
     showToast('卡池数据读取失败，请检查网络后重试', 2600);
   }
-  show('gacha'); applyBackground();
+  show('gacha'); applyBackground(); syncGachaPullButtons();
   hideLoad();
 });
 $('#gacha-back').addEventListener('click', goTitle);
+/* 无料卡池：名字带「无料」的池子免费招募，不消耗水晶 */
+function isFreePool(pool) { return !!pool && /无料/.test(pool.name || ''); }
+function syncGachaPullButtons() {
+  const pool = settings.gachaPools.find(p => p.id === _selPool);
+  const free = isFreePool(pool);
+  const b1 = $('#gacha-pull1'), b10 = $('#gacha-pull10');
+  if (b1) b1.textContent = free ? '免费招募1次' : '招募一次';
+  if (b10) b10.textContent = free ? '免费招募10次' : '招募十次';
+}
 $('#gacha-pull1').addEventListener('click', () => {
   const pool = settings.gachaPools.find(p => p.id === _selPool);
   if (!pool) { showToast('先在左侧选择一个卡池', 2200); return; }
+  if (isFreePool(pool)) { mkConfirm('确认招募', '是否要免费招募一次？（无料卡池不消耗水晶）', () => { _gachaDrawing = false; startGachaDraw(pool, 1); }); return; }
   if ((Number(settings.crystal) || 0) < 300) { showToast('水晶不足：招募一次需要 300 水晶', 2800); return; }
   mkConfirm('确认招募', '是否要招募一次？将消耗 300 水晶', () => { _gachaDrawing = false; startGachaDraw(pool, 1); });
 });
 $('#gacha-pull10').addEventListener('click', () => {
   const pool = settings.gachaPools.find(p => p.id === _selPool);
   if (!pool) { showToast('先在左侧选择一个卡池', 2200); return; }
+  if (isFreePool(pool)) { mkConfirm('确认招募', '是否要免费招募十次？（无料卡池不消耗水晶）', () => { _gachaDrawing = false; startGachaDraw(pool, 10); }); return; }
   if ((Number(settings.crystal) || 0) < 3000) { showToast('水晶不足：招募十次需要 3000 水晶', 2800); return; }
   mkConfirm('确认招募', '是否要招募十次？将消耗 3000 水晶', () => { _gachaDrawing = false; startGachaDraw(pool, 10); });
 });
