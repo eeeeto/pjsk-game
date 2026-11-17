@@ -114,6 +114,15 @@
     mask-image:linear-gradient(180deg,transparent 0,#000 9%,#000 88%,transparent 100%);
     -webkit-mask-image:linear-gradient(180deg,transparent 0,#000 9%,#000 88%,transparent 100%);}
   #song-scroll::-webkit-scrollbar{display:none;}
+  /* 筛选生效提示条：避免「怎么只剩几十首」的困惑 */
+  .filter-bar{display:none;align-items:center;gap:10px;width:min(760px,80vw);margin:0 auto 4px;padding:6px 12px;
+    border-radius:10px;background:rgba(37,226,255,.10);border:1px solid rgba(37,226,255,.35);
+    font-size:clamp(10px,1.7vh,12.5px);font-weight:800;color:#8fe6ff;position:relative;z-index:2;}
+  .filter-bar.on{display:flex;}
+  .filter-bar .fb-txt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .filter-bar .fb-clear{flex:none;font-family:inherit;font-size:11px;font-weight:800;color:#04222b;
+    background:#8fe6ff;border:0;border-radius:999px;padding:3px 12px;cursor:pointer;}
+  .filter-bar .fb-clear:active{transform:scale(.94);}
   .unit-head{display:flex;align-items:center;gap:10px;width:min(760px,80vw);margin:clamp(14px,3vh,26px) auto 6px;
     font-size:clamp(10px,1.7vh,13px);font-weight:800;letter-spacing:.2em;color:#a9bdd8;text-transform:uppercase;}
   .unit-head .dot{width:8px;height:8px;border-radius:50%;box-shadow:0 0 12px currentColor;background:currentColor;}
@@ -989,6 +998,10 @@
     <div class="page-head">
       <h2>选 <em>曲</em></h2>
       <div class="tip"><b class="song-count" id="song-count">共 0 曲</b><br>选曲由制作者与玩家共同决定<br><span class="tip-sub">如要投稿曲目请 DM 制作者</span></div>
+    </div>
+    <div class="filter-bar" id="song-filter-bar">
+      <span class="fb-txt" id="sf-bar-txt"></span>
+      <button class="fb-clear" id="sf-bar-clear">清除筛选</button>
     </div>
     <div id="song-scroll"></div>
     <div class="bottom-bar">
@@ -2228,6 +2241,18 @@ function songFilterState() {
   const f = settings.songFilter || {};
   return { dur: f.dur || 'all', fc: f.fc || 'all', ap: f.ap || 'all', fav: f.fav || 'all' };
 }
+/* 筛选条件的中文描述（用在提示条上，让玩家一眼看出为什么曲子变少了） */
+function songFilterDesc(f) {
+  const parts = [];
+  if (f.dur === 'short') parts.push('short');
+  else if (f.dur === 'full') parts.push('full');
+  if (f.fc === 'yes') parts.push('已 FC');
+  else if (f.fc === 'no') parts.push('未 FC');
+  if (f.ap === 'yes') parts.push('已 AP');
+  else if (f.ap === 'no') parts.push('未 AP');
+  if (f.fav === 'fav') parts.push('收藏夹');
+  return parts.join(' · ');
+}
 function songPassFilter(s) {
   const f = songFilterState();
   if (f.dur === 'full' && songIsShort(s)) return false;
@@ -2264,6 +2289,15 @@ function applySongFilter() {
   });
   const cntEl = $('#song-count');
   if (cntEl) cntEl.textContent = '共 ' + total + ' 曲';
+  // 筛选提示条：显示当前筛选条件与「已显示 / 总数」，附一键清除
+  const bar = $('#song-filter-bar'), bt = $('#sf-bar-txt');
+  const active = filterActive();
+  if (bar) bar.classList.toggle('on', active || total !== SONGS.length);
+  if (bt) {
+    bt.textContent = active
+      ? '筛选中：' + songFilterDesc(songFilterState()) + ' · 显示 ' + total + ' / ' + SONGS.length + ' 曲'
+      : ('仅显示 ' + total + ' / ' + SONGS.length + ' 曲');
+  }
 }
 
 function buildSongList() {
@@ -6598,6 +6632,15 @@ $('#f-clear').addEventListener('click', () => {
   ['#f-dur', '#f-fc', '#f-ap', '#f-fav'].forEach(sel =>
     $$(sel + ' .pill').forEach(p => p.classList.toggle('on', p.dataset.v === 'all')));
   $('#modal-filter').classList.remove('show');
+  applySongFilter();
+});
+/* 提示条上的一键清除筛选 */
+$('#sf-bar-clear').addEventListener('click', e => {
+  e.stopPropagation();
+  settings.songFilter = { dur: 'all', fc: 'all', ap: 'all', fav: 'all' };
+  saveSettings();
+  ['#f-dur', '#f-fc', '#f-ap', '#f-fav'].forEach(sel =>
+    $$(sel + ' .pill').forEach(p => p.classList.toggle('on', p.dataset.v === 'all')));
   applySongFilter();
 });
 $('#f-ok').addEventListener('click', () => {
