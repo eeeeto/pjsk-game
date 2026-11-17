@@ -7830,7 +7830,25 @@ function renderGachaPreview() {
         && String(ent[2]) === celeb.cid && gachaCelebKind(ent) === celeb.kind;
     }).sort((a, b) => _gachaIdx.cards[b][3] - _gachaIdx.cards[a][3]);
   }
-  if (!heroList.length) heroList = roster.filter(cid => _gachaIdx.cards[cid] && _gachaIdx.cards[cid][1] === 'rarity_4');
+  if (!heroList.length) {
+    // 普通池：只轮播「当期」的四星——卡池开始~结束期间实装的卡（也就是这期 UP 的那几张），新→旧。
+    // 注意 gachaPoolRoster 会把常驻卡合并进名单，所以要用索引里该池自己的 rosters 来判断当期；
+    // 复刻池名单里没有期间内新卡，回溯到同名的原版卡池取它的当期四星
+    let base = (_gachaIdx.rosters && _gachaIdx.rosters[pool.id]) || roster;
+    let sLim = pool.s, eLim = pool.e;
+    const origName = (pool.name || '').replace(/^[【\[]\s*復刻\s*[\]】]\s*/, '');
+    if (origName !== (pool.name || '')) {
+      const orig = (_gachaIdx.gachas || []).find(g => (g.name || '') === origName);
+      if (orig) { base = (_gachaIdx.rosters && _gachaIdx.rosters[orig.id]) || base; sLim = orig.s; eLim = orig.e; }
+    }
+    const r4 = base.filter(cid => _gachaIdx.cards[cid] && _gachaIdx.cards[cid][1] === 'rarity_4')
+      .sort((a, b) => (_gachaIdx.cards[b][3] || 0) - (_gachaIdx.cards[a][3] || 0));
+    const inRange = r4.filter(cid => {
+      const t = _gachaIdx.cards[cid][3] || 0;
+      return (!sLim || t >= sLim) && (!eLim || t <= eLim);
+    });
+    heroList = (inRange.length ? inRange : r4).slice(0, 12);
+  }
   _heroList = heroList; _heroIdx = 0;
   const stars = $('#gacha-hero-stars');
   heroImg.removeAttribute('src');
