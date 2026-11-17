@@ -7843,11 +7843,18 @@ function renderGachaPreview() {
     }
     const r4 = base.filter(cid => _gachaIdx.cards[cid] && _gachaIdx.cards[cid][1] === 'rarity_4')
       .sort((a, b) => (_gachaIdx.cards[b][3] || 0) - (_gachaIdx.cards[a][3] || 0));
-    const inRange = r4.filter(cid => {
-      const t = _gachaIdx.cards[cid][3] || 0;
-      return (!sLim || t >= sLim) && (!eLim || t <= eLim);
-    });
-    heroList = (inRange.length ? inRange : r4).slice(0, 12);
+    let list;
+    if (/コラボ/.test(pool.name || '')) {
+      // 联动卡池：直接显示名单里的全部联动四星（不受卡池日期限制）
+      list = r4;
+    } else {
+      const inRange = r4.filter(cid => {
+        const t = _gachaIdx.cards[cid][3] || 0;
+        return (!sLim || t >= sLim) && (!eLim || t <= eLim);
+      });
+      list = inRange.length ? inRange : r4;
+    }
+    heroList = list.slice(0, 12);
   }
   _heroList = heroList; _heroIdx = 0;
   const stars = $('#gacha-hero-stars');
