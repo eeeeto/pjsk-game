@@ -3742,8 +3742,7 @@ function loop(ts) {
         } else {
           G.counts.miss++;
           breakCombo();
-          G.hp = Math.max(0, G.hp - 80); G.damage += 80;
-          if (G.hp <= 0) G.hpZero = true;
+          takeDamage(80);          // 必须走 takeDamage：体力守护发动期间漏按也不扣血
           addEffect(n.lane, JUDGE_LABEL.miss, JUDGE_COLOR.miss);
         }
         if (n.type === 'hold') { n.holdState = 4; G.holding.delete(n.lane); }
@@ -4459,8 +4458,7 @@ function finishGame() {
   const rest = G.notes.filter(n => !n.judged).length;
   if (rest) {
     G.counts.miss += rest; G.judged += rest;
-    G.damage += rest * 80; G.hp = Math.max(0, G.hp - rest * 80);
-    if (G.hp <= 0) G.hpZero = true;
+    takeDamage(rest * 80);   // 走 takeDamage：体力守护激活中不扣血
   }
   G.holding.clear();
   const c = G.counts;
@@ -7604,9 +7602,10 @@ async function gachaCardImg(cid, part) {
   try { const b = await idbGet(key); if (b) { cardBlobs[key] = URL.createObjectURL(b); return cardBlobs[key]; } } catch (e) {}
   const ent = _gachaIdx.cards[cid];
   if (!ent) throw new Error('no card ' + cid);
-  // 候选源：本地内置 → 官方资源站 → wsrv 图片代理 → 官方源加随机参数重试（绕开中间层缓存的坏响应）
+  // 候选源：本地内置的 3 个 jsDelivr 镜像（gcore / cdn / fastly，主镜像挂了自动换）+ 站内同源
+  //   → 官方资源站 → wsrv 图片代理 → 官方源加随机参数重试（绕开中间层缓存的坏响应）
   const s = cardImgSet(ent[0], part);
-  const urls = [s.full, s.direct, s.proxy, s.direct + '?r=' + Date.now()];
+  const urls = [...mirrorUrls(s.full), s.direct, s.proxy, s.direct + '?r=' + Date.now()];
   let blob = null, lastErr = null;
   for (let round = 0; round < 2 && !blob; round++) {
     for (const u of urls) {
@@ -7716,8 +7715,9 @@ async function gachaCardThumb(cid, part) {
   const s = cardImgSet(ent[0], part);
   const thumbRemote = `https://wsrv.nl/?url=${encodeURIComponent(s.direct)}&w=480&output=webp&q=82`;
   let blob = null;
-  // 候选源：本地缩略图（同源，最快）→ wsrv 缩图 → 官方原图，各自超时慢源不干等
-  for (const [u, t] of [[s.thumb, 6000], [thumbRemote, 8000], [s.direct, 15000]]) {
+  // 候选源：本地缩略图的 3 个 jsDelivr 镜像 + 站内同源 → wsrv 缩图 → 官方原图，各自超时慢源不干等
+  const sources = [...mirrorUrls(s.thumb), thumbRemote, s.direct];
+  for (const [u, t] of sources.map(u => [u, u === thumbRemote ? 8000 : u === s.direct ? 15000 : 6000])) {
     try {
       blob = await Promise.race([
         fetchBlobProg([u]),
