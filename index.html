@@ -285,6 +285,20 @@
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 6px;}
   .bottom-bar .center b{color:#cfe6ff;font-weight:700;}
 
+  /* ---------- 水晶 / 休息室 ---------- */
+  .crystal-chip{display:inline-flex;align-items:center;gap:7px;padding:4px 13px 4px 7px;border-radius:999px;
+    background:rgba(6,12,26,.62);border:1px solid rgba(150,220,255,.4);backdrop-filter:blur(6px);
+    box-shadow:0 4px 16px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.08);}
+  .crystal-chip img{width:21px;height:21px;object-fit:contain;filter:drop-shadow(0 0 6px rgba(140,230,255,.5));}
+  .crystal-chip b{font-size:clamp(12px,1.9vh,15px);font-weight:900;color:#a8f0ff;font-variant-numeric:tabular-nums;letter-spacing:.02em;}
+  .head-right{display:flex;flex-direction:column;align-items:flex-end;gap:7px;min-width:0;}
+  /* 抽卡页指引改为胶囊底：不再直接糊在轮播卡面上 */
+  #screen-gacha .page-head .tip{background:rgba(6,12,26,.58);border:1px solid rgba(140,200,255,.3);
+    border-radius:10px;padding:5px 12px;backdrop-filter:blur(6px);color:#9db4d4;}
+  .rest-grid-empty{grid-column:1/-1;color:#5f7896;font-size:13px;text-align:center;padding:40px 0;line-height:1.9;}
+  .rest-badge{position:absolute;top:3px;right:5px;font-size:9.5px;font-weight:900;color:#04222b;
+    background:#8fe6ff;border-radius:999px;padding:2px 7px;letter-spacing:.05em;z-index:2;}
+
   /* ---------- 弹窗 ---------- */
   .modal{position:fixed;inset:0;z-index:120;display:none;align-items:center;justify-content:center;
     background:rgba(3,6,13,.72);backdrop-filter:blur(10px);padding:18px;}
@@ -856,10 +870,10 @@
   .gacha-hero::after{content:"";position:absolute;inset:0;pointer-events:none;
     background:linear-gradient(90deg,rgba(4,8,18,.72) 0%,rgba(4,8,18,.28) 30%,rgba(4,8,18,.05) 55%,rgba(4,8,18,.15) 100%),
       linear-gradient(180deg,rgba(4,8,18,.6) 0%,rgba(4,8,18,.05) 26%,rgba(4,8,18,0) 55%,rgba(4,8,18,.78) 100%);}
-  .gacha-hero .gh-count{position:absolute;top:14px;right:16px;font-size:12px;font-weight:800;color:#9db4d4;
+  .gacha-hero .gh-count{position:absolute;top:102px;right:16px;font-size:12px;font-weight:800;color:#9db4d4;
     background:rgba(6,12,26,.55);border:1px solid rgba(140,200,255,.3);border-radius:999px;padding:4px 12px;z-index:3;
     letter-spacing:.08em;backdrop-filter:blur(6px);}
-  .gacha-hero .gh-stars{position:absolute;right:26px;top:96px;font-size:26px;font-weight:800;color:#ffe27a;letter-spacing:1px;
+  .gacha-hero .gh-stars{position:absolute;right:26px;top:138px;font-size:26px;font-weight:800;color:#ffe27a;letter-spacing:1px;
     text-shadow:0 2px 10px rgba(0,0,0,.85);z-index:2;}
   .gacha-hero .gh-stars.bd{color:#ffd0f8;}
   @keyframes heroIn{from{opacity:0;transform:scale(1.04)}to{opacity:1;transform:scale(1)}}
@@ -1229,6 +1243,11 @@
           <input type="range" id="gacha34-range" min="0" max="15" step="0.5" value="5">
           <div class="sub">抽到三星时，有该概率在揭示瞬间升为四星——发光球阶段仍显示金色（三星），点击揭示时才变成四星卡面。0% = 关闭。</div>
         </div>
+        <div class="field">
+          <div class="lbl"><span>水晶</span><b class="crystal-val">--</b></div>
+          <button class="btn ghost" id="crystal-gain">获 取 水 晶（+100）</button>
+          <div class="sub">单次招募消耗 300 水晶 · 十连 3000 · 公告全部已读 +1000 · 休息室每张重复四星兑换 3000</div>
+        </div>
       </div>
     </div>
     <div class="bottom-bar">
@@ -1244,7 +1263,10 @@
     <div class="gacha-hero" id="gacha-hero" style="display:none"><img id="gacha-hero-img" alt=""><span class="gh-count" id="gacha-hero-count"></span><span class="gh-stars" id="gacha-hero-stars"></span></div>
     <div class="page-head">
       <h2>世界的<em>招募</em></h2>
-      <div class="tip">左侧选择卡池 · 右侧预览当期卡牌<br>点加号输入编号添加卡池</div>
+      <div class="head-right">
+        <div class="crystal-chip" id="crystal-chip" title="水晶余额"><img src="assets/icons/crystal.png" alt="水晶"><b class="crystal-val">--</b></div>
+        <div class="tip">左侧选择卡池 · 右侧预览当期卡牌<br>点加号输入编号添加卡池</div>
+      </div>
     </div>
     <div class="gacha-wrap">
       <div class="gacha-pools" id="gacha-pools"></div>
@@ -1308,6 +1330,7 @@
     <div class="bottom-bar">
       <button class="btn ghost" id="members-back">返 回</button>
       <div class="center"></div>
+      <button class="btn ghost" id="member-rest-btn">休 息 室</button>
       <button class="btn ghost" id="member-clean-btn">清 理</button>
       <button class="btn ghost" id="member-filter-btn">筛 选</button>
     </div>
@@ -1332,6 +1355,21 @@
 
   <!-- 成员大图浮层 -->
   <div id="member-big" style="display:none"><img id="member-big-img" alt=""></div>
+
+  <!-- ================= 休息室（重复四星） ================= -->
+  <section id="screen-rest" class="screen">
+    <div class="page-head">
+      <h2>休 <em>息 室</em></h2>
+      <div class="tip"><b class="song-count" id="rest-count">共 0 张</b><br>抽到重复的四星会到这里休息<br>每张可兑换 3000 水晶</div>
+    </div>
+    <div class="member-grid" id="rest-grid"></div>
+    <div class="bottom-bar">
+      <button class="btn ghost" id="rest-back">返 回</button>
+      <div class="center" id="rest-now"></div>
+      <button class="btn pink" id="rest-exchange" style="display:none">兑换所选（<b id="rest-ex-n">0</b> 张）</button>
+      <button class="btn ghost" id="rest-pick">选 择</button>
+    </div>
+  </section>
 
   <!-- ================= 开发者相关 ================= -->
   <section id="screen-dev" class="screen">
@@ -1697,7 +1735,8 @@
     <div class="dlg-title">公 告 <span>栏</span></div>
     <div class="notice-list" id="notice-list"></div>
     <div class="dlg-actions">
-      <button class="btn pink" id="notice-close">关 闭</button>
+      <button class="btn pink" id="notice-read" style="display:none">全部已读（可得 1000 水晶）</button>
+      <button class="btn ghost" id="notice-close">关 闭</button>
     </div>
   </div>
 </div>
@@ -2024,7 +2063,7 @@ const DEF_SET = { skin:'lumirect', bgMode:'card', bgCover:res('assets/covers/leo
   bgCard:res('assets/cards/88/card_normal.webp'), bgCardShade:0.45, customSkin:null, sfxVolume:0.5, bgmVolume:0.45, speed:7.0, diff:'normal',
   keyScale:1.0, noteSquash:0.6, skinText:'❄', skinTextColor:'#ffffff', judgeLeniency:1.0, holdAlpha:0.5, judgeLift:0, judgeOffset:0, myCards:[], lastSong:0, sound:'tap',
   marks:{}, favs:{}, collapsedUnits:{}, teams:[], activeTeam:-1, songFilter:{ dur:'all', fc:'all', ap:'all', fav:'all' },
-  gachaRate4:3, gacha3to4:5, gachaPulls:{}, gachaPools:[], members:[] };
+  gachaRate4:3, gacha3to4:5, gachaPulls:{}, gachaPools:[], members:[], crystal:900000 };
 let settings = Object.assign({}, DEF_SET);
 try {
   const raw = localStorage.getItem('sekai-fan-settings');
@@ -2057,6 +2096,28 @@ if (!settings.gachaPulls || typeof settings.gachaPulls !== 'object') settings.ga
 if (!Array.isArray(settings.gachaPools)) settings.gachaPools = [];
 if (!Array.isArray(settings.members)) settings.members = [];
 settings.members.forEach(m => { if (typeof m.af !== 'boolean') m.af = false; });   // 特训前(false)/特训后(true)
+/* 水晶：初始 900000；旧存档第一次打开自动补上 */
+if (settings.crystal === undefined || settings.crystal === null || isNaN(Number(settings.crystal))) settings.crystal = 900000;
+settings.crystal = Math.max(0, Math.floor(Number(settings.crystal)));
+/* 休息室：重复四星的存放（cid -> 重复张数），每张可兑换 3000 水晶 */
+if (!settings.dupes4 || typeof settings.dupes4 !== 'object' || Array.isArray(settings.dupes4)) settings.dupes4 = {};
+
+/* ---------- 水晶 ---------- */
+function updateCrystalUI() {
+  $$('.crystal-val').forEach(el => { el.textContent = settings.crystal.toLocaleString('en-US'); });
+}
+function addCrystal(n) {
+  n = Math.floor(Number(n) || 0);
+  settings.crystal = Math.max(0, (Number(settings.crystal) || 0) + n);
+  saveSettings(); updateCrystalUI();
+}
+/* 扣水晶：余额不足返回 false（调用方自行拦截） */
+function spendCrystal(n) {
+  n = Math.floor(Number(n) || 0);
+  if ((Number(settings.crystal) || 0) < n) return false;
+  settings.crystal -= n; saveSettings(); updateCrystalUI();
+  return true;
+}
 if (!settings.memberFilter) settings.memberFilter = { star: 'all', unit: 'all' };
 // 结算人物列表 / 个人主页（图片本体存 IndexedDB，settings 只存元数据）
 if (!Array.isArray(settings.resCards)) settings.resCards = [];
@@ -6737,7 +6798,7 @@ const NOTICES = [
       <p>曲库目前共 125 曲。</p>`
   }
 ];
-const NOTICE_SEEN_KEY = 'ps-notice-seen';
+const NOTICE_SEEN_KEY = 'ps-notice-seen-v2';   // v2：公告全部重置为未读
 function noticeSorted() {
   return NOTICES.slice().sort((a, b) => (a.time < b.time ? 1 : a.time > b.time ? -1 : 0));
 }
@@ -6745,11 +6806,18 @@ function noticeFmtTime(t) {
   const m = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})$/.exec(t);
   return m ? (+m[2]) + '/' + (+m[3]) + ' ' + m[4] + ':' + m[5] : t;
 }
+function noticeHasUnread() {
+  const latest = noticeSorted()[0];
+  return !!latest && localStorage.getItem(NOTICE_SEEN_KEY) !== latest.id;
+}
 function syncNoticeDot() {
   const dot = $('#notice-dot');
   if (!dot) return;
-  const latest = noticeSorted()[0];
-  dot.style.display = (latest && localStorage.getItem(NOTICE_SEEN_KEY) === latest.id) ? 'none' : '';
+  dot.style.display = noticeHasUnread() ? '' : 'none';
+}
+function syncNoticeReadBtn() {
+  const btn = $('#notice-read');
+  if (btn) btn.style.display = noticeHasUnread() ? '' : 'none';
 }
 function renderNotices() {
   const list = $('#notice-list');
@@ -6769,8 +6837,7 @@ function openNotice() {
   renderNotices();
   const m = $('#modal-notice');
   if (m) m.classList.add('show');
-  localStorage.setItem(NOTICE_SEEN_KEY, (noticeSorted()[0] || {}).id || '');
-  syncNoticeDot();
+  syncNoticeReadBtn();
 }
 if ($('#btn-notice')) $('#btn-notice').addEventListener('click', openNotice);
 if ($('#notice-close')) $('#notice-close').addEventListener('click', () => $('#modal-notice').classList.remove('show'));
@@ -6782,7 +6849,125 @@ if ($('#notice-list')) $('#notice-list').addEventListener('click', e => {
   const it = e.target.closest('.notice-item');
   if (it) it.classList.toggle('open');
 });
+/* 全部已读 → 得 1000 水晶（有未读公告时才会显示这个按钮） */
+if ($('#notice-read')) $('#notice-read').addEventListener('click', () => {
+  localStorage.setItem(NOTICE_SEEN_KEY, (noticeSorted()[0] || {}).id || '');
+  addCrystal(1000);
+  syncNoticeDot(); syncNoticeReadBtn();
+  showToast('已全部标记为已读，获得 1000 水晶', 3000);
+});
 syncNoticeDot();
+
+/* ================= 休息室（重复四星兑换水晶） ================= */
+let _restPickMode = false;
+const _restPicked = new Set();
+let _restEntries = [];
+function restEntries() {
+  const out = [];
+  const d = settings.dupes4 || {};
+  for (const cidStr of Object.keys(d)) {
+    const cid = Number(cidStr);
+    const ent = (_gachaIdx && _gachaIdx.cards[cid]) || null;
+    if (!ent || tierOf(ent[1]) !== 4 || d[cidStr] <= 0) continue;
+    for (let k = 0; k < d[cidStr]; k++) out.push({ cid, key: cidStr + '#' + k, ent });
+  }
+  return out;
+}
+function makeRestCell(e) {
+  const isBd = e.ent[1] === 'rarity_birthday';
+  const star = isBd ? '𐙚' : '★'.repeat(4);
+  const cardName = e.ent[4] || '';
+  const charName = (_gachaIdx && _gachaIdx.chars && _gachaIdx.chars[e.ent[2]]) || '';
+  const cell = document.createElement('div');
+  cell.className = 'mb';
+  cell.dataset.key = e.key;
+  const art = document.createElement('div');
+  art.className = 'mb-art';
+  art.innerHTML = `<img alt="" loading="lazy" decoding="async"><span class="mb-r" style="color:#ffd0f8">${star}</span><span class="rest-badge">+3000</span>`;
+  cell.appendChild(art);
+  const cap = document.createElement('div');
+  cap.className = 'mb-cap';
+  cap.title = (cardName ? cardName + ' · ' : '') + charName;
+  cap.innerHTML = `<b>${escapeHTML(cardName || '—')}</b><small>${escapeHTML(charName)}</small>`;
+  cell.appendChild(cap);
+  if (_restPickMode && _restPicked.has(e.key)) cell.classList.add('pick');
+  cell.addEventListener('click', () => {
+    if (!_restPickMode) return;
+    if (_restPicked.has(e.key)) { _restPicked.delete(e.key); cell.classList.remove('pick'); }
+    else { _restPicked.add(e.key); cell.classList.add('pick'); }
+    syncRestExBtn();
+  });
+  queueMemberImg(cell, e.cid, 'normal');
+  return cell;
+}
+function syncRestExBtn() {
+  const n = _restPicked.size;
+  const btn = $('#rest-exchange');
+  if (btn) {
+    btn.style.display = (_restPickMode && n) ? '' : 'none';
+    btn.innerHTML = `兑换所选（${n} 张 · ${(n * 3000).toLocaleString('en-US')} 水晶）`;
+  }
+  const pick = $('#rest-pick');
+  if (pick) pick.textContent = _restPickMode ? '取 消' : '选 择';
+  const now = $('#rest-now');
+  if (now) now.textContent = _restPickMode ? '选择模式：点击卡片勾选，每张兑换 3000 水晶' : '';
+}
+function renderRest() {
+  const grid = $('#rest-grid');
+  if (!grid) return;
+  _restEntries = restEntries();
+  grid.innerHTML = '';
+  _mbQueue = [];
+  const cnt = $('#rest-count');
+  if (cnt) cnt.textContent = `共 ${_restEntries.length} 张`;
+  if (!_restEntries.length) {
+    grid.innerHTML = '<div class="rest-grid-empty">还没有重复的四星卡<br>继续在「世界的招募」里招募吧——抽到重复的四星会自动放进这里</div>';
+    syncRestExBtn();
+    return;
+  }
+  for (const e of _restEntries) grid.appendChild(makeRestCell(e));
+  syncRestExBtn();
+}
+function exitRestPick() { _restPickMode = false; _restPicked.clear(); }
+if ($('#member-rest-btn')) $('#member-rest-btn').addEventListener('click', async () => {
+  exitRestPick();
+  show('rest'); applyBackground();
+  try { await loadGachaIdx(); } catch (e) {}
+  renderRest();
+});
+if ($('#rest-back')) $('#rest-back').addEventListener('click', () => {
+  exitRestPick();
+  show('members'); applyBackground();
+  renderMembers();
+});
+if ($('#rest-pick')) $('#rest-pick').addEventListener('click', () => {
+  if (!_restEntries.length) { showToast('休息室里还没有可兑换的卡', 2200); return; }
+  _restPickMode = !_restPickMode;
+  if (!_restPickMode) _restPicked.clear();
+  renderRest();
+});
+if ($('#rest-exchange')) $('#rest-exchange').addEventListener('click', () => {
+  const n = _restPicked.size;
+  if (!n) return;
+  mkConfirm('兑换水晶', `把选中的 ${n} 张重复四星兑换成 ${(n * 3000).toLocaleString('en-US')} 水晶？`, () => {
+    const perCid = {};
+    for (const key of _restPicked) { const cid = key.split('#')[0]; perCid[cid] = (perCid[cid] || 0) + 1; }
+    for (const [cid, k] of Object.entries(perCid)) {
+      settings.dupes4[cid] = Math.max(0, (settings.dupes4[cid] || 0) - k);
+      if (!settings.dupes4[cid]) delete settings.dupes4[cid];
+    }
+    addCrystal(n * 3000);
+    showToast(`兑换成功，获得 ${(n * 3000).toLocaleString('en-US')} 水晶`, 3000);
+    exitRestPick();
+    renderRest();
+  });
+});
+/* 抽卡设置：获取水晶（+100） */
+if ($('#crystal-gain')) $('#crystal-gain').addEventListener('click', () => {
+  addCrystal(100);
+  showToast('获得 100 水晶', 2200);
+});
+updateCrystalUI();
 
 $('#songs-ok').addEventListener('click', () => { stopPreview(); releasePreviewBuffer(); openConfirm(); });
 /* 筛选弹窗：时长 / FC / AP 三个维度，应用到曲目列表 */
@@ -8267,14 +8452,20 @@ function gachaPull(pool, n) {
 }
 
 function gachaAddMembers(results) {
-  let added = 0;
+  let added = 0, duped = 0;
   for (const r of results) {
+    const ent = _gachaIdx.cards[r.cid];
+    const tier = ent ? tierOf(ent[1]) : 2;
     if (!settings.members.some(m => m.cid === r.cid)) {
-      settings.members.push({ cid: r.cid, r: _gachaIdx.cards[r.cid] ? _gachaIdx.cards[r.cid][1] : 'rarity_2' });
+      settings.members.push({ cid: r.cid, r: ent ? ent[1] : 'rarity_2' });
       added++;
+    } else if (tier === 4) {
+      // 四星重复：放进休息室（每个重复个体之后可兑换 3000 水晶）
+      settings.dupes4[r.cid] = (settings.dupes4[r.cid] || 0) + 1;
+      duped++;
     }
   }
-  if (added) saveSettings();
+  if (added || duped) saveSettings();
   return added;
 }
 
@@ -8283,8 +8474,11 @@ let _gdQueue = [], _gdIdx = 0, _gdPool = null, _gdN = 1;
 function gdStars(ent) { return ent[1] === 'rarity_birthday' ? '𐙚' : '★'.repeat(tierOf(ent[1])); }
 async function startGachaDraw(pool, n) {
   if (_gachaDrawing) return;
+  // 招募消耗水晶：单抽 300、十连 3000（余额不足直接拦截）
+  const cost = n * 300;
+  if (!spendCrystal(cost)) { showToast(`水晶不足：招募需要 ${cost} 水晶，可在休息室兑换或从公告获取`, 3200); return; }
   const results = gachaPull(pool, n);
-  if (!results.length) { showToast('这个卡池暂时没有可招募的卡牌', 2600); return; }
+  if (!results.length) { addCrystal(cost); showToast('这个卡池暂时没有可招募的卡牌', 2600); return; }
   _gachaDrawing = true; _gdPool = pool; _gdN = n;
   // 累计该卡池的抽取次数（十连算 10 抽），并刷新大框与 UP 收集度
   settings.gachaPulls[pool.id] = (settings.gachaPulls[pool.id] || 0) + n;
@@ -9040,6 +9234,7 @@ $('#member-big').addEventListener('click', () => {
 
 /* ---------- 页面按钮 ---------- */
 $('#btn-gacha').addEventListener('click', async () => {
+  updateCrystalUI();   // 进招募页刷新水晶显示
   // 先把卡池索引读好再进页面，避免进去后空列表闪一下再填充
   showLoad('正在读取卡池…', null);
   try {
@@ -9056,12 +9251,14 @@ $('#gacha-back').addEventListener('click', goTitle);
 $('#gacha-pull1').addEventListener('click', () => {
   const pool = settings.gachaPools.find(p => p.id === _selPool);
   if (!pool) { showToast('先在左侧选择一个卡池', 2200); return; }
-  mkConfirm('确认招募', `是否要招募一次？`, () => { _gachaDrawing = false; startGachaDraw(pool, 1); });
+  if ((Number(settings.crystal) || 0) < 300) { showToast('水晶不足：招募一次需要 300 水晶', 2800); return; }
+  mkConfirm('确认招募', '是否要招募一次？将消耗 300 水晶', () => { _gachaDrawing = false; startGachaDraw(pool, 1); });
 });
 $('#gacha-pull10').addEventListener('click', () => {
   const pool = settings.gachaPools.find(p => p.id === _selPool);
   if (!pool) { showToast('先在左侧选择一个卡池', 2200); return; }
-  mkConfirm('确认招募', '是否要招募十次？', () => { _gachaDrawing = false; startGachaDraw(pool, 10); });
+  if ((Number(settings.crystal) || 0) < 3000) { showToast('水晶不足：招募十次需要 3000 水晶', 2800); return; }
+  mkConfirm('确认招募', '是否要招募十次？将消耗 3000 水晶', () => { _gachaDrawing = false; startGachaDraw(pool, 10); });
 });
 /* 一次性把全部一星卡加入成员库：一星卡不在任何招募池里，只能这样获得。
    用 settings.members1Star 标记，只执行一次（用户之后手动删掉不会再加回来） */
