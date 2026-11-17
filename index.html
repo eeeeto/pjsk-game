@@ -1431,9 +1431,9 @@
       </div>
     </div>
     <div class="res-actions">
-      <button class="btn ghost" id="res-share">分享</button>
       <button class="btn ghost" id="res-again">再次演出</button>
-      <button class="btn" id="res-home">完成演出</button>
+      <button class="btn ghost" id="res-share">分享结果</button>
+      <button class="btn" id="res-home">完成</button>
     </div>
   </section>
 
@@ -1735,7 +1735,7 @@
     <div class="dlg-title">公 告 <span>栏</span></div>
     <div class="notice-list" id="notice-list"></div>
     <div class="dlg-actions">
-      <button class="btn pink" id="notice-read" style="display:none">全部已读（可得 1000 水晶）</button>
+      <button class="btn pink" id="notice-read" style="display:none">一键已读所有公告</button>
       <button class="btn ghost" id="notice-close">关 闭</button>
     </div>
   </div>
@@ -6798,7 +6798,8 @@ const NOTICES = [
       <p>曲库目前共 125 曲。</p>`
   }
 ];
-const NOTICE_SEEN_KEY = 'ps-notice-seen-v2';   // v2：公告全部重置为未读
+const NOTICE_READ_KEY = 'ps-notice-read-v3';   // v3：改为按条记录已读（水晶 = 本次已读条数 × 1000），公告全部重置为未读
+try { localStorage.removeItem('ps-notice-seen-v2'); } catch (e) {}
 function noticeSorted() {
   return NOTICES.slice().sort((a, b) => (a.time < b.time ? 1 : a.time > b.time ? -1 : 0));
 }
@@ -6806,10 +6807,20 @@ function noticeFmtTime(t) {
   const m = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})$/.exec(t);
   return m ? (+m[2]) + '/' + (+m[3]) + ' ' + m[4] + ':' + m[5] : t;
 }
-function noticeHasUnread() {
-  const latest = noticeSorted()[0];
-  return !!latest && localStorage.getItem(NOTICE_SEEN_KEY) !== latest.id;
+function noticeReadSet() {
+  try {
+    const arr = JSON.parse(localStorage.getItem(NOTICE_READ_KEY) || '[]');
+    return new Set(Array.isArray(arr) ? arr : []);
+  } catch (e) { return new Set(); }
 }
+function noticeSaveRead(set) {
+  localStorage.setItem(NOTICE_READ_KEY, JSON.stringify([...set]));
+}
+function unreadNoticeCount() {
+  const read = noticeReadSet();
+  return NOTICES.filter(n => !read.has(n.id)).length;
+}
+function noticeHasUnread() { return unreadNoticeCount() > 0; }
 function syncNoticeDot() {
   const dot = $('#notice-dot');
   if (!dot) return;
@@ -6817,7 +6828,10 @@ function syncNoticeDot() {
 }
 function syncNoticeReadBtn() {
   const btn = $('#notice-read');
-  if (btn) btn.style.display = noticeHasUnread() ? '' : 'none';
+  if (!btn) return;
+  const n = unreadNoticeCount();
+  btn.style.display = n ? '' : 'none';
+  btn.textContent = `一键已读所有公告（${n} 条 · +${(n * 1000).toLocaleString('en-US')} 水晶）`;
 }
 function renderNotices() {
   const list = $('#notice-list');
@@ -6849,12 +6863,16 @@ if ($('#notice-list')) $('#notice-list').addEventListener('click', e => {
   const it = e.target.closest('.notice-item');
   if (it) it.classList.toggle('open');
 });
-/* 全部已读 → 得 1000 水晶（有未读公告时才会显示这个按钮） */
+/* 一键已读所有公告 → 水晶 = 本次已读的公告数量 × 1000（全部已读后按钮隐藏） */
 if ($('#notice-read')) $('#notice-read').addEventListener('click', () => {
-  localStorage.setItem(NOTICE_SEEN_KEY, (noticeSorted()[0] || {}).id || '');
-  addCrystal(1000);
+  const n = unreadNoticeCount();
+  if (!n) return;
+  const read = noticeReadSet();
+  NOTICES.forEach(x => read.add(x.id));
+  noticeSaveRead(read);
+  addCrystal(n * 1000);
   syncNoticeDot(); syncNoticeReadBtn();
-  showToast('已全部标记为已读，获得 1000 水晶', 3000);
+  showToast(`已读 ${n} 条公告，获得 ${(n * 1000).toLocaleString('en-US')} 水晶`, 3200);
 });
 syncNoticeDot();
 
