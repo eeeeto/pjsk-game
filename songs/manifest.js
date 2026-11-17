@@ -1396,6 +1396,18 @@ window.SONGS = [
   "duration": 102.49,
   "file": "songs/s141.mp3",
   "full": true,
-  "cover": "assets/covers/other2.jpg"
+  "cover": "assets/covers/bandori1.jpg"
+ }
+,
+ {
+  "title": "ティアドロップス",
+  "artist": "Poppin'Party",
+  "credit": "",
+  "unit": "otherworld",
+  "game": true,
+  "duration": 217.13,
+  "file": "songs/s142.mp3",
+  "full": true,
+  "cover": "assets/covers/bandori1.jpg"
  }
 ];
