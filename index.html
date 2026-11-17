@@ -81,6 +81,47 @@
   .logo-sub{margin-top:clamp(8px,1.6vh,16px);color:#9db4d4;font-size:clamp(11px,1.8vh,15px);letter-spacing:.16em;}
   .title-actions{display:flex;flex-direction:column;gap:clamp(6px,1.3vh,14px);margin-top:clamp(12px,2.8vh,38px);width:min(340px,64vw);}
   .title-actions .btn{width:100%;height:clamp(34px,7.2vh,54px);font-size:clamp(12.5px,1.95vh,18px);padding:0 clamp(16px,2.6vw,30px);}
+  /* 公告栏入口：粉紫实心 + 呼吸光，标题页里第一个跳出来 */
+  .title-actions .btn.notice{background:linear-gradient(135deg,#ffd0e8,#ff5ea8 52%,#b44dff);color:#22031a;
+    box-shadow:0 8px 26px rgba(255,94,168,.34),inset 0 1px 0 rgba(255,255,255,.72);
+    animation:noticePulse 2.8s ease-in-out infinite;gap:8px;}
+  @keyframes noticePulse{
+    0%,100%{box-shadow:0 8px 26px rgba(255,94,168,.30),inset 0 1px 0 rgba(255,255,255,.72);}
+    50%{box-shadow:0 12px 40px rgba(255,94,168,.62),inset 0 1px 0 rgba(255,255,255,.8);}}
+  .title-actions .btn.notice svg{width:1.05em;height:1.05em;flex:none;}
+  .title-actions .btn.notice .dot{position:absolute;top:7px;right:11px;width:9px;height:9px;border-radius:50%;
+    background:#ff1f63;box-shadow:0 0 0 2px rgba(34,3,26,.55),0 0 10px #ff1f63;}
+  /* 公告弹窗 */
+  .notice-dlg{width:min(600px,94vw);}
+  .notice-list{margin-top:clamp(8px,1.8vh,16px);display:flex;flex-direction:column;gap:8px;}
+  .notice-item{border-radius:14px;background:rgba(255,255,255,.045);border:1px solid rgba(140,200,255,.16);
+    cursor:pointer;overflow:hidden;transition:border-color .18s,background .18s;}
+  .notice-item:hover{border-color:rgba(37,226,255,.36);}
+  .notice-item.open{background:rgba(37,226,255,.065);border-color:rgba(37,226,255,.46);}
+  .notice-head{display:flex;align-items:center;gap:9px;padding:10px 12px;}
+  .notice-tag{flex:none;font-size:10px;font-weight:900;letter-spacing:.1em;padding:3px 8px;border-radius:999px;
+    background:rgba(255,94,168,.16);color:#ffb3d6;border:1px solid rgba(255,94,168,.38);}
+  .notice-title{flex:1;min-width:0;font-size:clamp(12.5px,1.95vh,15px);font-weight:800;color:#eaf4ff;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .notice-date{flex:none;font-size:10.5px;color:#8ea6c6;font-variant-numeric:tabular-nums;letter-spacing:.04em;}
+  .notice-item .caret{flex:none;width:8px;height:8px;border-right:2px solid #7fa6cf;border-bottom:2px solid #7fa6cf;
+    transform:rotate(45deg);transition:transform .24s;margin-left:2px;margin-top:-3px;}
+  .notice-item.open .caret{transform:rotate(-135deg);margin-top:3px;border-color:#8fe6ff;}
+  .notice-body{display:grid;grid-template-rows:0fr;transition:grid-template-rows .28s ease;}
+  .notice-item.open .notice-body{grid-template-rows:1fr;}
+  .notice-body>.clip{overflow:hidden;min-height:0;}
+  .notice-body .inner{padding:0 12px 11px;font-size:clamp(11px,1.72vh,13px);line-height:1.78;color:#b9cbe4;}
+  .notice-body .inner p{margin:0 0 6px;}
+  .notice-body .inner ul{margin:0 0 6px;padding-left:1.1em;}
+  .notice-body .inner li{margin:2px 0;}
+  .notice-body .inner b{color:#eaf4ff;}
+  .notice-body .inner .hl{color:#ffb3d6;font-weight:800;}
+  .notice-body .inner a{color:#8fe6ff;font-weight:800;text-decoration:none;border-bottom:1px dashed rgba(143,230,255,.55);word-break:break-all;}
+  .notice-link{margin:8px 0 2px;display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;
+    background:rgba(37,226,255,.1);border:1px solid rgba(37,226,255,.32);}
+  .notice-link .u{flex:1;min-width:0;font-size:11.5px;color:#8fe6ff;font-weight:800;overflow:hidden;
+    text-overflow:ellipsis;white-space:nowrap;}
+  .notice-link .go{flex:none;font-size:11px;font-weight:900;color:#04222b;background:#8fe6ff;border-radius:999px;padding:3px 10px;}
   /* 矮屏（手机横屏）进一步压缩，保证整列按钮不出屏 */
   @media (max-height:460px){
     .logo{font-size:clamp(26px,7.2vh,40px);}
@@ -983,6 +1024,11 @@
       <div class="logo-sub">セカイに、キミの音を。</div>
       <div class="title-actions">
         <button class="btn" id="btn-start">开 始 演 出</button>
+        <button class="btn notice" id="btn-notice">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 9.5h2.6L12 5.3v13.4L6.6 14.5H4a1.2 1.2 0 0 1-1.2-1.2v-2.6A1.2 1.2 0 0 1 4 9.5z"/><path d="M15.4 8.2a5.2 5.2 0 0 1 0 7.6" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/></svg>
+          公 告 栏
+          <i class="dot" id="notice-dot"></i>
+        </button>
         <button class="btn ghost" id="btn-profile">个 人 主 页</button>
         <button class="btn ghost" id="btn-gacha">「世界」的招募</button>
         <button class="btn ghost" id="btn-members">成 员</button>
@@ -1637,6 +1683,16 @@
 </div>
 
 <!-- ================= 确认弹窗 ================= -->
+<div class="modal" id="modal-notice">
+  <div class="dialog notice-dlg">
+    <div class="dlg-title">公 告 <span>栏</span></div>
+    <div class="notice-list" id="notice-list"></div>
+    <div class="dlg-actions">
+      <button class="btn pink" id="notice-close">关 闭</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal" id="modal-filter">
   <div class="dialog">
     <div class="dlg-title">筛选<span>曲目</span></div>
@@ -6609,6 +6665,84 @@ $('#dev-back').addEventListener('click', () => { goTitle(); });
 
 
 $('#songs-back').addEventListener('click', () => { stopPreview(); releasePreviewBuffer(); goTitle(); });
+/* ================= 公告栏 ================= */
+/* 新增公告：往数组里加一条即可，按 time 倒序自动排（最近的在最上面） */
+const NOTICES = [
+  {
+    id: 'n20261117b', time: '2026-11-17 20:54', tag: '投稿',
+    title: '歌曲与音效投稿现已开放',
+    body: `<p>从今天开始，<b>歌曲与打击音效投稿正式开放</b>。想打的歌、想听的按键音，都可以发过来。</p>
+      <ul>
+        <li><b>曲风范围</b>：VOCALOID（ボカロ）系、音企（音乐企划）曲、J-POP 为主，其他与游戏氛围相符的曲目也欢迎。</li>
+        <li><b>音效</b>：按键音、判定音都可以，尽量提供无损或高码率音源。</li>
+        <li><b>底线</b>：涉及政治、宗教、地域对立等争议内容的曲目与音效一律不收录，请勿投稿。</li>
+        <li><b>建议附带</b>：曲名 / 作者、音源文件或链接、BPM、期望难度，能省下不少来回沟通。</li>
+      </ul>
+      <p>投稿入口（小红书私信）：</p>
+      <a class="notice-link" href="https://xhslink.cn/o/86wGX5NvHqv" target="_blank" rel="noopener">
+        <span class="u">https://xhslink.cn/o/86wGX5NvHqv</span><span class="go">前 往</span>
+      </a>
+      <p style="margin-top:8px">采纳上线后会在公告栏与选曲页同步说明，感谢每一份投稿。</p>`
+  },
+  {
+    id: 'n20261117a', time: '2026-11-17 20:05', tag: '曲库',
+    title: '两首 A-SOUL 曲目已上线',
+    body: `<p>两首 <b>A-SOUL</b> 的 short 版本已加入曲库，现在就能在选曲页打到：</p>
+      <ul>
+        <li><b>Re-sonance (short)</b> — A-SOUL · 1:57</li>
+        <li><b>练习心事 (short)</b> — A-SOUL · 1:59</li>
+      </ul>
+      <p>分类归入「枝江」，封面统一使用枝江视觉图；两首都在 2:00 以内，会自动出现在 <b>short</b> 筛选里。</p>
+      <p>曲库目前共 125 曲。</p>`
+  }
+];
+const NOTICE_SEEN_KEY = 'ps-notice-seen';
+function noticeSorted() {
+  return NOTICES.slice().sort((a, b) => (a.time < b.time ? 1 : a.time > b.time ? -1 : 0));
+}
+function noticeFmtTime(t) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})$/.exec(t);
+  return m ? (+m[2]) + '/' + (+m[3]) + ' ' + m[4] + ':' + m[5] : t;
+}
+function syncNoticeDot() {
+  const dot = $('#notice-dot');
+  if (!dot) return;
+  const latest = noticeSorted()[0];
+  dot.style.display = (latest && localStorage.getItem(NOTICE_SEEN_KEY) === latest.id) ? 'none' : '';
+}
+function renderNotices() {
+  const list = $('#notice-list');
+  if (!list) return;
+  list.innerHTML = noticeSorted().map((n, i) => `
+    <div class="notice-item${i === 0 ? ' open' : ''}" data-id="${n.id}">
+      <div class="notice-head">
+        <span class="notice-tag">${n.tag}</span>
+        <span class="notice-title">${n.title}</span>
+        <span class="notice-date">${noticeFmtTime(n.time)}</span>
+        <i class="caret"></i>
+      </div>
+      <div class="notice-body"><div class="clip"><div class="inner">${n.body}</div></div></div>
+    </div>`).join('');
+}
+function openNotice() {
+  renderNotices();
+  const m = $('#modal-notice');
+  if (m) m.classList.add('show');
+  localStorage.setItem(NOTICE_SEEN_KEY, (noticeSorted()[0] || {}).id || '');
+  syncNoticeDot();
+}
+if ($('#btn-notice')) $('#btn-notice').addEventListener('click', openNotice);
+if ($('#notice-close')) $('#notice-close').addEventListener('click', () => $('#modal-notice').classList.remove('show'));
+if ($('#modal-notice')) $('#modal-notice').addEventListener('click', e => {
+  if (e.target.id === 'modal-notice') $('#modal-notice').classList.remove('show');
+});
+if ($('#notice-list')) $('#notice-list').addEventListener('click', e => {
+  if (e.target.closest('a')) return;   // 链接照常打开，不误触折叠
+  const it = e.target.closest('.notice-item');
+  if (it) it.classList.toggle('open');
+});
+syncNoticeDot();
+
 $('#songs-ok').addEventListener('click', () => { stopPreview(); releasePreviewBuffer(); openConfirm(); });
 /* 筛选弹窗：时长 / FC / AP 三个维度，应用到曲目列表 */
 $('#songs-filter').addEventListener('click', () => {
