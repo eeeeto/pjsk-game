@@ -9268,7 +9268,7 @@ $('#btn-gacha').addEventListener('click', async () => {
 });
 $('#gacha-back').addEventListener('click', goTitle);
 /* 无料卡池：名字带「无料」的池子免费招募，不消耗水晶 */
-function isFreePool(pool) { return !!pool && /无料/.test(pool.name || ''); }
+function isFreePool(pool) { return !!pool && /(无料|無料)/.test(pool.name || ''); }
 function syncGachaPullButtons() {
   const pool = settings.gachaPools.find(p => p.id === _selPool);
   const free = isFreePool(pool);
