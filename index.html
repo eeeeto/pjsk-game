@@ -1177,12 +1177,9 @@
           <div class="sub" id="gacha-rate4-sub">当前概率：四星 3% · 三星 8.5% · 二星 88.5%</div>
         </div>
         <div class="field">
-          <div class="lbl"><span>歪卡</span><b id="gacha-off-val">开</b></div>
-          <div class="pills" id="gacha-off-pills">
-            <div class="pill on" data-goff="1">开（20% 歪成其他卡池的四星）</div>
-            <div class="pill" data-goff="0">关</div>
-          </div>
-          <div class="sub">打开：四星 80% 出当期 UP，20% 歪成其他卡池的四星（只算真四星，纪念卡不算）。关闭：四星只出当期 UP 的三四张主要卡，绝不歪。生日池与周年池不受影响，仍然只出被庆祝的角色。</div>
+          <div class="lbl"><span>四星出当期的概率</span><b id="gacha-up-val">80%</b></div>
+          <input type="range" id="gacha-up-range" min="50" max="100" step="1" value="80">
+          <div class="sub" id="gacha-up-sub">当前概率：四星出现时 80% 是当期 UP，20% 歪成其他卡池的四星（只算真四星，纪念卡不算）。100% = 绝不歪。生日池与周年池不受影响，仍然只出被庆祝的角色。</div>
         </div>
         <div class="field">
           <div class="lbl"><span>三星转四星概率</span><b id="gacha34-val">5%</b></div>
@@ -1988,7 +1985,7 @@ const DEF_SET = { skin:'lumirect', bgMode:'card', bgCover:res('assets/covers/leo
   bgCard:res('assets/cards/88/card_normal.webp'), bgCardShade:0.45, customSkin:null, sfxVolume:0.5, bgmVolume:0.45, speed:7.0, diff:'normal',
   keyScale:1.0, noteSquash:0.6, skinText:'❄', skinTextColor:'#ffffff', judgeLeniency:1.0, holdAlpha:0.5, judgeLift:0, judgeOffset:0, myCards:[], lastSong:0, sound:'tap',
   marks:{}, favs:{}, collapsedUnits:{}, teams:[], activeTeam:-1, songFilter:{ dur:'all', fc:'all', ap:'all', fav:'all' },
-  gachaRate4:3, gachaOff:true, gacha3to4:5, gachaPulls:{}, gachaPools:[], members:[] };
+  gachaRate4:3, gacha3to4:5, gachaPulls:{}, gachaPools:[], members:[] };
 let settings = Object.assign({}, DEF_SET);
 try {
   const raw = localStorage.getItem('sekai-fan-settings');
@@ -2006,7 +2003,16 @@ settings.judgeOffset = clamp(Number(settings.judgeOffset) || 0, -150, 150);
 if (!Array.isArray(settings.myCards)) settings.myCards = [];
 // 抽卡设置：四星概率（3~7，默认 3）/ 已添加的卡池 / 招募到的成员
 settings.gachaRate4 = clamp(Number(settings.gachaRate4) || 3, 3, 7);
-if (typeof settings.gachaOff !== 'boolean') settings.gachaOff = true;   // 歪卡开关，默认开
+// 四星出当前 UP 的概率（%），50~100，默认 80；旧存档的歪卡开关按语义迁移（关=100%，开=80%）
+{
+  const n = Number(settings.gachaUpProb);
+  if (isNaN(n) || settings.gachaUpProb === undefined || settings.gachaUpProb === null) {
+    settings.gachaUpProb = (settings.gachaOff === false) ? 100 : 80;
+  } else {
+    settings.gachaUpProb = clamp(Math.round(n), 50, 100);
+  }
+  delete settings.gachaOff;
+}
 if (!settings.gachaPulls || typeof settings.gachaPulls !== 'object') settings.gachaPulls = {};   // 各卡池已抽取次数
 { const v34 = Number(settings.gacha3to4); settings.gacha3to4 = isNaN(v34) ? 5 : clamp(v34, 0, 15); }   // 三星转四星概率（%），0~15，默认 5
 if (!Array.isArray(settings.gachaPools)) settings.gachaPools = [];
@@ -7043,7 +7049,7 @@ $$('.tab').forEach(t => t.addEventListener('click', () => {
   if (t.dataset.tab === 'skin') requestAnimationFrame(renderKeySize);
   if (t.dataset.tab === 'team') renderTeams();
   if (t.dataset.tab === 'result') renderResCards();
-  if (t.dataset.tab === 'gachaset') { syncGachaRateUI(); syncGachaOffUI(); syncGacha34UI(); }
+  if (t.dataset.tab === 'gachaset') { syncGachaRateUI(); syncGachaUpUI(); syncGacha34UI(); }
 }));
 
 /* ============================================================
@@ -7790,15 +7796,21 @@ $('#gacha-rate4-range').addEventListener('input', e => {
   settings.gachaRate4 = Number(e.target.value);
   saveSettings(); syncGachaRateUI();
 });
-function syncGachaOffUI() {
-  const v = $('#gacha-off-val');
-  if (v) v.textContent = settings.gachaOff ? '开' : '关';
-  document.querySelectorAll('#gacha-off-pills .pill').forEach(p => p.classList.toggle('on', (p.dataset.goff === '1') === !!settings.gachaOff));
+function syncGachaUpUI() {
+  const v = $('#gacha-up-val'), r = $('#gacha-up-range'), s = $('#gacha-up-sub');
+  const p = clamp(Math.round(Number(settings.gachaUpProb) || 80), 50, 100);
+  if (r) r.value = p;
+  if (v) v.textContent = p + '%';
+  if (s) {
+    s.textContent = p >= 100
+      ? '当前概率：四星 100% 出当期 UP，绝不歪（只算真四星，纪念卡不算）。生日池与周年池不受影响，仍然只出被庆祝的角色。'
+      : `当前概率：四星出现时 ${p}% 是当期 UP，${100 - p}% 歪成其他卡池的四星（只算真四星，纪念卡不算）。生日池与周年池不受影响，仍然只出被庆祝的角色。`;
+  }
 }
-document.querySelectorAll('#gacha-off-pills .pill').forEach(p => p.addEventListener('click', () => {
-  settings.gachaOff = p.dataset.goff === '1';
-  saveSettings(); syncGachaOffUI();
-}));
+$('#gacha-up-range').addEventListener('input', e => {
+  settings.gachaUpProb = clamp(Math.round(Number(e.target.value)), 50, 100);
+  saveSettings(); syncGachaUpUI();
+});
 function syncGacha34UI() {
   const v = $('#gacha34-val'), r = $('#gacha34-range');
   const p = clamp(Number(settings.gacha3to4) || 0, 0, 15);
@@ -7847,7 +7859,7 @@ function gachaFmtDate(t) {
   } catch (e) { return ''; }
 }
 
-/* 该池的「当期 UP」四星列表（轮播与歪卡开关共用同一套判定）：
+/* 该池的「当期 UP」四星列表（轮播、收集度与「四星出当期概率」共用同一套判定）：
    UP 主要卡 = 与卡池同一天实装的那几张（一般三四张）；开始日没有实装记录的特殊池退回卡池期间内实装的卡；
    联动池（池名含コラボ）= 名单里全部联动四星；复刻池回溯同名的原版卡池取它的 UP */
 const _poolUp4Cache = {};
@@ -8089,7 +8101,7 @@ function gachaCelebInfo(pool) {
   }
   return cid ? { cid, kind } : null;
 }
-/* 歪卡名单缓存：key = 当前池 id，value = 其他所有卡池的四星卡 id 列表 */
+/* 歪卡名单缓存：key = 当前池 id，value = 其他所有卡池的四星卡 id 列表（四星出当期概率 <100% 时用） */
 const _offPool4Cache = {};
 function gachaPull(pool, n) {
   const roster = gachaPoolRoster(pool);
@@ -8132,14 +8144,17 @@ function gachaPull(pool, n) {
   };
   // 四星基础槽位固定为当期 UP 的三四张主要卡（与轮播同一套判定）——之前名单不足十连会补入
   // 全部常驻卡，导致四星几乎全歪到常驻；现在常驻卡不再占据四星槽位
+  let up4List = [];
   if (!celeb) {
-    const up4 = gachaPoolUp4(pool);
-    if (up4.length) byTier[4] = up4.slice();
+    up4List = gachaPoolUp4(pool);
+    if (up4List.length) byTier[4] = up4List.slice();
   }
-  // 歪卡：开启后，出四星时有 20% 概率歪成其他卡池的四星（真正的 rarity_4，生日/周年纪念卡不算）；
-  // 关闭则四星 100% 当期 UP。生日池 / 周年池不受影响——它们必须只出被庆祝的角色
+  // 四星出当期的概率：出四星时 upProb% 是本池当期 UP，剩下 (100-upProb)% 歪成其他卡池的四星
+  // （真正的 rarity_4，生日/周年纪念卡不算）。100% = 绝不歪。
+  // 生日池 / 周年池不受影响——它们必须只出被庆祝的角色。池子没有 UP 判定结果时不歪。
+  const upProb = clamp(Math.round(Number(settings.gachaUpProb)), 50, 100);
   let offList = null;
-  if (settings.gachaOff !== false && !celeb) {
+  if (!celeb && upProb < 100 && up4List.length) {
     if (!_offPool4Cache[pool.id]) {
       const set = new Set();
       for (const g of _gachaIdx.gachas || []) {
@@ -8165,7 +8180,7 @@ function gachaPull(pool, n) {
       cid = byTier[4][Math.floor(Math.random() * byTier[4].length)];
       fake3 = true;
     }
-    if (tier === 4 && cid && offList && offList.length && Math.random() < 0.2) {
+    if (tier === 4 && cid && offList && offList.length && Math.random() * 100 >= upProb) {
       cid = offList[Math.floor(Math.random() * offList.length)];
     }
     out.push({ cid, tier: 0, fake3 });
