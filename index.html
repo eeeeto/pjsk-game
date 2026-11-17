@@ -1162,6 +1162,14 @@
           <input type="range" id="gacha-rate4-range" min="3" max="7" step="0.5" value="3">
           <div class="sub" id="gacha-rate4-sub">当前概率：四星 3% · 三星 8.5% · 二星 88.5%</div>
         </div>
+        <div class="field">
+          <div class="lbl"><span>歪卡</span><b id="gacha-off-val">开</b></div>
+          <div class="pills" id="gacha-off-pills">
+            <div class="pill on" data-goff="1">开（20% 歪成其他卡池的四星）</div>
+            <div class="pill" data-goff="0">关</div>
+          </div>
+          <div class="sub">打开后，每次出四星时有 20% 概率变成其他卡池的四星卡（只算真正的四星，生日/周年纪念卡不算）。生日池与周年池不受影响，仍然只出被庆祝的角色。</div>
+        </div>
       </div>
     </div>
     <div class="bottom-bar">
@@ -1954,7 +1962,7 @@ const DEF_SET = { skin:'lumirect', bgMode:'card', bgCover:res('assets/covers/leo
   bgCard:res('assets/cards/88/card_normal.webp'), bgCardShade:0.45, customSkin:null, sfxVolume:0.5, bgmVolume:0.45, speed:7.0, diff:'normal',
   keyScale:1.0, noteSquash:0.6, skinText:'❄', skinTextColor:'#ffffff', judgeLeniency:1.0, holdAlpha:0.5, judgeLift:0, judgeOffset:0, myCards:[], lastSong:0, sound:'tap',
   marks:{}, favs:{}, collapsedUnits:{}, teams:[], activeTeam:-1, songFilter:{ dur:'all', fc:'all', ap:'all', fav:'all' },
-  gachaRate4:3, gachaPools:[], members:[] };
+  gachaRate4:3, gachaOff:true, gachaPools:[], members:[] };
 let settings = Object.assign({}, DEF_SET);
 try {
   const raw = localStorage.getItem('sekai-fan-settings');
@@ -1972,6 +1980,7 @@ settings.judgeOffset = clamp(Number(settings.judgeOffset) || 0, -150, 150);
 if (!Array.isArray(settings.myCards)) settings.myCards = [];
 // 抽卡设置：四星概率（3~7，默认 3）/ 已添加的卡池 / 招募到的成员
 settings.gachaRate4 = clamp(Number(settings.gachaRate4) || 3, 3, 7);
+if (typeof settings.gachaOff !== 'boolean') settings.gachaOff = true;   // 歪卡开关，默认开
 if (!Array.isArray(settings.gachaPools)) settings.gachaPools = [];
 if (!Array.isArray(settings.members)) settings.members = [];
 settings.members.forEach(m => { if (typeof m.af !== 'boolean') m.af = false; });   // 特训前(false)/特训后(true)
@@ -7006,6 +7015,7 @@ $$('.tab').forEach(t => t.addEventListener('click', () => {
   if (t.dataset.tab === 'skin') requestAnimationFrame(renderKeySize);
   if (t.dataset.tab === 'team') renderTeams();
   if (t.dataset.tab === 'result') renderResCards();
+  if (t.dataset.tab === 'gachaset') { syncGachaRateUI(); syncGachaOffUI(); }
 }));
 
 /* ============================================================
@@ -7752,6 +7762,15 @@ $('#gacha-rate4-range').addEventListener('input', e => {
   settings.gachaRate4 = Number(e.target.value);
   saveSettings(); syncGachaRateUI();
 });
+function syncGachaOffUI() {
+  const v = $('#gacha-off-val');
+  if (v) v.textContent = settings.gachaOff ? '开' : '关';
+  document.querySelectorAll('#gacha-off-pills .pill').forEach(p => p.classList.toggle('on', (p.dataset.goff === '1') === !!settings.gachaOff));
+}
+document.querySelectorAll('#gacha-off-pills .pill').forEach(p => p.addEventListener('click', () => {
+  settings.gachaOff = p.dataset.goff === '1';
+  saveSettings(); syncGachaOffUI();
+}));
 
 /* ---------- 卡池列表 ---------- */
 function renderGachaPools() {
@@ -7978,6 +7997,8 @@ function gachaCelebInfo(pool) {
   }
   return cid ? { cid, kind } : null;
 }
+/* 歪卡名单缓存：key = 当前池 id，value = 其他所有卡池的四星卡 id 列表 */
+const _offPool4Cache = {};
 function gachaPull(pool, n) {
   const roster = gachaPoolRoster(pool);
   const byTier = { 1: [], 2: [], 3: [], 4: [] };
@@ -8017,8 +8038,32 @@ function gachaPull(pool, n) {
     if (!arr.length) return null;
     return arr[Math.floor(Math.random() * arr.length)];
   };
+  // 歪卡：开启后，出四星时有 20% 概率歪成其他卡池的四星（真正的 rarity_4，生日/周年纪念卡不算）。
+  // 生日池 / 周年池不受影响——它们必须只出被庆祝的角色
+  let offList = null;
+  if (settings.gachaOff !== false && !celeb) {
+    if (!_offPool4Cache[pool.id]) {
+      const set = new Set();
+      for (const g of _gachaIdx.gachas || []) {
+        if (String(g.id) === String(pool.id)) continue;
+        for (const cid of (_gachaIdx.rosters && _gachaIdx.rosters[g.id]) || []) {
+          const ent = _gachaIdx.cards[cid];
+          if (ent && ent[1] === 'rarity_4') set.add(Number(cid));
+        }
+      }
+      _offPool4Cache[pool.id] = [...set];
+    }
+    offList = _offPool4Cache[pool.id];
+  }
   const out = [];
-  for (let i = 0; i < n; i++) out.push({ cid: pick(gachaPickTier(pool)), tier: 0 });
+  for (let i = 0; i < n; i++) {
+    const tier = gachaPickTier(pool);
+    let cid = pick(tier);
+    if (tier === 4 && cid && offList && offList.length && Math.random() < 0.2) {
+      cid = offList[Math.floor(Math.random() * offList.length)];
+    }
+    out.push({ cid, tier: 0 });
+  }
   // 十连保底：一抽都没有三星以上 → 最后一抽强制三星
   if (n >= 10 && !out.some(x => x.cid && _gachaIdx.cards[x.cid] && tierOf(_gachaIdx.cards[x.cid][1]) >= 3)) {
     const c = pick(3);
