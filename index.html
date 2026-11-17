@@ -295,30 +295,6 @@
   #img-sheet .is-acts{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;}
   #img-sheet .is-acts .btn{min-width:112px;text-decoration:none;}
 
-  /* 新曲速递 */
-  .logo-new{display:inline-block;margin-top:clamp(8px,1.4vh,14px);font-family:inherit;
-    font-size:clamp(10.5px,1.5vh,12.5px);font-weight:800;letter-spacing:.06em;color:#8fe6ff;
-    background:rgba(37,226,255,.08);border:1px solid rgba(37,226,255,.28);border-radius:999px;
-    padding:5px 14px;cursor:pointer;}
-  .logo-new:hover{background:rgba(37,226,255,.16);}
-  @media (max-height:460px){.logo-new{font-size:10px;padding:3px 10px;}}
-  #screen-newmusic{padding-bottom:0;}
-  .nm-scroll{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
-    padding:4px clamp(16px,3.6vw,48px) 18px;display:grid;grid-template-columns:repeat(auto-fill,minmax(350px,1fr));
-    gap:14px;align-content:start;position:relative;z-index:1;}
-  .nm-card{background:rgba(10,18,34,.74);border:1px solid rgba(120,190,255,.16);border-radius:16px;
-    padding:14px 16px 12px;display:flex;flex-direction:column;gap:8px;min-width:0;}
-  .nm-head{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;}
-  .nm-cat{font-size:16px;font-weight:900;color:#eaf4ff;}
-  .nm-sub{font-size:10.5px;color:#6b84a3;letter-spacing:.06em;}
-  .nm-num{margin-left:auto;font-size:11px;font-weight:800;color:#25e2ff;
-    border:1px solid rgba(37,226,255,.32);border-radius:999px;padding:0 9px;line-height:18px;}
-  .nm-list{display:flex;flex-direction:column;}
-  .nm-row{display:flex;gap:10px;align-items:baseline;padding:4px 0;border-bottom:1px dashed rgba(120,170,255,.09);}
-  .nm-row:last-child{border-bottom:0;}
-  .nm-name{flex:1;min-width:0;font-size:12.5px;color:#cfe4ff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .nm-size{flex:none;font-size:10.5px;color:#5f7896;font-variant-numeric:tabular-nums;}
-  @media (max-width:640px){.nm-scroll{grid-template-columns:1fr;}}
 
   /* 开发者相关页 */
   #screen-dev .page-head{position:relative;z-index:2;}
@@ -996,7 +972,6 @@
       <div class="logo-kicker">Fan Made Rhythm Game</div>
       <div class="logo">PROJECT<br>SEKAI<small>FAN STAGE</small></div>
       <div class="logo-sub">セカイに、キミの音を。</div>
-      <button class="logo-new" id="btn-newmusic">11.15 新曲速递 · 59 首 →</button>
       <div class="title-actions">
         <button class="btn" id="btn-start">开 始 演 出</button>
         <button class="btn ghost" id="btn-profile">个 人 主 页</button>
@@ -1289,20 +1264,6 @@
 
   <!-- 成员大图浮层 -->
   <div id="member-big" style="display:none"><img id="member-big-img" alt=""></div>
-
-  <!-- ================= 新曲速递 ================= -->
-  <section id="screen-newmusic" class="screen">
-    <div class="page-head">
-      <h2>新曲<em>速递</em></h2>
-      <div class="tip"><b class="song-count" id="nm-count">共 59 首</b><br>11.15 上新歌单<br><span class="tip-sub">按组合分类 · 曲目清单</span></div>
-    </div>
-    <div class="nm-scroll" id="nm-list"></div>
-    <div class="bottom-bar">
-      <button class="btn ghost" id="newmusic-back">返 回</button>
-      <div class="center" id="nm-now">11.15 上新 · 8 个分类</div>
-      <div></div>
-    </div>
-  </section>
 
   <!-- ================= 开发者相关 ================= -->
   <section id="screen-dev" class="screen">
@@ -2069,7 +2030,7 @@ function applyBackground() {
 /* ---------- 全局背景音乐 ----------
    首页 / 个人主页（含名片编辑）/ 世界招募 / 设置 播放同一首 BGM，其余页面自动淡出暂停。
    浏览器限制自动播放：首次点击/按键后补播一次；音量由设置里的「BGM 音量」控制。 */
-const BGM_PAGES = { title: 1, profile: 1, pfcards: 1, pfeditor: 1, gacha: 1, settings: 1, members: 1, newmusic: 1 };
+const BGM_PAGES = { title: 1, profile: 1, pfcards: 1, pfeditor: 1, gacha: 1, settings: 1, members: 1 };
 const BGM_SRC = res('assets/bgm/always-together.mp3');
 let bgmAudio = null, bgmFadeTimer = 0, bgmBlocked = false, bgmSuppressed = false;
 
@@ -6612,113 +6573,6 @@ $('#btn-settings').addEventListener('click', () => {
 $('#btn-dev').addEventListener('click', () => { show('dev'); applyBackground(); });
 $('#dev-back').addEventListener('click', () => { goTitle(); });
 
-/* ---------- 新曲速递（11.15 上新歌单） ---------- */
-const NEW_MUSIC = [
-  { cat: "虚拟歌手", sub: "ボカロ", songs: [
-    ["サツキ - おばけ体験(feat.重音テト)", "1.1 M"],
-    ["電ǂ鯨 - 童話になったらいいのに", "1.5 M"],
-    ["佐藤乃子歌愛ユキ - たぶん、夢(feat.歌愛ユキ)", "1.2 M"],
-    ["TRAPCHICK重音テト音街ウナ - ApprovePlease,Genie!", "1.3 M"],
-    ["被遗忘者的哀伤北山薇 - 极星流浪夜", "1.7 M"],
-    ["平行四界Quadimension星尘 - 最终祈愿", "2.0 M"],
-    ["星尘 - 站在银河术馆前的少年——星尘Infinity", "1.8 M"],
-    ["MIMI初音ミク可不 - 妄想哀歌(feat.初音ミク&可不)", "1.4 M"],
-    ["星葵77洛天依Official - 啥啊", "1.1 M"],
-    ["n-buna GUMI - 透明エレジー", "3.6 M"],
-    ["洛天依Official - 终冕", "1.7 M"],
-    ["n-buna初音ミク-ウミユリ海底譚", "1.8 M"],
-    ["結月ゆかりなきゃむりゃ - 幾望の月", "2.3 M"],
-    ["AnythingBecomeMoe_初音ミク - 展示中毒(feat.HatsuneMiku)", "1.1 M"],
-    ["かれたよつば - ヤラララ(feat.重音テト)(呀啦啦啦)", "1.2 M"],
-    ["halyosyKAITO - スノーマン(Rerec)", "1.7 M"],
-    ["あばらや - かなしばりに遭ったら", "1.7 M"],
-    ["r-906夢ノ結唱ROSE夢ノ結唱POPY-怪電話", "2.6 M"],
-    ["r-906初音ミク-パノプティコン", "1.9 M"],
-    ["malo初音ミク - ハジメテノオト", "2.3 M"],
-    ["かしこ。 初音ミク - コドモアツカイ", "4.2 M"],
-    ["WONDERFUL★OPPORTUNITY!鏡音レン鏡音リン - 成敗いたAAAAAす！(feat.鏡音レン&鏡音リン)", "1.5 M"],
-    ["r-906初音ミク-匙ノ咒(feat.初音ミク)", "2.1 M"],
-    ["LonePi歌愛ユキ - ハイドレンジア", "1.6 M"],
-    ["LonePi 花隈千冬 - ゲンチアナ", "4.1 M"],
-    ["MARETU初音ミク - しう", "2.1 M"],
-    ["原口沙輔重音テト - 人マニア", "994.4 K"],
-    ["DECO27初音ミク - パラサイト", "1.3 M"],
-    ["samfree巡音ルカ - たこルカ★マグロフィーバー", "1.0 M"],
-    ["ユジー初音ミク - ミルククラウン・オン・ソーネチカ", "1.7 M"],
-    ["いよわ初音ミク - パジャミィ", "1.6 M"],
-    ["香椎モイミ羽累 - 紫色の向日葵", "2.1 M"],
-  ] },
-  { cat: "其他世界", sub: "其他作品", songs: [
-    ["Ado - 愛して愛して愛して", "2.0 M"],
-    ["宝鐘マリン - きゃぴ", "1.5 M"],
-    ["A-SOUL-LeapTop", "1.5 M"],
-    ["鷲尾伶菜 - SoAddictive", "1.9 M"],
-    ["ヒトリエ - ワンミーツハー", "1.6 M"],
-    ["ふぉるて - ずうっといっしょ！", "1.4 M"],
-    ["クロノヴァ - Re：", "1.8 M"],
-    ["HIMEHINA - 琥珀の身体", "2.0 M"],
-    ["BRIGHT - 儚くて", "1.9 M"],
-    ["BRIGHT - 1年2ヶ月20日", "2.4 M"],
-    ["Fivesta - 今でもILoveYou", "2.0 M"],
-    ["Goosehouse - 光るなら", "1.9 M"],
-    ["黒うさぎ - アポフェニア", "1.1 M"],
-  ] },
-  { cat: "Leo/need", sub: "Leo/need", songs: [
-    ["日野森志歩 巡音ルカ 星乃一歌 天馬咲希 望月穗波 - このまんまでいこう(Game Size.)", "1.7 M"],
-    ["ロキ(short)", "2.1 M"],
-  ] },
-  { cat: "MORE MORE JUMP!", sub: "MORE MORE JUMP!", songs: [
-    ["天使のクローバー", "726.2 K"],
-    ["ツギハギスタッカート（short）", "2.5 M"],
-    ["ハッピーシンセサイザ(short)", "813.6 K"],
-  ] },
-  { cat: "Vivid BAD SQUAD", sub: "Vivid BAD SQUAD", songs: [
-    ["劣等上等（short）", "2.0 M"],
-  ] },
-  { cat: "Wonderlands×Showtime", sub: "Wonderlands×Showtime", songs: [
-    ["天马司、神代类、镜音连 - 行星环", "993.4 K"],
-    ["ブリキノダンス(short)", "2.0 M"],
-  ] },
-  { cat: "25時、ナイトコードで。", sub: "Nightcord at 25:00", songs: [
-    ["dna25时x镜音铃", "1.2 M"],
-    ["dnalive25时x镜音铃", "2.3 M"],
-    ["私は雨25时x镜音连", "1.5 M"],
-    ["かいりきベア25時、ナイトコードで。鏡音レン - バグ(feat.宵崎奏&朝比奈まふゆ&東雲絵名&暁山瑞希&鏡音レン)", "1.3 M"],
-    ["シャルル(short)", "2.1 M"],
-  ] },
-  { cat: "混活 / 联动", sub: "Mixed & Collab", songs: [
-    ["SEKAI（short）", "2.3 M"],
-  ] },
-];
-function renderNewMusic() {
-  const box = $('#nm-list');
-  if (!box || box.dataset.done) return;
-  box.dataset.done = '1';
-  let total = 0;
-  for (const g of NEW_MUSIC) {
-    total += g.songs.length;
-    const card = document.createElement('div');
-    card.className = 'nm-card';
-    const head = document.createElement('div');
-    head.className = 'nm-head';
-    head.innerHTML = `<span class="nm-cat">${escapeHTML(g.cat)}</span><span class="nm-sub">${escapeHTML(g.sub)}</span><span class="nm-num">${g.songs.length} 首</span>`;
-    card.appendChild(head);
-    const list = document.createElement('div');
-    list.className = 'nm-list';
-    for (const s of g.songs) {
-      const row = document.createElement('div');
-      row.className = 'nm-row';
-      row.innerHTML = `<span class="nm-name" title="${escapeHTML(s[0])}">${escapeHTML(s[0])}</span><span class="nm-size">${escapeHTML(s[1] || '')}</span>`;
-      list.appendChild(row);
-    }
-    card.appendChild(list);
-    box.appendChild(card);
-  }
-  const cnt = $('#nm-count');
-  if (cnt) cnt.textContent = `共 ${total} 首`;
-}
-$('#btn-newmusic').addEventListener('click', () => { show('newmusic'); applyBackground(); renderNewMusic(); });
-$('#newmusic-back').addEventListener('click', () => { goTitle(); });
 
 $('#songs-back').addEventListener('click', () => { stopPreview(); releasePreviewBuffer(); goTitle(); });
 $('#songs-ok').addEventListener('click', () => { stopPreview(); releasePreviewBuffer(); openConfirm(); });

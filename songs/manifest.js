@@ -1352,5 +1352,27 @@ window.SONGS = [
   "file": "songs/s137.mp3",
   "full": true,
   "cover": "assets/covers/other1.jpg",
+ },
+ {
+  "title": "Re-sonance (short)",
+  "artist": "A-SOUL",
+  "credit": "",
+  "unit": "zijiang",
+  "game": true,
+  "duration": 116.87,
+  "file": "songs/s138.mp3",
+  "full": true,
+  "cover": "assets/covers/zijiang1.jpg",
+ },
+ {
+  "title": "练习心事 (short)",
+  "artist": "A-SOUL",
+  "credit": "",
+  "unit": "zijiang",
+  "game": true,
+  "duration": 119.21,
+  "file": "songs/s139.mp3",
+  "full": true,
+  "cover": "assets/covers/zijiang1.jpg",
  }
 ];
