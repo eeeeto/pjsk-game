@@ -923,8 +923,8 @@
   .gd-tap-hint{position:absolute;bottom:7vh;left:0;right:0;text-align:center;color:#9db4d4;font-size:14px;letter-spacing:.3em;
     animation:hintPulse 1.6s ease-in-out infinite;}
   @keyframes hintPulse{0%,100%{opacity:.4}50%{opacity:1}}
-  .gd-flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;transition:opacity .12s;}
-  .gd-flash.on{opacity:1;}
+  .gd-flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;transition:opacity .2s ease-out;}
+  .gd-flash.on{opacity:.3;}
   .gd-card-stage{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;}
   .gd-card-stage img.gd-portrait{height:82%;max-width:72%;object-fit:cover;object-position:50% 8%;border-radius:12px;
     box-shadow:0 18px 70px rgba(0,0,0,.75);animation:cardIn .4s ease-out;}
@@ -2169,7 +2169,7 @@ function applyBackground() {
 /* ---------- 全局背景音乐 ----------
    首页 / 个人主页（含名片编辑）/ 世界招募 / 设置 播放同一首 BGM，其余页面自动淡出暂停。
    浏览器限制自动播放：首次点击/按键后补播一次；音量由设置里的「BGM 音量」控制。 */
-const BGM_PAGES = { title: 1, profile: 1, pfcards: 1, pfeditor: 1, gacha: 1, settings: 1, members: 1 };
+const BGM_PAGES = { title: 1, profile: 1, pfcards: 1, pfeditor: 1, gacha: 1, settings: 1, members: 1, rest: 1 };
 const BGM_SRC = res('assets/bgm/always-together.mp3');
 let bgmAudio = null, bgmFadeTimer = 0, bgmBlocked = false, bgmSuppressed = false;
 
