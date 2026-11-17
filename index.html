@@ -1197,6 +1197,7 @@
         <div class="gacha-info" id="gacha-info" style="display:none">
           <div class="gi-name" id="gi-name"></div>
           <div class="gi-meta" id="gi-meta"></div>
+          <div class="gi-meta" id="gi-count"></div>
         </div>
       </div>
     </div>
@@ -1962,7 +1963,7 @@ const DEF_SET = { skin:'lumirect', bgMode:'card', bgCover:res('assets/covers/leo
   bgCard:res('assets/cards/88/card_normal.webp'), bgCardShade:0.45, customSkin:null, sfxVolume:0.5, bgmVolume:0.45, speed:7.0, diff:'normal',
   keyScale:1.0, noteSquash:0.6, skinText:'❄', skinTextColor:'#ffffff', judgeLeniency:1.0, holdAlpha:0.5, judgeLift:0, judgeOffset:0, myCards:[], lastSong:0, sound:'tap',
   marks:{}, favs:{}, collapsedUnits:{}, teams:[], activeTeam:-1, songFilter:{ dur:'all', fc:'all', ap:'all', fav:'all' },
-  gachaRate4:3, gachaOff:true, gachaPools:[], members:[] };
+  gachaRate4:3, gachaOff:true, gachaPulls:{}, gachaPools:[], members:[] };
 let settings = Object.assign({}, DEF_SET);
 try {
   const raw = localStorage.getItem('sekai-fan-settings');
@@ -1981,6 +1982,7 @@ if (!Array.isArray(settings.myCards)) settings.myCards = [];
 // 抽卡设置：四星概率（3~7，默认 3）/ 已添加的卡池 / 招募到的成员
 settings.gachaRate4 = clamp(Number(settings.gachaRate4) || 3, 3, 7);
 if (typeof settings.gachaOff !== 'boolean') settings.gachaOff = true;   // 歪卡开关，默认开
+if (!settings.gachaPulls || typeof settings.gachaPulls !== 'object') settings.gachaPulls = {};   // 各卡池已抽取次数
 if (!Array.isArray(settings.gachaPools)) settings.gachaPools = [];
 if (!Array.isArray(settings.members)) settings.members = [];
 settings.members.forEach(m => { if (typeof m.af !== 'boolean') m.af = false; });   // 特训前(false)/特训后(true)
@@ -7783,6 +7785,7 @@ function renderGachaPools() {
     el.addEventListener('click', e => {
       if (e.target.classList.contains('gp-del')) {
         settings.gachaPools = settings.gachaPools.filter(x => x.id !== p.id);
+        delete settings.gachaPulls[p.id];   // 删除卡池：抽取次数归零（重新添加后从 0 开始）
         if (_selPool === p.id) { _selPool = -1; renderGachaPreview(); }
         saveSettings(); renderGachaPools();
         return;
@@ -7854,6 +7857,7 @@ function renderGachaPreview() {
   $('#gi-name').textContent = pool.name;
   const typeTxt = { ceil: '限定', normal: '常驻', gift: '赠送', beginner: '新手' }[pool.type] || pool.type;
   $('#gi-meta').textContent = `${typeTxt} · ${gachaFmtDate(pool.s)} ~ ${gachaFmtDate(pool.e)} · 四星概率 ${gachaRateParts().r4}%`;
+  $('#gi-count').textContent = `已抽取 ${settings.gachaPulls[pool.id] || 0} 次`;
   now.textContent = pool.name;
   // 右侧卡面轮播：生日池 / 周年池轮播该角色历年纪念卡（新→旧）；普通池展示该池四星卡的特训后卡面
   const celeb = gachaCelebInfo(pool);
@@ -8135,6 +8139,11 @@ async function startGachaDraw(pool, n) {
   const results = gachaPull(pool, n);
   if (!results.length) { showToast('这个卡池暂时没有可招募的卡牌', 2600); return; }
   _gachaDrawing = true; _gdPool = pool; _gdN = n;
+  // 累计该卡池的抽取次数（十连算 10 抽）
+  settings.gachaPulls[pool.id] = (settings.gachaPulls[pool.id] || 0) + n;
+  saveSettings();
+  const cntEl = $('#gi-count');
+  if (cntEl && _selPool === pool.id) cntEl.textContent = `已抽取 ${settings.gachaPulls[pool.id]} 次`;
   gachaAddMembers(results);
   _gdQueue = results; _gdIdx = -1;
 
