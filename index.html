@@ -801,6 +801,20 @@
   .gacha-info{position:absolute;top:0;left:0;right:0;padding:12px 20px 8px;z-index:2;pointer-events:none;}
   .gi-name{font-size:17px;font-weight:800;color:#eaf4ff;text-shadow:0 2px 10px rgba(0,0,0,.6);}
   .gi-meta{font-size:11px;color:#9db4d4;margin-top:3px;}
+  /* 抽取次数大框 + 当期UP收集度进度条 */
+  .gacha-stat{margin-top:10px;display:inline-flex;flex-direction:column;gap:10px;min-width:min(300px,58vw);
+    background:rgba(5,11,24,.68);border:1px solid rgba(140,200,255,.32);border-radius:14px;padding:12px 18px;
+    backdrop-filter:blur(6px);box-shadow:0 6px 24px rgba(0,0,0,.35);}
+  .gs-count{display:flex;align-items:baseline;gap:10px;}
+  .gs-count .num{font-size:clamp(30px,5.2vh,42px);font-weight:900;color:#7fe3ff;line-height:1;
+    text-shadow:0 0 18px rgba(46,200,255,.55);font-variant-numeric:tabular-nums;}
+  .gs-count .lbl{font-size:13px;color:#a9c4e8;font-weight:800;letter-spacing:.12em;}
+  .gs-up-head{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;color:#cfe3ff;
+    font-weight:700;margin-bottom:5px;letter-spacing:.05em;}
+  .gs-up-head b{color:#ffd0e0;font-variant-numeric:tabular-nums;}
+  .gs-bar{height:12px;border-radius:999px;background:rgba(10,20,40,.85);border:1px solid rgba(140,200,255,.28);overflow:hidden;}
+  .gs-bar i{display:block;height:100%;width:0;border-radius:999px;
+    background:linear-gradient(90deg,#2ec8ff,#8f7bff 55%,#ff5e8a);box-shadow:0 0 12px rgba(255,94,138,.55);transition:width .45s ease;}
   .gacha-hero{position:absolute;inset:0;z-index:0;overflow:hidden;background:#0a1120;}
   .gacha-hero img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 10%;display:block;
     animation:heroIn .45s ease-out;}
@@ -1197,7 +1211,13 @@
         <div class="gacha-info" id="gacha-info" style="display:none">
           <div class="gi-name" id="gi-name"></div>
           <div class="gi-meta" id="gi-meta"></div>
-          <div class="gi-meta" id="gi-count"></div>
+          <div class="gacha-stat">
+            <div class="gs-count"><span class="num" id="gi-count-num">0</span><span class="lbl">已抽取次数</span></div>
+            <div class="gs-up">
+              <div class="gs-up-head"><span>当期UP收集度</span><b id="gi-up-val">-- / --</b></div>
+              <div class="gs-bar"><i id="gi-up-bar"></i></div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -7844,6 +7864,29 @@ function gachaPoolUp4(pool) {
   }
   return _poolUp4Cache[pool.id];
 }
+/* 该池的「当期 UP」完整列表：生日/周年池 = 该角色历年纪念卡；普通池 = gachaPoolUp4（轮播与收集度共用） */
+function gachaUpListFor(pool) {
+  const celeb = gachaCelebInfo(pool);
+  if (celeb) {
+    return Object.keys(_gachaIdx.cards).map(Number).filter(cid => {
+      const ent = _gachaIdx.cards[cid];
+      return ent && ent[1] === 'rarity_birthday'
+        && String(ent[2]) === celeb.cid && gachaCelebKind(ent) === celeb.kind;
+    }).sort((a, b) => _gachaIdx.cards[b][3] - _gachaIdx.cards[a][3]);
+  }
+  return gachaPoolUp4(pool);
+}
+/* 抽取次数大框 + 当期UP收集度进度条（collected = 名单里已拥有的 UP 卡） */
+function syncGachaStat(pool, upList) {
+  const num = $('#gi-count-num'), val = $('#gi-up-val'), bar = $('#gi-up-bar');
+  if (!num || !pool) return;
+  num.textContent = settings.gachaPulls[pool.id] || 0;
+  const up = upList || gachaUpListFor(pool);
+  const total = up.length;
+  const got = total ? up.filter(cid => (settings.members || []).some(m => Number(m.cid) === Number(cid))).length : 0;
+  val.textContent = total ? `${got} / ${total}` : '-- / --';
+  bar.style.width = total ? (got / total * 100).toFixed(1) + '%' : '0%';
+}
 
 function renderGachaPreview() {
   const empty = $('#gacha-empty'), info = $('#gacha-info'), hero = $('#gacha-hero'), heroImg = $('#gacha-hero-img'), now = $('#gacha-now');
@@ -7857,20 +7900,11 @@ function renderGachaPreview() {
   $('#gi-name').textContent = pool.name;
   const typeTxt = { ceil: '限定', normal: '常驻', gift: '赠送', beginner: '新手' }[pool.type] || pool.type;
   $('#gi-meta').textContent = `${typeTxt} · ${gachaFmtDate(pool.s)} ~ ${gachaFmtDate(pool.e)} · 四星概率 ${gachaRateParts().r4}%`;
-  $('#gi-count').textContent = `已抽取 ${settings.gachaPulls[pool.id] || 0} 次`;
   now.textContent = pool.name;
-  // 右侧卡面轮播：生日池 / 周年池轮播该角色历年纪念卡（新→旧）；普通池展示该池四星卡的特训后卡面
-  const celeb = gachaCelebInfo(pool);
+  // 右侧卡面轮播：生日池 / 周年池轮播该角色历年纪念卡（新→旧）；普通池只轮播当期 UP 的三四张，歪卡不上轮播
   const roster = gachaPoolRoster(pool);
-  let heroList = [];
-  if (celeb) {
-    heroList = Object.keys(_gachaIdx.cards).map(Number).filter(cid => {
-      const ent = _gachaIdx.cards[cid];
-      return ent && ent[1] === 'rarity_birthday'
-        && String(ent[2]) === celeb.cid && gachaCelebKind(ent) === celeb.kind;
-    }).sort((a, b) => _gachaIdx.cards[b][3] - _gachaIdx.cards[a][3]);
-  }
-  if (!heroList.length) heroList = gachaPoolUp4(pool);   // 普通池：只轮播当期 UP 的三四张，歪卡不上轮播
+  let heroList = gachaUpListFor(pool);
+  syncGachaStat(pool, heroList);
   _heroList = heroList; _heroIdx = 0;
   const stars = $('#gacha-hero-stars');
   heroImg.removeAttribute('src');
@@ -8139,11 +8173,10 @@ async function startGachaDraw(pool, n) {
   const results = gachaPull(pool, n);
   if (!results.length) { showToast('这个卡池暂时没有可招募的卡牌', 2600); return; }
   _gachaDrawing = true; _gdPool = pool; _gdN = n;
-  // 累计该卡池的抽取次数（十连算 10 抽）
+  // 累计该卡池的抽取次数（十连算 10 抽），并刷新大框与 UP 收集度
   settings.gachaPulls[pool.id] = (settings.gachaPulls[pool.id] || 0) + n;
   saveSettings();
-  const cntEl = $('#gi-count');
-  if (cntEl && _selPool === pool.id) cntEl.textContent = `已抽取 ${settings.gachaPulls[pool.id]} 次`;
+  syncGachaStat(pool);
   gachaAddMembers(results);
   _gdQueue = results; _gdIdx = -1;
 
