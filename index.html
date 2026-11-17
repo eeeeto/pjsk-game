@@ -8110,7 +8110,8 @@ $('#gacha34-range').addEventListener('input', e => {
 let _gpDoneOpen = false;   // 折叠组默认收起
 function poolUpComplete(p) {
   try {
-    const up = gachaPoolUp4(p);
+    // 与轮播/收集度用同一套 UP 判定（gachaUpListFor：生日/周年池=历年卡，复刻池回溯原池）
+    const up = gachaUpListFor(p);
     if (!up.length) return false;
     const have = new Set((settings.members || []).map(m => Number(m.cid)));
     return up.every(cid => have.has(Number(cid)));
