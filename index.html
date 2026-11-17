@@ -840,6 +840,12 @@
     background:rgba(255,80,80,.18);color:#ff9c9c;font-size:12px;display:none;cursor:pointer;}
   .gacha-pools:hover .gp-del{display:block;}
   .gp-item .gp-del:hover{background:rgba(255,80,80,.4);color:#fff;}
+  .gp-done-head{padding:9px 12px;margin-top:4px;border-radius:10px;background:rgba(255,255,255,.04);
+    color:#8fa8c9;font-size:11.5px;font-weight:700;letter-spacing:.04em;cursor:pointer;user-select:none;
+    display:flex;justify-content:space-between;align-items:center;border:1px dashed rgba(140,190,255,.22);}
+  .gp-done-head b{font-size:11px;color:#6f87a8;}
+  .gp-done-head:hover{background:rgba(120,200,255,.09);}
+  .gp-item.gp-done{opacity:.55;font-weight:600;}
   .gp-add{padding:12px;border:1.5px dashed rgba(140,190,255,.4);border-radius:10px;color:#8fd2ff;text-align:center;cursor:pointer;
     font-size:20px;font-weight:700;user-select:none;}
   .gp-add:hover{background:rgba(120,200,255,.1);}
@@ -1367,7 +1373,7 @@
       <button class="btn ghost" id="rest-back">返 回</button>
       <div class="center" id="rest-now"></div>
       <button class="btn pink" id="rest-exchange" style="display:none">兑换所选（<b id="rest-ex-n">0</b> 张）</button>
-      <button class="btn ghost" id="rest-pick">选 择</button>
+      <button class="btn ghost" id="rest-pick">全 选</button>
     </div>
   </section>
 
@@ -6877,7 +6883,7 @@ if ($('#notice-read')) $('#notice-read').addEventListener('click', () => {
 syncNoticeDot();
 
 /* ================= 休息室（重复四星兑换水晶） ================= */
-let _restPickMode = false;
+let _restPickMode = true;
 const _restPicked = new Set();
 let _restEntries = [];
 function restEntries() {
@@ -6926,9 +6932,9 @@ function syncRestExBtn() {
     btn.innerHTML = `兑换所选（${n} 张 · ${(n * 3000).toLocaleString('en-US')} 水晶）`;
   }
   const pick = $('#rest-pick');
-  if (pick) pick.textContent = _restPickMode ? '取 消' : '选 择';
+  if (pick) pick.textContent = (_restEntries.length && n === _restEntries.length) ? '取消全选' : '全 选';
   const now = $('#rest-now');
-  if (now) now.textContent = _restPickMode ? '选择模式：点击卡片勾选，每张兑换 3000 水晶' : '';
+  if (now) now.textContent = _restPickMode ? '选择模式：点击卡片勾选/取消，每张兑换 3000 水晶' : '';
 }
 function renderRest() {
   const grid = $('#rest-grid');
@@ -6946,7 +6952,7 @@ function renderRest() {
   for (const e of _restEntries) grid.appendChild(makeRestCell(e));
   syncRestExBtn();
 }
-function exitRestPick() { _restPickMode = false; _restPicked.clear(); }
+function exitRestPick() { _restPickMode = true; _restPicked.clear(); }   // 休息室默认就是选择模式
 if ($('#member-rest-btn')) $('#member-rest-btn').addEventListener('click', async () => {
   exitRestPick();
   show('rest'); applyBackground();
@@ -6960,8 +6966,8 @@ if ($('#rest-back')) $('#rest-back').addEventListener('click', () => {
 });
 if ($('#rest-pick')) $('#rest-pick').addEventListener('click', () => {
   if (!_restEntries.length) { showToast('休息室里还没有可兑换的卡', 2200); return; }
-  _restPickMode = !_restPickMode;
-  if (!_restPickMode) _restPicked.clear();
+  if (_restPicked.size === _restEntries.length) _restPicked.clear();   // 全选状态 → 取消全选
+  else _restEntries.forEach(e => _restPicked.add(e.key));              // 未全选 → 全选
   renderRest();
 });
 if ($('#rest-exchange')) $('#rest-exchange').addEventListener('click', () => {
@@ -8100,24 +8106,46 @@ $('#gacha34-range').addEventListener('input', e => {
 });
 
 /* ---------- 卡池列表 ---------- */
+/* 已集齐当期：当期 UP 四星全部在成员库里 → 自动折叠进列表底部（点表头可展开） */
+let _gpDoneOpen = false;   // 折叠组默认收起
+function poolUpComplete(p) {
+  try {
+    const up = gachaPoolUp4(p);
+    if (!up.length) return false;
+    const have = new Set((settings.members || []).map(m => Number(m.cid)));
+    return up.every(cid => have.has(Number(cid)));
+  } catch (e) { return false; }
+}
+function makeGachaPoolItem(p) {
+  const el = document.createElement('div');
+  el.className = 'gp-item' + (p.id === _selPool ? ' on' : '');
+  el.innerHTML = `<span>${escapeHTML(p.name)}</span><span class="gp-del" title="删除">✕</span>`;
+  el.addEventListener('click', e => {
+    if (e.target.classList.contains('gp-del')) {
+      settings.gachaPools = settings.gachaPools.filter(x => x.id !== p.id);
+      delete settings.gachaPulls[p.id];   // 删除卡池：抽取次数归零（重新添加后从 0 开始）
+      if (_selPool === p.id) { _selPool = -1; syncGachaPullButtons(); renderGachaPreview(); }
+      saveSettings(); renderGachaPools();
+      return;
+    }
+    _selPool = p.id; syncGachaPullButtons(); renderGachaPools(); renderGachaPreview();
+  });
+  return el;
+}
 function renderGachaPools() {
   const box = $('#gacha-pools');
   box.innerHTML = '';
-  for (const p of settings.gachaPools) {
-    const el = document.createElement('div');
-    el.className = 'gp-item' + (p.id === _selPool ? ' on' : '');
-    el.innerHTML = `<span>${escapeHTML(p.name)}</span><span class="gp-del" title="删除">✕</span>`;
-    el.addEventListener('click', e => {
-      if (e.target.classList.contains('gp-del')) {
-        settings.gachaPools = settings.gachaPools.filter(x => x.id !== p.id);
-        delete settings.gachaPulls[p.id];   // 删除卡池：抽取次数归零（重新添加后从 0 开始）
-        if (_selPool === p.id) { _selPool = -1; syncGachaPullButtons(); renderGachaPreview(); }
-        saveSettings(); renderGachaPools();
-        return;
-      }
-      _selPool = p.id; syncGachaPullButtons(); renderGachaPools(); renderGachaPreview();
-    });
-    box.appendChild(el);
+  const done = [], open = [];
+  for (const p of settings.gachaPools) (poolUpComplete(p) ? done : open).push(p);
+  for (const p of open) box.appendChild(makeGachaPoolItem(p));
+  if (done.length) {
+    const head = document.createElement('div');
+    head.className = 'gp-done-head';
+    head.innerHTML = `<span>已集齐当期（${done.length}）</span><b>${_gpDoneOpen ? '▾' : '▸'}</b>`;
+    head.title = '当期 UP 已全部收进成员库的卡池，自动折叠到这里';
+    head.addEventListener('click', () => { _gpDoneOpen = !_gpDoneOpen; renderGachaPools(); });
+    box.appendChild(head);
+    if (_gpDoneOpen) for (const p of done) { const el = makeGachaPoolItem(p); el.classList.add('gp-done'); box.appendChild(el); }
   }
   const add = document.createElement('div');
   add.className = 'gp-add';
