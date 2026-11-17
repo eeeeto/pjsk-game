@@ -1184,6 +1184,11 @@
           </div>
           <div class="sub">打开：四星 80% 出当期 UP，20% 歪成其他卡池的四星（只算真四星，纪念卡不算）。关闭：四星只出当期 UP 的三四张主要卡，绝不歪。生日池与周年池不受影响，仍然只出被庆祝的角色。</div>
         </div>
+        <div class="field">
+          <div class="lbl"><span>三星转四星概率</span><b id="gacha34-val">5%</b></div>
+          <input type="range" id="gacha34-range" min="0" max="15" step="0.5" value="5">
+          <div class="sub">抽到三星时，有该概率在揭示瞬间升为四星——发光球阶段仍显示金色（三星），点击揭示时才变成四星卡面。0% = 关闭。</div>
+        </div>
       </div>
     </div>
     <div class="bottom-bar">
@@ -1983,7 +1988,7 @@ const DEF_SET = { skin:'lumirect', bgMode:'card', bgCover:res('assets/covers/leo
   bgCard:res('assets/cards/88/card_normal.webp'), bgCardShade:0.45, customSkin:null, sfxVolume:0.5, bgmVolume:0.45, speed:7.0, diff:'normal',
   keyScale:1.0, noteSquash:0.6, skinText:'❄', skinTextColor:'#ffffff', judgeLeniency:1.0, holdAlpha:0.5, judgeLift:0, judgeOffset:0, myCards:[], lastSong:0, sound:'tap',
   marks:{}, favs:{}, collapsedUnits:{}, teams:[], activeTeam:-1, songFilter:{ dur:'all', fc:'all', ap:'all', fav:'all' },
-  gachaRate4:3, gachaOff:true, gachaPulls:{}, gachaPools:[], members:[] };
+  gachaRate4:3, gachaOff:true, gacha3to4:5, gachaPulls:{}, gachaPools:[], members:[] };
 let settings = Object.assign({}, DEF_SET);
 try {
   const raw = localStorage.getItem('sekai-fan-settings');
@@ -2003,6 +2008,7 @@ if (!Array.isArray(settings.myCards)) settings.myCards = [];
 settings.gachaRate4 = clamp(Number(settings.gachaRate4) || 3, 3, 7);
 if (typeof settings.gachaOff !== 'boolean') settings.gachaOff = true;   // 歪卡开关，默认开
 if (!settings.gachaPulls || typeof settings.gachaPulls !== 'object') settings.gachaPulls = {};   // 各卡池已抽取次数
+{ const v34 = Number(settings.gacha3to4); settings.gacha3to4 = isNaN(v34) ? 5 : clamp(v34, 0, 15); }   // 三星转四星概率（%），0~15，默认 5
 if (!Array.isArray(settings.gachaPools)) settings.gachaPools = [];
 if (!Array.isArray(settings.members)) settings.members = [];
 settings.members.forEach(m => { if (typeof m.af !== 'boolean') m.af = false; });   // 特训前(false)/特训后(true)
@@ -7037,7 +7043,7 @@ $$('.tab').forEach(t => t.addEventListener('click', () => {
   if (t.dataset.tab === 'skin') requestAnimationFrame(renderKeySize);
   if (t.dataset.tab === 'team') renderTeams();
   if (t.dataset.tab === 'result') renderResCards();
-  if (t.dataset.tab === 'gachaset') { syncGachaRateUI(); syncGachaOffUI(); }
+  if (t.dataset.tab === 'gachaset') { syncGachaRateUI(); syncGachaOffUI(); syncGacha34UI(); }
 }));
 
 /* ============================================================
@@ -7793,6 +7799,18 @@ document.querySelectorAll('#gacha-off-pills .pill').forEach(p => p.addEventListe
   settings.gachaOff = p.dataset.goff === '1';
   saveSettings(); syncGachaOffUI();
 }));
+function syncGacha34UI() {
+  const v = $('#gacha34-val'), r = $('#gacha34-range');
+  const p = clamp(Number(settings.gacha3to4) || 0, 0, 15);
+  if (r) r.value = p;
+  if (v) v.textContent = p + '%';
+  const sub = v && v.closest('.field') && v.closest('.field').querySelector('.sub');
+  if (sub) sub.style.opacity = p > 0 ? '' : '.55';
+}
+$('#gacha34-range').addEventListener('input', e => {
+  settings.gacha3to4 = Number(e.target.value);
+  saveSettings(); syncGacha34UI();
+});
 
 /* ---------- 卡池列表 ---------- */
 function renderGachaPools() {
@@ -8136,13 +8154,21 @@ function gachaPull(pool, n) {
     offList = _offPool4Cache[pool.id];
   }
   const out = [];
+  const p34 = clamp(Number(settings.gacha3to4) || 0, 0, 15);   // 三星转四星概率（%）
   for (let i = 0; i < n; i++) {
     const tier = gachaPickTier(pool);
     let cid = pick(tier);
+    let fake3 = false;
+    // 三星转四星：三星的中奖卡有 p34% 概率实际是四星——抽卡时已定，但表演上仍是金色球，
+    // 点击揭示时才亮出四星卡面
+    if (tier === 3 && cid && p34 > 0 && byTier[4].length && Math.random() * 100 < p34) {
+      cid = byTier[4][Math.floor(Math.random() * byTier[4].length)];
+      fake3 = true;
+    }
     if (tier === 4 && cid && offList && offList.length && Math.random() < 0.2) {
       cid = offList[Math.floor(Math.random() * offList.length)];
     }
-    out.push({ cid, tier: 0 });
+    out.push({ cid, tier: 0, fake3 });
   }
   // 十连保底：一抽都没有三星以上 → 最后一抽强制三星
   if (n >= 10 && !out.some(x => x.cid && _gachaIdx.cards[x.cid] && tierOf(_gachaIdx.cards[x.cid][1]) >= 3)) {
@@ -8201,17 +8227,18 @@ async function startGachaDraw(pool, n) {
   $('#gd-stage').innerHTML = '';
   $('#gd-summary').style.display = 'none';
   $('#gd-flash').classList.remove('on');
-  // 每张卡各对应一个发光球（颜色 = 该卡星数），星数最高的一颗置于正中央 C 位
+  // 每张卡各对应一个发光球（颜色 = 该卡星数；三星转四星的卡在球阶段仍显示金色三星），星数最高的一颗置于正中央 C 位
+  const dispTier = r => r.fake3 ? 3 : r.tier;
   const orbs = $('#gd-orbs');
   orbs.innerHTML = '';
-  const order = results.map((r, i) => i).sort((a, b) => results[b].tier - results[a].tier);
+  const order = results.map((r, i) => i).sort((a, b) => dispTier(results[b]) - dispTier(results[a]));
   const restN = Math.max(1, order.length - 1);
   for (let k = 0; k < order.length; k++) {
     const r = results[order[k]];
     const pos = document.createElement('div');
     pos.className = 'gd-orb-pos';
     const o = document.createElement('div');
-    o.className = `gd-orb c${r.tier}` + (k === 0 ? ' gd-orb-c' : '');
+    o.className = `gd-orb c${dispTier(r)}` + (k === 0 ? ' gd-orb-c' : '');
     if (k === 0) {
       pos.style.left = '50%'; pos.style.top = '50%';
     } else {
