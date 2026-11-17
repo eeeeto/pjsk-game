@@ -81,16 +81,23 @@
   .logo-sub{margin-top:clamp(8px,1.6vh,16px);color:#9db4d4;font-size:clamp(11px,1.8vh,15px);letter-spacing:.16em;}
   .title-actions{display:flex;flex-direction:column;gap:clamp(6px,1.3vh,14px);margin-top:clamp(12px,2.8vh,38px);width:min(340px,64vw);}
   .title-actions .btn{width:100%;height:clamp(34px,7.2vh,54px);font-size:clamp(12.5px,1.95vh,18px);padding:0 clamp(16px,2.6vw,30px);}
-  /* 公告栏入口：粉紫实心 + 呼吸光，标题页里第一个跳出来 */
-  .title-actions .btn.notice{background:linear-gradient(135deg,#ffd0e8,#ff5ea8 52%,#b44dff);color:#22031a;
-    box-shadow:0 8px 26px rgba(255,94,168,.34),inset 0 1px 0 rgba(255,255,255,.72);
-    animation:noticePulse 2.8s ease-in-out infinite;gap:8px;}
-  @keyframes noticePulse{
-    0%,100%{box-shadow:0 8px 26px rgba(255,94,168,.30),inset 0 1px 0 rgba(255,255,255,.72);}
-    50%{box-shadow:0 12px 40px rgba(255,94,168,.62),inset 0 1px 0 rgba(255,255,255,.8);}}
-  .title-actions .btn.notice svg{width:1.05em;height:1.05em;flex:none;}
-  .title-actions .btn.notice .dot{position:absolute;top:7px;right:11px;width:9px;height:9px;border-radius:50%;
-    background:#ff1f63;box-shadow:0 0 0 2px rgba(34,3,26,.55),0 0 10px #ff1f63;}
+  /* 公告栏入口：就在原来「新曲速递」的位置（logo 副标题下方），粉紫发光胶囊 */
+  .logo-notice{margin-top:clamp(10px,2.2vh,20px);display:flex;width:fit-content;align-items:center;gap:9px;
+    padding:7px 15px 7px 13px;border-radius:999px;cursor:pointer;position:relative;font-family:inherit;
+    font-weight:900;font-size:clamp(11.5px,1.8vh,14px);letter-spacing:.16em;color:#fff;
+    background:linear-gradient(135deg,rgba(255,94,168,.30),rgba(180,77,255,.24));
+    border:1px solid rgba(255,120,190,.65);
+    box-shadow:0 8px 24px rgba(255,94,168,.26),inset 0 0 18px rgba(255,94,168,.16);
+    animation:noticeGlow 2.8s ease-in-out infinite;transition:transform .14s;}
+  .logo-notice:active{transform:scale(.95);}
+  @keyframes noticeGlow{
+    0%,100%{box-shadow:0 8px 24px rgba(255,94,168,.22),inset 0 0 18px rgba(255,94,168,.14);}
+    50%{box-shadow:0 10px 34px rgba(255,94,168,.58),inset 0 0 22px rgba(255,94,168,.32);}}
+  .logo-notice svg{width:1.15em;height:1.15em;flex:none;}
+  .logo-notice .badge{font-size:9.5px;font-weight:900;letter-spacing:.1em;padding:2px 6px;border-radius:999px;
+    background:#ff2d6f;color:#fff;box-shadow:0 0 12px rgba(255,45,111,.85);animation:badgeBlink 1.6s ease-in-out infinite;}
+  @keyframes badgeBlink{0%,100%{opacity:1}50%{opacity:.45}}
+  @media (max-height:460px){ .logo-notice{margin-top:6px;padding:5px 12px;font-size:11px;gap:7px;} }
   /* 公告弹窗 */
   .notice-dlg{width:min(600px,94vw);}
   .notice-list{margin-top:clamp(8px,1.8vh,16px);display:flex;flex-direction:column;gap:8px;}
@@ -124,11 +131,13 @@
   .notice-link .go{flex:none;font-size:11px;font-weight:900;color:#04222b;background:#8fe6ff;border-radius:999px;padding:3px 10px;}
   /* 矮屏（手机横屏）进一步压缩，保证整列按钮不出屏 */
   @media (max-height:460px){
-    .logo{font-size:clamp(26px,7.2vh,40px);}
+    .logo{font-size:clamp(24px,6.6vh,36px);}
+    .logo small{margin-top:.3em;}
     .logo-kicker{font-size:10px;letter-spacing:.3em;margin-bottom:2px;}
     .logo-sub{margin-top:3px;font-size:10px;}
-    .title-actions{gap:5px;margin-top:8px;width:min(300px,52vw);}
-    .title-actions .btn{height:31px;font-size:12px;letter-spacing:.04em;}
+    .logo-notice{margin-top:4px;padding:4px 11px;font-size:10.5px;gap:6px;}
+    .title-actions{gap:3px;margin-top:6px;width:min(300px,52vw);}
+    .title-actions .btn{height:28px;font-size:12px;letter-spacing:.04em;}
     .title-foot{font-size:9px;bottom:6px;}
   }
   @media (max-height:375px){
@@ -1022,13 +1031,13 @@
       <div class="logo-kicker">Fan Made Rhythm Game</div>
       <div class="logo">PROJECT<br>SEKAI<small>FAN STAGE</small></div>
       <div class="logo-sub">セカイに、キミの音を。</div>
+      <button class="logo-notice" id="btn-notice">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 9.5h2.6L12 5.3v13.4L6.6 14.5H4a1.2 1.2 0 0 1-1.2-1.2v-2.6A1.2 1.2 0 0 1 4 9.5z"/><path d="M15.4 8.2a5.2 5.2 0 0 1 0 7.6" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/></svg>
+        <span>公 告 栏</span>
+        <span class="badge" id="notice-dot">NEW</span>
+      </button>
       <div class="title-actions">
         <button class="btn" id="btn-start">开 始 演 出</button>
-        <button class="btn notice" id="btn-notice">
-          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 9.5h2.6L12 5.3v13.4L6.6 14.5H4a1.2 1.2 0 0 1-1.2-1.2v-2.6A1.2 1.2 0 0 1 4 9.5z"/><path d="M15.4 8.2a5.2 5.2 0 0 1 0 7.6" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/></svg>
-          公 告 栏
-          <i class="dot" id="notice-dot"></i>
-        </button>
         <button class="btn ghost" id="btn-profile">个 人 主 页</button>
         <button class="btn ghost" id="btn-gacha">「世界」的招募</button>
         <button class="btn ghost" id="btn-members">成 员</button>
