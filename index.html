@@ -1168,7 +1168,7 @@
             <div class="pill on" data-goff="1">开（20% 歪成其他卡池的四星）</div>
             <div class="pill" data-goff="0">关</div>
           </div>
-          <div class="sub">打开后，每次出四星时有 20% 概率变成其他卡池的四星卡（只算真正的四星，生日/周年纪念卡不算）。生日池与周年池不受影响，仍然只出被庆祝的角色。</div>
+          <div class="sub">打开：四星 80% 出当期 UP，20% 歪成其他卡池的四星（只算真四星，纪念卡不算）。关闭：四星只出当期 UP 的三四张主要卡，绝不歪。生日池与周年池不受影响，仍然只出被庆祝的角色。</div>
         </div>
       </div>
     </div>
@@ -7806,6 +7806,42 @@ function gachaFmtDate(t) {
   } catch (e) { return ''; }
 }
 
+/* 该池的「当期 UP」四星列表（轮播与歪卡开关共用同一套判定）：
+   UP 主要卡 = 与卡池同一天实装的那几张（一般三四张）；开始日没有实装记录的特殊池退回卡池期间内实装的卡；
+   联动池（池名含コラボ）= 名单里全部联动四星；复刻池回溯同名的原版卡池取它的 UP */
+const _poolUp4Cache = {};
+function gachaPoolUp4(pool) {
+  if (!pool) return [];
+  if (!_poolUp4Cache[pool.id]) {
+    let base = (_gachaIdx.rosters && _gachaIdx.rosters[pool.id]) || [];
+    let startT = pool.s, sLim = pool.s, eLim = pool.e;
+    const origName = (pool.name || '').replace(/^[【\[]\s*復刻\s*[\]】]\s*/, '');
+    if (origName !== (pool.name || '')) {
+      const orig = (_gachaIdx.gachas || []).find(g => (g.name || '') === origName);
+      if (orig) { base = (_gachaIdx.rosters && _gachaIdx.rosters[orig.id]) || base; startT = orig.s; sLim = orig.s; eLim = orig.e; }
+    }
+    const r4 = base.filter(cid => _gachaIdx.cards[cid] && _gachaIdx.cards[cid][1] === 'rarity_4')
+      .sort((a, b) => (_gachaIdx.cards[b][3] || 0) - (_gachaIdx.cards[a][3] || 0));
+    let list;
+    if (/コラボ/.test(pool.name || '')) {
+      list = r4;   // 联动池：全部联动四星，不受卡池日期限制
+    } else {
+      const atStart = startT ? r4.filter(cid => (_gachaIdx.cards[cid][3] || 0) === startT) : [];
+      if (atStart.length) {
+        list = atStart;
+      } else {
+        const inRange = r4.filter(cid => {
+          const t = _gachaIdx.cards[cid][3] || 0;
+          return (!sLim || t >= sLim) && (!eLim || t <= eLim);
+        });
+        list = inRange.length ? inRange : r4;
+      }
+    }
+    _poolUp4Cache[pool.id] = list.slice(0, 12);
+  }
+  return _poolUp4Cache[pool.id];
+}
+
 function renderGachaPreview() {
   const empty = $('#gacha-empty'), info = $('#gacha-info'), hero = $('#gacha-hero'), heroImg = $('#gacha-hero-img'), now = $('#gacha-now');
   const pool = settings.gachaPools.find(p => p.id === _selPool);
@@ -7830,40 +7866,7 @@ function renderGachaPreview() {
         && String(ent[2]) === celeb.cid && gachaCelebKind(ent) === celeb.kind;
     }).sort((a, b) => _gachaIdx.cards[b][3] - _gachaIdx.cards[a][3]);
   }
-  if (!heroList.length) {
-    // 普通池：只轮播「当期 UP」的四星。池子的四星分两类——UP 的主要卡（一般三四张，
-    // 和卡池同一天实装）跟凑数的歪卡；轮播只放 UP 的那几张，新→旧。
-    // 注意 gachaPoolRoster 会把常驻卡合并进名单，所以要用索引里该池自己的 rosters 来判断；
-    // 复刻池名单里没有新卡，回溯到同名的原版卡池取它的 UP 四星
-    let base = (_gachaIdx.rosters && _gachaIdx.rosters[pool.id]) || roster;
-    let startT = pool.s, sLim = pool.s, eLim = pool.e;
-    const origName = (pool.name || '').replace(/^[【\[]\s*復刻\s*[\]】]\s*/, '');
-    if (origName !== (pool.name || '')) {
-      const orig = (_gachaIdx.gachas || []).find(g => (g.name || '') === origName);
-      if (orig) { base = (_gachaIdx.rosters && _gachaIdx.rosters[orig.id]) || base; startT = orig.s; sLim = orig.s; eLim = orig.e; }
-    }
-    const r4 = base.filter(cid => _gachaIdx.cards[cid] && _gachaIdx.cards[cid][1] === 'rarity_4')
-      .sort((a, b) => (_gachaIdx.cards[b][3] || 0) - (_gachaIdx.cards[a][3] || 0));
-    let list;
-    if (/コラボ/.test(pool.name || '')) {
-      // 联动卡池：直接显示名单里的全部联动四星（不受卡池日期限制）
-      list = r4;
-    } else {
-      // UP 主要卡：和卡池同一天实装的那几张（一般的池正好三四张）
-      const atStart = startT ? r4.filter(cid => (_gachaIdx.cards[cid][3] || 0) === startT) : [];
-      if (atStart.length) {
-        list = atStart;
-      } else {
-        // 卡池开始日没有实装记录（部分特殊池）→ 退回「卡池期间内实装」的卡
-        const inRange = r4.filter(cid => {
-          const t = _gachaIdx.cards[cid][3] || 0;
-          return (!sLim || t >= sLim) && (!eLim || t <= eLim);
-        });
-        list = inRange.length ? inRange : r4;
-      }
-    }
-    heroList = list.slice(0, 12);
-  }
+  if (!heroList.length) heroList = gachaPoolUp4(pool);   // 普通池：只轮播当期 UP 的三四张，歪卡不上轮播
   _heroList = heroList; _heroIdx = 0;
   const stars = $('#gacha-hero-stars');
   heroImg.removeAttribute('src');
@@ -8071,8 +8074,14 @@ function gachaPull(pool, n) {
     if (!arr.length) return null;
     return arr[Math.floor(Math.random() * arr.length)];
   };
-  // 歪卡：开启后，出四星时有 20% 概率歪成其他卡池的四星（真正的 rarity_4，生日/周年纪念卡不算）。
-  // 生日池 / 周年池不受影响——它们必须只出被庆祝的角色
+  // 四星基础槽位固定为当期 UP 的三四张主要卡（与轮播同一套判定）——之前名单不足十连会补入
+  // 全部常驻卡，导致四星几乎全歪到常驻；现在常驻卡不再占据四星槽位
+  if (!celeb) {
+    const up4 = gachaPoolUp4(pool);
+    if (up4.length) byTier[4] = up4.slice();
+  }
+  // 歪卡：开启后，出四星时有 20% 概率歪成其他卡池的四星（真正的 rarity_4，生日/周年纪念卡不算）；
+  // 关闭则四星 100% 当期 UP。生日池 / 周年池不受影响——它们必须只出被庆祝的角色
   let offList = null;
   if (settings.gachaOff !== false && !celeb) {
     if (!_offPool4Cache[pool.id]) {
