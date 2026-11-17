@@ -7831,15 +7831,16 @@ function renderGachaPreview() {
     }).sort((a, b) => _gachaIdx.cards[b][3] - _gachaIdx.cards[a][3]);
   }
   if (!heroList.length) {
-    // 普通池：只轮播「当期」的四星——卡池开始~结束期间实装的卡（也就是这期 UP 的那几张），新→旧。
-    // 注意 gachaPoolRoster 会把常驻卡合并进名单，所以要用索引里该池自己的 rosters 来判断当期；
-    // 复刻池名单里没有期间内新卡，回溯到同名的原版卡池取它的当期四星
+    // 普通池：只轮播「当期 UP」的四星。池子的四星分两类——UP 的主要卡（一般三四张，
+    // 和卡池同一天实装）跟凑数的歪卡；轮播只放 UP 的那几张，新→旧。
+    // 注意 gachaPoolRoster 会把常驻卡合并进名单，所以要用索引里该池自己的 rosters 来判断；
+    // 复刻池名单里没有新卡，回溯到同名的原版卡池取它的 UP 四星
     let base = (_gachaIdx.rosters && _gachaIdx.rosters[pool.id]) || roster;
-    let sLim = pool.s, eLim = pool.e;
+    let startT = pool.s, sLim = pool.s, eLim = pool.e;
     const origName = (pool.name || '').replace(/^[【\[]\s*復刻\s*[\]】]\s*/, '');
     if (origName !== (pool.name || '')) {
       const orig = (_gachaIdx.gachas || []).find(g => (g.name || '') === origName);
-      if (orig) { base = (_gachaIdx.rosters && _gachaIdx.rosters[orig.id]) || base; sLim = orig.s; eLim = orig.e; }
+      if (orig) { base = (_gachaIdx.rosters && _gachaIdx.rosters[orig.id]) || base; startT = orig.s; sLim = orig.s; eLim = orig.e; }
     }
     const r4 = base.filter(cid => _gachaIdx.cards[cid] && _gachaIdx.cards[cid][1] === 'rarity_4')
       .sort((a, b) => (_gachaIdx.cards[b][3] || 0) - (_gachaIdx.cards[a][3] || 0));
@@ -7848,11 +7849,18 @@ function renderGachaPreview() {
       // 联动卡池：直接显示名单里的全部联动四星（不受卡池日期限制）
       list = r4;
     } else {
-      const inRange = r4.filter(cid => {
-        const t = _gachaIdx.cards[cid][3] || 0;
-        return (!sLim || t >= sLim) && (!eLim || t <= eLim);
-      });
-      list = inRange.length ? inRange : r4;
+      // UP 主要卡：和卡池同一天实装的那几张（一般的池正好三四张）
+      const atStart = startT ? r4.filter(cid => (_gachaIdx.cards[cid][3] || 0) === startT) : [];
+      if (atStart.length) {
+        list = atStart;
+      } else {
+        // 卡池开始日没有实装记录（部分特殊池）→ 退回「卡池期间内实装」的卡
+        const inRange = r4.filter(cid => {
+          const t = _gachaIdx.cards[cid][3] || 0;
+          return (!sLim || t >= sLim) && (!eLim || t <= eLim);
+        });
+        list = inRange.length ? inRange : r4;
+      }
     }
     heroList = list.slice(0, 12);
   }
