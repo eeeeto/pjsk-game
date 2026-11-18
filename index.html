@@ -2215,9 +2215,9 @@ function applyBackground() {
 }
 
 /* ---------- 全局背景音乐 ----------
-   首页 / 个人主页（含名片编辑）/ 世界招募 / 设置 播放同一首 BGM，其余页面自动淡出暂停。
+   首页 / 个人主页（含名片编辑）/ 世界招募 / 设置 / 成员 / 休息室 / 开发者相关 播放同一首 BGM，其余页面自动淡出暂停。
    浏览器限制自动播放：首次点击/按键后补播一次；音量由设置里的「BGM 音量」控制。 */
-const BGM_PAGES = { title: 1, profile: 1, pfcards: 1, pfeditor: 1, gacha: 1, settings: 1, members: 1, rest: 1 };
+const BGM_PAGES = { title: 1, profile: 1, pfcards: 1, pfeditor: 1, gacha: 1, settings: 1, members: 1, rest: 1, dev: 1 };
 const BGM_SRC = res('assets/bgm/always-together.mp3');
 let bgmAudio = null, bgmFadeTimer = 0, bgmBlocked = false, bgmSuppressed = false;
 
