@@ -7942,10 +7942,13 @@ function gachaPoolRoster(pool) {
   if (_poolRosterCache[key]) return _poolRosterCache[key];
   const idx = _gachaIdx;
   if (pool.id === 'mix') {
-    // 無料混合卡池：全部四星（含未来上新——名单直接从卡牌索引实时取，索引更新即自动补入）
-    const all4 = Object.keys(idx.cards).map(Number).filter(cid => idx.cards[cid] && idx.cards[cid][1] === 'rarity_4');
-    _poolRosterCache[key] = all4;
-    return all4;
+    // 無料混合卡池：全部四星（含未来上新）+ 全部二星/三星作低星卡池底
+    const all = Object.keys(idx.cards).map(Number).filter(cid => {
+      const r = idx.cards[cid] && idx.cards[cid][1];
+      return r === 'rarity_4' || r === 'rarity_3' || r === 'rarity_2';
+    });
+    _poolRosterCache[key] = all;
+    return all;
   }
   let lst = (idx.rosters && idx.rosters[key]) ? idx.rosters[key].slice() : [];
   if (!lst.length) {
@@ -8230,7 +8233,8 @@ const _poolUp4Cache = {};
 function gachaPoolUp4(pool) {
   if (!pool) return [];
   if (!_poolUp4Cache[pool.id]) {
-    let base = (_gachaIdx.rosters && _gachaIdx.rosters[pool.id]) || [];
+    let base = (pool.id === 'mix') ? gachaPoolRoster(pool)   // 無料混池：名单来自 gachaPoolRoster（全部四星）
+      : ((_gachaIdx.rosters && _gachaIdx.rosters[pool.id]) || []);
     let startT = pool.s, sLim = pool.s, eLim = pool.e;
     const origName = (pool.name || '').replace(/^[【\[]\s*復刻\s*[\]】]\s*/, '');
     if (origName !== (pool.name || '')) {
@@ -8239,6 +8243,11 @@ function gachaPoolUp4(pool) {
     }
     const r4 = base.filter(cid => _gachaIdx.cards[cid] && _gachaIdx.cards[cid][1] === 'rarity_4')
       .sort((a, b) => (_gachaIdx.cards[b][3] || 0) - (_gachaIdx.cards[a][3] || 0));
+    if (pool.id === 'mix') {
+      // 無料混池：没有「当期」——轮播/收集度直接用最新的 12 张四星（新→旧）
+      _poolUp4Cache[pool.id] = r4.slice(0, 12);
+      return _poolUp4Cache[pool.id];
+    }
     let list;
     if (/コラボ/.test(pool.name || '')) {
       list = r4;   // 联动池：全部联动四星，不受卡池日期限制
@@ -8293,8 +8302,11 @@ function renderGachaPreview() {
   empty.style.display = 'none'; info.style.display = ''; hero.style.display = '';
   $('#gi-name').textContent = pool.name;
   const typeTxt = { ceil: '限定', normal: '常驻', gift: '赠送', beginner: '新手' }[pool.type] || pool.type;
-  $('#gi-meta').textContent = `${typeTxt} · ${gachaFmtDate(pool.s)} ~ ${gachaFmtDate(pool.e)} · 四星概率 ${gachaRateParts().r4}%`;
+  $('#gi-meta').textContent = `${typeTxt} · ${gachaFmtDate(pool.s)} ~ ${gachaFmtDate(pool.e)} · 四星概率 ${pool.id === 'mix' ? 10 : gachaRateParts().r4}%`;
   now.textContent = pool.name;
+  // 抽数/收集度窗口：無料混池没有「当期」概念，不显示
+  const statBox = document.querySelector('.gacha-stat');
+  if (statBox) statBox.style.display = pool.id === 'mix' ? 'none' : '';
   // 右侧卡面轮播：生日池 / 周年池轮播该角色历年纪念卡（新→旧）；普通池只轮播当期 UP 的三四张，歪卡不上轮播
   const roster = gachaPoolRoster(pool);
   let heroList = gachaUpListFor(pool);
@@ -8428,6 +8440,13 @@ function gachaRatesFor(pool) {
   return { 2: Math.round((100 - p.r4 - r3) * 10) / 10, 3: r3, 4: p.r4 };
 }
 function gachaPickTier(pool) {
+  // 無料混合卡池：固定概率 四星 10% · 三星 8.5% · 二星 81.5%（不受全局四星概率设置影响）
+  if (pool && pool.id === 'mix') {
+    const roll = Math.random() * 100;
+    if (roll < 10) return 4;
+    if (roll < 18.5) return 3;
+    return 2;
+  }
   const rates = gachaRatesFor(pool);
   const roll = Math.random() * 100;
   if (roll < rates[4]) return 4;
