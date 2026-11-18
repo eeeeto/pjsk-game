@@ -1945,7 +1945,7 @@ const UNIT_CHAR_IDS = {
   n25: [17, 18, 19, 20]
 };
 /* 無料混合卡池：固定置顶、不可删除、免费，内容 = 全部四星（含未来上新） */
-const MIX_POOL = { id: 'mix', name: '【無料】混合卡池（全部四星）', abn: '', type: 1, s: 1601391600000, e: 32503680000000, rates: [] };
+const MIX_POOL = { id: 'mix', name: '【無料】混合卡池', abn: '', type: 1, s: 1601391600000, e: 32503680000000, rates: [] };
 function ensureMixPool() {
   const cur = settings.gachaPools.find(p => p.id === 'mix');
   if (!cur) {
