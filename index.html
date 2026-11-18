@@ -1297,6 +1297,7 @@
     <div class="gacha-actions">
       <button class="btn ghost" id="gacha-back">返 回</button>
       <div class="center" id="gacha-now"></div>
+      <button class="btn ghost" id="gacha-fav">抽卡设置</button>
       <button class="btn pink" id="gacha-pull1">招募一次</button>
       <button class="btn" id="gacha-pull10">招募十次</button>
     </div>
@@ -1736,6 +1737,24 @@
 </div>
 
 <!-- ================= 确认弹窗 ================= -->
+<!-- 本命设置弹窗（無料混合卡池用） -->
+<div class="modal" id="modal-fav">
+  <div class="dialog">
+    <div class="dlg-title">抽卡设置<span>本命</span></div>
+    <div class="field">
+      <div class="lbl"><span>本命组合（选一个）</span></div>
+      <div class="mf-chips" id="fav-units"></div>
+    </div>
+    <div class="field">
+      <div class="lbl"><span>本命角色（最多两个）</span></div>
+      <div class="mf-chips" id="fav-chars"></div>
+    </div>
+    <p class="hint">被设为本命的角色，在<b>【無料】混合卡池</b>里的出率提升 <b>3 倍</b>。选组合会清空角色选择，选角色会清空组合；两者都不选 = 全部等概率。</p>
+    <div class="dlg-actions">
+      <button class="btn pink" id="fav-ok">确 定</button>
+    </div>
+  </div>
+</div>
 <div class="modal" id="modal-notice">
   <div class="dialog notice-dlg">
     <div class="dlg-title">公 告 <span>栏</span></div>
@@ -1916,6 +1935,27 @@ const PROFILE_UNITS = [
   { key: 'n25',     label: '25時、ナイトコードで。' }
 ];
 const PROFILE_UNIT_MAP = Object.fromEntries(PROFILE_UNITS.map(u => [u.key, u.label]));
+/* 组合 → 角色编号（与 _gachaIdx.chars 的数字编号一致：1..20 五大组合成员，21..26 バーチャル・シンガー） */
+const UNIT_CHAR_IDS = {
+  vocaloid: [21, 22, 23, 24, 25, 26],
+  leoneed: [1, 2, 3, 4],
+  mmj: [5, 6, 7, 8],
+  vbs: [9, 10, 11, 12],
+  wxs: [13, 14, 15, 16],
+  n25: [17, 18, 19, 20]
+};
+/* 無料混合卡池：固定置顶、不可删除、免费，内容 = 全部四星（含未来上新） */
+const MIX_POOL = { id: 'mix', name: '【無料】混合卡池（全部四星）', abn: '', type: 1, s: 1601391600000, e: 32503680000000, rates: [] };
+function ensureMixPool() {
+  const cur = settings.gachaPools.find(p => p.id === 'mix');
+  if (!cur) {
+    settings.gachaPools.unshift({ ...MIX_POOL });
+    saveSettings();
+    return;
+  }
+  if (cur.e > 8.6e15) { cur.s = MIX_POOL.s; cur.e = MIX_POOL.e; saveSettings(); }   // 修正早期版本的时间戳
+  cur.name = MIX_POOL.name;
+}
 const profileUnitLabel = k => PROFILE_UNIT_MAP[k] || '';
 // 枝江 / E-girls 的歌曲在「当前曲目」等处也显示为合并后的分类名
 UNIT_MAP.zijiang = UNIT_MAP.otherworld;
@@ -2102,6 +2142,8 @@ if (!settings.gachaPulls || typeof settings.gachaPulls !== 'object') settings.ga
 if (!Array.isArray(settings.gachaPools)) settings.gachaPools = [];
 if (!Array.isArray(settings.members)) settings.members = [];
 settings.members.forEach(m => { if (typeof m.af !== 'boolean') m.af = false; });   // 特训前(false)/特训后(true)
+if (!settings.benife || typeof settings.benife !== 'object') settings.benife = { unit: '', chars: [] };   // 本命（無料混池出率加成）
+if (!Array.isArray(settings.benife.chars)) settings.benife.chars = [];
 /* 水晶：初始 900000；旧存档第一次打开自动补上 */
 if (settings.crystal === undefined || settings.crystal === null || isNaN(Number(settings.crystal))) settings.crystal = 900000;
 settings.crystal = Math.max(0, Math.floor(Number(settings.crystal)));
@@ -7899,6 +7941,12 @@ function gachaPoolRoster(pool) {
   const key = String(pool.id);
   if (_poolRosterCache[key]) return _poolRosterCache[key];
   const idx = _gachaIdx;
+  if (pool.id === 'mix') {
+    // 無料混合卡池：全部四星（含未来上新——名单直接从卡牌索引实时取，索引更新即自动补入）
+    const all4 = Object.keys(idx.cards).map(Number).filter(cid => idx.cards[cid] && idx.cards[cid][1] === 'rarity_4');
+    _poolRosterCache[key] = all4;
+    return all4;
+  }
   let lst = (idx.rosters && idx.rosters[key]) ? idx.rosters[key].slice() : [];
   if (!lst.length) {
     // 窗口法：该池 UP 新卡 + 截至卡池结束的全部常驻卡（与真实抽卡池一致）。
@@ -8115,6 +8163,7 @@ $('#gacha34-range').addEventListener('input', e => {
 let _gpDoneOpen = false;   // 折叠组默认收起
 function poolUpComplete(p) {
   try {
+    if (p.id === 'mix') return false;   // 混池没有「当期」概念，不参与折叠
     // 与轮播/收集度用同一套 UP 判定（gachaUpListFor：生日/周年池=历年卡，复刻池回溯原池）
     const up = gachaUpListFor(p);
     if (!up.length) return false;
@@ -8122,10 +8171,10 @@ function poolUpComplete(p) {
     return up.every(cid => have.has(Number(cid)));
   } catch (e) { return false; }
 }
-function makeGachaPoolItem(p) {
+function makeGachaPoolItem(p, noDel) {
   const el = document.createElement('div');
   el.className = 'gp-item' + (p.id === _selPool ? ' on' : '');
-  el.innerHTML = `<span>${escapeHTML(p.name)}</span><span class="gp-del" title="删除">✕</span>`;
+  el.innerHTML = `<span>${escapeHTML(p.name)}</span>` + (noDel ? '' : `<span class="gp-del" title="删除">✕</span>`);
   el.addEventListener('click', e => {
     if (e.target.classList.contains('gp-del')) {
       settings.gachaPools = settings.gachaPools.filter(x => x.id !== p.id);
@@ -8141,8 +8190,14 @@ function makeGachaPoolItem(p) {
 function renderGachaPools() {
   const box = $('#gacha-pools');
   box.innerHTML = '';
+  ensureMixPool();
+  const mix = settings.gachaPools.find(p => p.id === 'mix');
   const done = [], open = [];
-  for (const p of settings.gachaPools) (poolUpComplete(p) ? done : open).push(p);
+  for (const p of settings.gachaPools) {
+    if (p.id === 'mix') continue;
+    (poolUpComplete(p) ? done : open).push(p);
+  }
+  if (mix) box.appendChild(makeGachaPoolItem(mix, true));   // 無料混池固定置顶，不可删除
   for (const p of open) box.appendChild(makeGachaPoolItem(p));
   if (done.length) {
     const head = document.createElement('div');
@@ -8447,15 +8502,32 @@ function gachaPull(pool, n) {
     else if (own4.length) byTier[4] = own4;
     byTier[1] = [];
   }
+  /* 無料混合卡池（id='mix'）：不套用 UP/歪卡逻辑，全四星等概率（本命角色卡 3 倍权重） */
+  const isMix = pool.id === 'mix';
+  const mixFavIds = (() => {
+    if (!isMix) return null;
+    const b = settings.benife || {};
+    const ids = new Set((b.chars || []).map(Number));
+    if (b.unit && UNIT_CHAR_IDS[b.unit]) UNIT_CHAR_IDS[b.unit].forEach(id => ids.add(id));
+    return ids;
+  })();
+  const wpick = arr => {
+    if (!arr.length) return null;
+    if (!mixFavIds || !mixFavIds.size) return arr[Math.floor(Math.random() * arr.length)];
+    const w = arr.map(cid => mixFavIds.has(Number(_gachaIdx.cards[cid][2])) ? 3 : 1);
+    let r = Math.random() * w.reduce((a, b) => a + b, 0);
+    for (let k = 0; k < arr.length; k++) { r -= w[k]; if (r <= 0) return arr[k]; }
+    return arr[arr.length - 1];
+  };
   const pick = tier => {
     const arr = byTier[tier].length ? byTier[tier] : byTier[3].length ? byTier[3] : byTier[4].length ? byTier[4] : byTier[2];
     if (!arr.length) return null;
-    return arr[Math.floor(Math.random() * arr.length)];
+    return isMix ? wpick(arr) : arr[Math.floor(Math.random() * arr.length)];
   };
   // 四星基础槽位固定为当期 UP 的三四张主要卡（与轮播同一套判定）——之前名单不足十连会补入
   // 全部常驻卡，导致四星几乎全歪到常驻；现在常驻卡不再占据四星槽位
   let up4List = [];
-  if (!celeb) {
+  if (!celeb && !isMix) {
     up4List = gachaPoolUp4(pool);
     if (up4List.length) byTier[4] = up4List.slice();
   }
@@ -9323,6 +9395,48 @@ $('#gacha-pull10').addEventListener('click', () => {
   if (isFreePool(pool)) { mkConfirm('确认招募', '是否要免费招募十次？（无料卡池不消耗水晶）', () => { _gachaDrawing = false; startGachaDraw(pool, 10); }); return; }
   if ((Number(settings.crystal) || 0) < 3000) { showToast('水晶不足：招募十次需要 3000 水晶', 2800); return; }
   mkConfirm('确认招募', '是否要招募十次？将消耗 3000 水晶', () => { _gachaDrawing = false; startGachaDraw(pool, 10); });
+});
+/* 本命设置：無料混合卡池里本命角色出率 3 倍（组合二选一：一个组合 或 最多两个角色） */
+function benifeChips() {
+  const b = settings.benife;
+  const uBox = $('#fav-units'), cBox = $('#fav-chars');
+  if (!uBox || !cBox) return;
+  uBox.innerHTML = PROFILE_UNITS.map(u => `<div class="mf-chip${b.unit === u.key ? ' on' : ''}" data-u="${u.key}">${escapeHTML(u.label)}</div>`).join('');
+  cBox.innerHTML = CHARS.map((c, i) => `<div class="mf-chip${b.chars.includes(i + 1) ? ' on' : ''}" data-c="${i + 1}">${escapeHTML(c[1])}</div>`).join('');
+}
+function benifeSummary() {
+  const b = settings.benife;
+  if (b.unit) return '本命组合：' + (PROFILE_UNIT_MAP[b.unit] || b.unit);
+  if (b.chars.length) return '本命角色：' + b.chars.map(id => (CHARS[id - 1] || ['',''])[1]).join('、');
+  return '未设置本命（全部等概率）';
+}
+if ($('#gacha-fav')) $('#gacha-fav').addEventListener('click', () => { benifeChips(); $('#modal-fav').classList.add('show'); });
+if ($('#fav-units')) $('#fav-units').addEventListener('click', e => {
+  const chip = e.target.closest('.mf-chip'); if (!chip) return;
+  const key = chip.dataset.u;
+  settings.benife.unit = settings.benife.unit === key ? '' : key;
+  settings.benife.chars = [];              // 选组合清空角色
+  benifeChips();
+});
+if ($('#fav-chars')) $('#fav-chars').addEventListener('click', e => {
+  const chip = e.target.closest('.mf-chip'); if (!chip) return;
+  const id = Number(chip.dataset.c);
+  const chars = settings.benife.chars;
+  if (chars.includes(id)) { settings.benife.chars = chars.filter(x => x !== id); }
+  else {
+    if (chars.length >= 2) { showToast('本命角色最多选两个', 2200); return; }
+    settings.benife.unit = '';             // 选角色清空组合
+    chars.push(id);
+  }
+  benifeChips();
+});
+if ($('#fav-ok')) $('#fav-ok').addEventListener('click', () => {
+  $('#modal-fav').classList.remove('show');
+  saveSettings();
+  showToast(benifeSummary() + '，無料混池出率已生效', 3000);
+});
+if ($('#modal-fav')) $('#modal-fav').addEventListener('click', e => {
+  if (e.target.id === 'modal-fav') $('#modal-fav').classList.remove('show');
 });
 /* 一次性把全部一星卡加入成员库：一星卡不在任何招募池里，只能这样获得。
    用 settings.members1Star 标记，只执行一次（用户之后手动删掉不会再加回来） */
