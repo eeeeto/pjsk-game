@@ -1252,7 +1252,7 @@
         <div class="field">
           <div class="lbl"><span>水晶</span><b class="crystal-val">--</b></div>
           <button class="btn ghost" id="crystal-gain">获 取 水 晶（+100）</button>
-          <div class="sub">单次招募消耗 300 水晶 · 十连 3000 · 公告全部已读 +1000 · 休息室每张重复四星兑换 3000</div>
+          <div class="sub">单次招募消耗 300 水晶 · 十连 3000 · 公告全部已读 +1000 · 休息室每张重复四星兑换 3000 · 歌曲每点亮一颗星 +1000</div>
         </div>
       </div>
     </div>
@@ -2356,8 +2356,13 @@ function songMarks(s) {
 function setSongMark(s, i, v) {
   settings.marks = settings.marks || {};
   const m = songMarks(s).slice();
+  const newly = v && !m[i];   // 新点亮一颗星（星星不可手动点，只打歌达成）
   m[i] = v;
   settings.marks[songKey(s)] = m;
+  if (newly) {
+    addCrystal(1000);         // 每首歌每颗星首次点亮 +1000 水晶（一颗星只奖励一次）
+    showToast('点亮一颗星，获得 1000 水晶', 2600);
+  }
   saveSettings();
 }
 
