@@ -6792,6 +6792,17 @@ $('#songs-back').addEventListener('click', () => { stopPreview(); releasePreview
 /* 新增公告：往数组里加一条即可，按 time 倒序自动排（最近的在最上面） */
 const NOTICES = [
   {
+    id: 'n20261120a', time: '2026-11-20 12:00', tag: '活动', reward: 6000,
+    title: '感恩节特别公告：感谢有你的 6000 水晶',
+    body: `<p>今年的感恩节快到了（11 月 26 日），这是 FAN STAGE 的第一个感恩节。</p>
+      <p>从第一条投稿公告到现在的 128 首曲子，每一次点开、每一局打歌，都是这个小小的音游继续做下去的理由。<b>谢谢每一位玩家。</b></p>
+      <ul>
+        <li><b>感恩奖励</b>：已读本条公告即可领取 <b>6000 水晶</b>（点击「一键已读所有公告」时会一并计入）。</li>
+        <li>水晶可用于「世界」的招募，抽中喜欢的成员带去打歌吧。</li>
+      </ul>
+      <p>感恩节快乐，火鸡和水晶都给你。🍗</p>`
+  },
+  {
     id: 'n20261118a', time: '2026-11-18 00:06', tag: '曲库',
     title: '《ティアドロップス》已上线',
     body: `<p>Poppin'Party（BanG Dream! 企划）的 <b>《ティアドロップス》</b> 已加入曲库。</p>
@@ -6879,12 +6890,17 @@ function syncNoticeDot() {
   if (!dot) return;
   dot.style.display = noticeHasUnread() ? '' : 'none';
 }
+function noticeReward(n) { return Number(n.reward) || 1000; }   // 每条公告可自定义已读奖励，默认 1000
+function unreadRewardSum() {
+  const read = noticeReadSet();
+  return NOTICES.filter(n => !read.has(n.id)).reduce((s, n) => s + noticeReward(n), 0);
+}
 function syncNoticeReadBtn() {
   const btn = $('#notice-read');
   if (!btn) return;
   const n = unreadNoticeCount();
   btn.style.display = n ? '' : 'none';
-  btn.textContent = `一键已读所有公告（${n} 条 · +${(n * 1000).toLocaleString('en-US')} 水晶）`;
+  btn.textContent = `一键已读所有公告（${n} 条 · +${unreadRewardSum().toLocaleString('en-US')} 水晶）`;
 }
 function renderNotices() {
   const list = $('#notice-list');
@@ -6916,16 +6932,18 @@ if ($('#notice-list')) $('#notice-list').addEventListener('click', e => {
   const it = e.target.closest('.notice-item');
   if (it) it.classList.toggle('open');
 });
-/* 一键已读所有公告 → 水晶 = 本次已读的公告数量 × 1000（全部已读后按钮隐藏） */
+/* 一键已读所有公告 → 水晶 = 本次已读各条公告奖励之和（默认 1000/条，公告可用 reward 自定义） */
 if ($('#notice-read')) $('#notice-read').addEventListener('click', () => {
   const n = unreadNoticeCount();
   if (!n) return;
+  const sum = unreadRewardSum();
+  if (!sum) return;
   const read = noticeReadSet();
   NOTICES.forEach(x => read.add(x.id));
   noticeSaveRead(read);
-  addCrystal(n * 1000);
+  addCrystal(sum);
   syncNoticeDot(); syncNoticeReadBtn();
-  showToast(`已读 ${n} 条公告，获得 ${(n * 1000).toLocaleString('en-US')} 水晶`, 3200);
+  showToast(`已读 ${n} 条公告，获得 ${sum.toLocaleString('en-US')} 水晶`, 3200);
 });
 syncNoticeDot();
 
