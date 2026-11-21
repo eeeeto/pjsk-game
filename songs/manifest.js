@@ -1410,4 +1410,48 @@ window.SONGS = [
   "full": true,
   "cover": "assets/covers/bandori1.jpg"
  }
+,
+ {
+  "title": "虚無さん",
+  "artist": "25時、ナイトコードで。 feat. 宵崎奏&朝比奈まふゆ&東雲絵名&暁山瑞希&鏡音レン",
+  "credit": "",
+  "unit": "n25",
+  "game": true,
+  "duration": 150.67,
+  "file": "songs/s143.mp3",
+  "full": true,
+  "cover": "assets/covers/n251.jpg"
+ },
+ {
+  "title": "エンパープル",
+  "artist": "25時、ナイトコードで。 feat. 宵崎奏&朝比奈まふゆ&東雲絵名&暁山瑞希&鏡音リン",
+  "credit": "",
+  "unit": "n25",
+  "game": true,
+  "duration": 181.20,
+  "file": "songs/s144.mp3",
+  "full": true,
+  "cover": "assets/covers/n251.jpg"
+ },
+ {
+  "title": "有罪推论",
+  "artist": "以方星尘",
+  "credit": "",
+  "unit": "vocaloid",
+  "game": true,
+  "duration": 167.55,
+  "file": "songs/s145.mp3",
+  "full": true,
+  "cover": "assets/covers/vocaloid1.jpg"
+ },
+ {
+  "title": "茧中病变",
+  "artist": "以方星尘",
+  "credit": "",
+  "unit": "vocaloid",
+  "game": true,
+  "duration": 130.31,
+  "file": "songs/s146.mp3",
+  "cover": "assets/covers/vocaloid1.jpg"
+ }
 ];
